@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Szauna Monitor - Grádiens</title>
+    <title>Szauna Monitor Fix</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
@@ -17,11 +17,10 @@
         }
         .stats-card {
             position: absolute; top: 10px; right: 10px; z-index: 100; 
-            background: rgba(255, 255, 255, 0.85); padding: 12px; border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 12px; line-height: 1.4; color: #333; pointer-events: none;
+            background: rgba(255, 255, 255, 0.85); padding: 10px; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 11px; color: #333; pointer-events: none;
         }
-        .stats-card b { color: #e74c3c; font-size: 14px; }
-        .stats-card .grad-val { color: #3498db; }
+        .stats-card b { color: #e74c3c; font-size: 13px; }
         .chart-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10px; padding-top: 80px; box-sizing: border-box; }
         button, input { padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
         button { background: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; }
@@ -32,15 +31,12 @@
 <div class="controls">
     <input type="date" id="datePicker">
     <button id="loadBtn">OK</button>
-    <button id="resetBtn">Vissza</button>
+    <button id="resetBtn">VISSZA</button>
 </div>
 
 <div class="stats-card" id="statsCard">
-    <strong>HŐMÉRSÉKLET</strong><br>
-    Aktuális: <b id="statLast">--</b> | Max: <b id="statMax">--</b><br>
-    <strong>GRÁDIENS (°C/perc)</strong><br>
-    Max emelkedés: <b class="grad-val" id="gradMax">--</b><br>
-    Max hűlés: <b class="grad-val" id="gradMin">--</b>
+    Hőfok: <b id="statLast">--</b> | Max: <b id="statMax">--</b><br>
+    Grádiens Max: <b style="color:#3498db" id="gradMax">--</b> | Min: <b style="color:#3498db" id="gradMin">--</b>
 </div>
 
 <div class="chart-container">
@@ -64,11 +60,11 @@
                         label: 'Hőmérséklet (°C)',
                         borderColor: '#e74c3c',
                         backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                        borderWidth: 3,
+                        borderWidth: 2,
                         data: [],
                         yAxisID: 'y',
                         pointRadius: 0,
-                        tension: 0.3,
+                        tension: 0.2,
                         fill: true
                     },
                     {
@@ -78,7 +74,7 @@
                         data: [],
                         yAxisID: 'yGrad',
                         pointRadius: 0,
-                        tension: 0.4,
+                        tension: 0.3,
                         fill: false
                     }
                 ]
@@ -92,59 +88,35 @@
                         type: 'time',
                         time: { unit: 'hour', displayFormats: { hour: 'HH:mm' } },
                         grid: { color: '#eee' },
-                        min: null, max: null // LoadData-ban állítjuk precízen
+                        ticks: { maxRotation: 0, autoSkip: true }
                     },
                     y: {
                         type: 'linear', position: 'left',
                         min: 0, max: 100,
-                        title: { display: true, text: '°C' }
+                        grid: { color: '#eee' }
                     },
                     yGrad: {
                         type: 'linear', position: 'right',
                         grid: { drawOnChartArea: false },
-                        title: { display: true, text: '°C / perc' },
-                        ticks: { color: '#3498db' }
+                        display: true
                     }
                 },
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        callbacks: {
-                            title: (ctx) => new Date(ctx[0].parsed.x).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' }),
-                            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}`
-                        }
-                    },
                     zoom: {
                         pan: { enabled: true, mode: 'x' },
-                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
-                        limits: { x: { min: 'original', max: 'original' } }
+                        zoom: { 
+                            wheel: { enabled: true }, 
+                            pinch: { enabled: true }, 
+                            mode: 'x',
+                        },
+                        limits: { 
+                            x: { min: 'original', max: 'original', minRange: 1000 * 60 * 30 } // Max 30 percre enged csak ránagyítani
+                        }
                     }
                 }
             }
         });
-    }
-
-    function calculateGradient(feeds) {
-        const gradData = [];
-        const windowMs = 5 * 60 * 1000; // 5 perces ablak
-
-        for (let i = 0; i < feeds.length; i++) {
-            const current = feeds[i];
-            const pastTime = current.x.getTime() - windowMs;
-            
-            // Megkeressük az 5 perccel ezelőtti pontot
-            const pastPoint = feeds.find(f => f.x.getTime() >= pastTime);
-            
-            if (pastPoint && pastPoint !== current) {
-                const tempDiff = current.y - pastPoint.y;
-                const timeDiffMin = (current.x.getTime() - pastPoint.x.getTime()) / 60000;
-                if (timeDiffMin > 0) {
-                    gradData.push({ x: current.x, y: tempDiff / timeDiffMin });
-                }
-            }
-        }
-        return gradData;
     }
 
     async function loadData() {
@@ -154,42 +126,53 @@
         try {
             const response = await fetch(url);
             const data = await response.json();
-            const feeds = data.feeds.map(f => ({ x: new Date(f.created_at), y: parseFloat(f.field1) }));
+            const feeds = data.feeds.map(f => ({ x: new Date(f.created_at).getTime(), y: parseFloat(f.field1) }));
 
             if (feeds.length > 0) {
-                // Grádiens számítás
-                const gradFeeds = calculateGradient(feeds);
-                const gradients = gradFeeds.map(g => g.y);
-                const temps = feeds.map(f => f.y);
+                const gradData = [];
+                const windowMs = 5 * 60 * 1000;
 
-                // Stat frissítés
+                feeds.forEach((current) => {
+                    const pastPoint = feeds.find(f => f.x >= current.x - windowMs && f.x < current.x);
+                    if (pastPoint) {
+                        const tDiff = current.y - pastPoint.y;
+                        const mDiff = (current.x - pastPoint.x) / 60000;
+                        gradData.push({ x: current.x, y: tDiff / mDiff });
+                    } else {
+                        gradData.push({ x: current.x, y: 0 });
+                    }
+                });
+
+                const temps = feeds.map(f => f.y);
+                const grads = gradData.map(g => g.y);
+
                 document.getElementById('statMax').innerText = Math.max(...temps).toFixed(1) + "°C";
                 document.getElementById('statLast').innerText = temps[temps.length-1].toFixed(1) + "°C";
-                document.getElementById('gradMax').innerText = "+" + Math.max(...gradients).toFixed(2);
-                document.getElementById('gradMin').innerText = Math.min(...gradients).toFixed(2);
-
-                // Y skála kerekítés
-                let yMax = Math.max(100, Math.ceil(Math.max(...temps)/10)*10);
-                let yMin = Math.min(0, Math.floor(Math.min(...temps)/10)*10);
-                myChart.options.scales.y.max = yMax;
-                myChart.options.scales.y.min = yMin;
+                document.getElementById('gradMax').innerText = "+" + Math.max(...grads).toFixed(2);
+                document.getElementById('gradMin').innerText = Math.min(...grads).toFixed(2);
 
                 myChart.data.datasets[0].data = feeds;
-                myChart.data.datasets[1].data = gradFeeds;
-            }
+                myChart.data.datasets[1].data = gradData;
 
-            // Precíz 0-24h fixálás
-            const d = new Date(dateStr);
-            myChart.options.scales.x.min = new Date(d.setHours(0,0,0,0)).getTime();
-            myChart.options.scales.x.max = new Date(d.setHours(23,59,59,999)).getTime();
-            
+                const d = new Date(dateStr);
+                const start = new Date(d.setHours(0,0,0,0)).getTime();
+                const end = new Date(d.setHours(23,59,59,999)).getTime();
+                
+                myChart.options.scales.x.min = start;
+                myChart.options.scales.x.max = end;
+                myChart.options.plugins.zoom.limits.x.min = start;
+                myChart.options.plugins.zoom.limits.x.max = end;
+            }
             myChart.resetZoom();
-            myChart.update();
+            myChart.update('none');
         } catch (e) { console.error(e); }
     }
 
+    document.getElementById('resetBtn').onclick = () => {
+        myChart.resetZoom();
+        myChart.update();
+    };
     document.getElementById('loadBtn').onclick = loadData;
-    document.getElementById('resetBtn').onclick = () => myChart.resetZoom();
 
     initChart();
     loadData();
