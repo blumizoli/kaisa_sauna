@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Szauna Monitor</title>
+    <title>Szauna Monitor Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
@@ -11,21 +12,21 @@
         body, html { 
             margin: 0; padding: 0; height: 100%; width: 100%; 
             font-family: sans-serif; background-color: #f8f9fa;
-            overflow: hidden; touch-action: pan-y; /* Engedi a függőleges görgetést, de a többit a JS kezeli */
+            overflow: hidden; touch-action: none; /* Teljes kontroll a JS-nél */
         }
         .controls {
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            z-index: 100; background: rgba(255, 255, 255, 0.9);
-            padding: 10px; border-radius: 12px; display: flex; gap: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 100; background: rgba(255, 255, 255, 0.95);
+            padding: 8px; border-radius: 12px; display: flex; gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
         }
         .chart-container {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            padding: 15px; padding-top: 70px; /* Hely a gomboknak */
+            padding: 10px; padding-top: 75px;
             box-sizing: border-box;
         }
-        input, button { padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px; outline: none; }
-        button { background: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; }
+        input, button { padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px; }
+        button { background: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; min-width: 60px; }
         button:active { background: #c0392b; }
     </style>
 </head>
@@ -57,8 +58,8 @@
                 datasets: [{
                     label: 'Hőmérséklet',
                     borderColor: '#e74c3c',
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                    borderWidth: 2,
+                    backgroundColor: 'rgba(231, 76, 60, 0.15)',
+                    borderWidth: 3,
                     data: [],
                     pointRadius: 0,
                     pointHitRadius: 50,
@@ -82,55 +83,46 @@
                             displayFormats: { hour: 'HH:mm' },
                             tooltipFormat: 'HH:mm'
                         },
-                        grid: { display: true, color: '#eee' },
-                        ticks: { color: '#666' }
+                        grid: { color: '#eee' }
                     },
                     y: {
                         min: 0,
                         max: 100,
-                        grid: { display: true, color: '#eee' },
-                        ticks: { color: '#666' }
+                        grid: { color: '#eee' }
                     }
                 },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         enabled: true,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Átlátszóbb fekete
-                        titleFont: { size: 14 },
-                        bodyFont: { size: 16, weight: 'bold' },
-                        displayColors: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        padding: 12,
                         callbacks: {
-                            label: function(context) {
-                                return context.parsed.y.toFixed(1) + ' °C';
-                            },
-                            title: function(context) {
-                                // Magyar 24 órás formátum a buborékban
-                                const date = new Date(context[0].parsed.x);
-                                return date.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+                            label: (ctx) => ` ${ctx.parsed.y.toFixed(1)} °C`,
+                            title: (ctx) => {
+                                const d = new Date(ctx[0].parsed.x);
+                                return d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
                             }
                         }
                     },
                     zoom: {
                         pan: {
                             enabled: true,
-                            mode: 'x',
-                            // Ez engedélyezi az egérrel való húzást PC-n billentyű nélkül:
-                            modifierKey: null 
+                            mode: 'xy', // Most már fel-le is húzható
+                            threshold: 5
                         },
                         zoom: {
                             wheel: { enabled: true },
                             pinch: { enabled: true },
-                            mode: 'x',
-                            drag: { enabled: false }
+                            mode: 'xy' // Most már fel-le is nagyítható
                         },
                         limits: {
-                            x: { min: 'original', max: 'original' }
+                            x: { min: 'original', max: 'original' },
+                            y: { min: 0, max: 150 } // Engedjük kicsit feljebb, ha nagyon befűtenél
                         }
                     }
                 }
             },
-            // Függőleges vonal plugin
             plugins: [{
                 id: 'crosshair',
                 afterDraw: (chart) => {
@@ -140,10 +132,11 @@
                         let ctx = chart.ctx;
                         ctx.save();
                         ctx.beginPath();
+                        ctx.setLineDash([5, 5]); // Szaggatott vonal a modernebb kinézethez
                         ctx.moveTo(x, yAxis.top);
                         ctx.lineTo(x, yAxis.bottom);
                         ctx.lineWidth = 1;
-                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
                         ctx.stroke();
                         ctx.restore();
                     }
@@ -158,9 +151,7 @@
         const minT = new Date(d.setHours(0,0,0,0)).getTime();
         const maxT = new Date(d.setHours(23,59,59,999)).getTime();
 
-        const start = selectedDate + " 00:00:00";
-        const end = selectedDate + " 23:59:59";
-        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${start}&end=${end}`;
+        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${selectedDate} 00:00:00&end=${selectedDate} 23:59:59`;
 
         try {
             const response = await fetch(url);
@@ -173,8 +164,9 @@
             myChart.options.plugins.zoom.limits.x.max = maxT;
 
             myChart.data.datasets[0].data = chartData;
+            myChart.resetZoom(); // Frissítésnél ugorjon vissza alaphelyzetbe
             myChart.update();
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Hiba:", e); }
     }
 
     document.getElementById('loadBtn').onclick = loadData;
