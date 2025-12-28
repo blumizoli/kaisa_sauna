@@ -9,25 +9,31 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
-        body, html { 
-            margin: 0; padding: 0; height: 100%; width: 100%; 
-            font-family: sans-serif; background-color: #f8f9fa;
-            overflow: hidden; touch-action: none; /* Teljes kontroll a JS-nél */
-        }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; background-color: #f8f9fa; overflow: hidden; touch-action: none; }
+        
+        /* Gombok és dátumválasztó */
         .controls {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            z-index: 100; background: rgba(255, 255, 255, 0.95);
+            position: absolute; top: 10px; left: 10px;
+            z-index: 100; background: rgba(255, 255, 255, 0.9);
             padding: 8px; border-radius: 12px; display: flex; gap: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        .chart-container {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            padding: 10px; padding-top: 75px;
-            box-sizing: border-box;
+
+        /* Statisztikai ablak a jobb felső sarokban */
+        .stats-card {
+            position: absolute; top: 10px; right: 10px;
+            z-index: 100; background: rgba(255, 255, 255, 0.85);
+            padding: 12px; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-size: 13px; line-height: 1.5; color: #333;
+            pointer-events: none; /* Ne zavarja a kattintást alatta */
         }
+        .stats-card b { color: #e74c3c; font-size: 15px; }
+        .stats-title { font-weight: bold; border-bottom: 1px solid #ddd; margin-bottom: 5px; padding-bottom: 2px; display: block; }
+
+        .chart-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10px; padding-top: 75px; box-sizing: border-box; }
         input, button { padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px; }
-        button { background: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; min-width: 60px; }
-        button:active { background: #c0392b; }
+        button { background: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -36,6 +42,13 @@
     <input type="date" id="datePicker">
     <button id="loadBtn">OK</button>
     <button id="resetBtn">Vissza</button>
+</div>
+
+<div class="stats-card" id="statsCard">
+    <span class="stats-title">Napi adatok</span>
+    Aktuális: <b id="statLast">--</b><br>
+    Maximum: <b id="statMax">--</b><br>
+    Minimum: <b id="statMin">--</b>
 </div>
 
 <div class="chart-container">
@@ -51,7 +64,6 @@
 
     function initChart() {
         const ctx = document.getElementById('saunaChart').getContext('2d');
-        
         myChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -70,25 +82,19 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index',
-                    axis: 'x'
-                },
+                interaction: { intersect: false, mode: 'index', axis: 'x' },
                 scales: {
                     x: {
                         type: 'time',
-                        time: { 
-                            unit: 'hour', 
-                            displayFormats: { hour: 'HH:mm' },
-                            tooltipFormat: 'HH:mm'
-                        },
-                        grid: { color: '#eee' }
+                        time: { unit: 'hour', displayFormats: { hour: 'HH:mm' }, tooltipFormat: 'HH:mm' },
+                        grid: { color: '#eee' },
+                        bounds: 'ticks'
                     },
                     y: {
                         min: 0,
                         max: 100,
-                        grid: { color: '#eee' }
+                        grid: { color: '#eee' },
+                        ticks: { stepSize: 10 }
                     }
                 },
                 plugins: {
@@ -96,7 +102,6 @@
                     tooltip: {
                         enabled: true,
                         backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        padding: 12,
                         callbacks: {
                             label: (ctx) => ` ${ctx.parsed.y.toFixed(1)} °C`,
                             title: (ctx) => {
@@ -106,20 +111,9 @@
                         }
                     },
                     zoom: {
-                        pan: {
-                            enabled: true,
-                            mode: 'xy', // Most már fel-le is húzható
-                            threshold: 5
-                        },
-                        zoom: {
-                            wheel: { enabled: true },
-                            pinch: { enabled: true },
-                            mode: 'xy' // Most már fel-le is nagyítható
-                        },
-                        limits: {
-                            x: { min: 'original', max: 'original' },
-                            y: { min: 0, max: 150 } // Engedjük kicsit feljebb, ha nagyon befűtenél
-                        }
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                        limits: { x: { min: 'original', max: 'original' } }
                     }
                 }
             },
@@ -132,11 +126,11 @@
                         let ctx = chart.ctx;
                         ctx.save();
                         ctx.beginPath();
-                        ctx.setLineDash([5, 5]); // Szaggatott vonal a modernebb kinézethez
+                        ctx.setLineDash([5, 5]);
                         ctx.moveTo(x, yAxis.top);
                         ctx.lineTo(x, yAxis.bottom);
                         ctx.lineWidth = 1;
-                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
                         ctx.stroke();
                         ctx.restore();
                     }
@@ -156,17 +150,38 @@
         try {
             const response = await fetch(url);
             const data = await response.json();
-            const chartData = data.feeds.map(f => ({ x: new Date(f.created_at), y: parseFloat(f.field1) }));
+            const feeds = data.feeds.map(f => ({ x: new Date(f.created_at), y: parseFloat(f.field1) }));
+
+            if (feeds.length > 0) {
+                const temps = feeds.map(f => f.y).filter(v => !isNaN(v));
+                const maxVal = Math.max(...temps);
+                const minVal = Math.min(...temps);
+                const lastVal = feeds[feeds.length - 1].y;
+
+                // Statisztika frissítése
+                document.getElementById('statMax').innerText = maxVal.toFixed(1) + " °C";
+                document.getElementById('statMin').innerText = minVal.toFixed(1) + " °C";
+                document.getElementById('statLast').innerText = lastVal.toFixed(1) + " °C";
+
+                // Y skála igazítása
+                let yMin = 0;
+                let yMax = 100;
+                if (minVal < 0) yMin = Math.floor(minVal / 10) * 10;
+                if (maxVal > 100) yMax = Math.ceil(maxVal / 10) * 10;
+
+                myChart.options.scales.y.min = yMin;
+                myChart.options.scales.y.max = yMax;
+            }
 
             myChart.options.scales.x.min = minT;
             myChart.options.scales.x.max = maxT;
             myChart.options.plugins.zoom.limits.x.min = minT;
             myChart.options.plugins.zoom.limits.x.max = maxT;
 
-            myChart.data.datasets[0].data = chartData;
-            myChart.resetZoom(); // Frissítésnél ugorjon vissza alaphelyzetbe
+            myChart.data.datasets[0].data = feeds;
+            myChart.resetZoom();
             myChart.update();
-        } catch (e) { console.error("Hiba:", e); }
+        } catch (e) { console.error(e); }
     }
 
     document.getElementById('loadBtn').onclick = loadData;
