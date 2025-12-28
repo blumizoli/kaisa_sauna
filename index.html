@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Szauna Monitor</title>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 0; background: #f4f4f4; padding: 15px; }
+        .box { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .nav { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        #chart { width: 100%; height: 500px; }
+        input, button { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+        button { background: #28a745; color: white; cursor: pointer; border: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="nav">
+            <strong>Dátum kiválasztása:</strong> 
+            <input type="date" id="dateInput">
+            <button onclick="loadData()">Grafikon frissítése</button>
+        </div>
+        <div id="chart"></div>
+    </div>
+
+    <script>
+        const API_KEY = 'CM6CKHX2JG7IY375';
+        const CHAN_ID = '3213557';
+        document.getElementById('dateInput').valueAsDate = new Date();
+
+        function loadData() {
+            const d = document.getElementById('dateInput').value;
+            const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${d}%2000:00:00&end=${d}%2023:59:59&timezone=Europe/Budapest`;
+
+            fetch(url).then(r => r.json()).then(data => {
+                const temp = [], hum = [];
+                data.feeds.forEach(f => {
+                    const t = new Date(f.created_at).getTime();
+                    if(f.field1) temp.push([t, parseFloat(f.field1)]);
+                    if(f.field2) hum.push([t, parseFloat(f.field2)]);
+                });
+                render(temp, hum);
+            });
+        }
+
+        function render(temp, hum) {
+            Highcharts.chart('chart', {
+                chart: { zoomType: 'x', panning: true, panKey: 'shift' },
+                title: { text: 'Kaisa Sauna Monitor' },
+                xAxis: { type: 'datetime', title: { text: 'Idő' } },
+                yAxis: [{ 
+                    title: { text: 'Hőmérséklet [°C]' },
+                    labels: { format: '{value}°C' }
+                }, { 
+                    title: { text: 'Páratartalom [%]' }, 
+                    opposite: true,
+                    labels: { format: '{value}%' }
+                }],
+                tooltip: { shared: true, xDateFormat: '%Y-%m-%d %H:%M:%S' },
+                series: [
+                    { name: 'Hőmérséklet', data: temp, color: '#ff4d4d', tooltip: { valueSuffix: ' °C' } },
+                    { name: 'Páratartalom', data: hum, color: '#4da6ff', yAxis: 1, tooltip: { valueSuffix: ' %' } }
+                ],
+                credits: { enabled: false }
+            });
+        }
+        loadData();
+    </script>
+</body>
+</html>
