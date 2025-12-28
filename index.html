@@ -12,19 +12,18 @@
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; background-color: #ffffff; overflow: hidden; touch-action: none; }
         .controls {
             position: absolute; top: 10px; left: 10px; z-index: 100; 
-            background: rgba(255, 255, 255, 0.9); padding: 8px; border-radius: 12px; 
+            background: rgba(255, 255, 255, 0.95); padding: 8px; border-radius: 12px; 
             display: flex; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-wrap: wrap;
         }
         .stats-card {
             position: absolute; top: 10px; right: 10px; z-index: 100; 
-            background: rgba(255, 255, 255, 0.9); padding: 12px; border-radius: 12px;
+            background: rgba(255, 255, 255, 0.95); padding: 12px; border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 12px; line-height: 1.4; color: #333; pointer-events: none; border: 1px solid #eee;
         }
         .stats-card h3 { margin: 0 0 5px 0; font-size: 11px; color: #888; text-transform: uppercase; border-bottom: 1px solid #eee; }
         .stats-card b { color: #e74c3c; font-size: 14px; }
         .stats-card .grad-b { color: #3498db; }
-        
-        .chart-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10px; padding-top: 110px; box-sizing: border-box; }
+        .chart-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10px; padding-top: 115px; box-sizing: border-box; }
         button, input { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; font-weight: bold; }
         button { cursor: pointer; background: #f8f9fa; color: #333; }
         #loadBtn { background: #e74c3c; color: white; border: none; }
@@ -57,7 +56,9 @@
     const CHAN_ID = '3213557';
     let myChart;
 
-    document.getElementById('datePicker').valueAsDate = new Date();
+    // Alapértelmezett dátum beállítása (mai nap)
+    const today = new Date();
+    document.getElementById('datePicker').value = today.toISOString().split('T')[0];
 
     function initChart() {
         const ctx = document.getElementById('saunaChart').getContext('2d');
@@ -73,7 +74,6 @@
                     pointRadius: 0,
                     tension: 0.3,
                     fill: true,
-                    // Egyedi tömb a grádiens értékek tárolására a tooltip számára
                     gradients: []
                 }]
             },
@@ -90,8 +90,8 @@
                             displayFormats: { hour: 'HH:mm' } 
                         },
                         grid: { color: '#f0f0f0' },
-                        // Kényszerített 0-24 tartomány
-                        min: null, max: null 
+                        // Ez biztosítja, hogy a tengely 0-24-ig mutasson akkor is ha nincs adat
+                        bounds: 'ticks'
                     },
                     y: {
                         min: 0, max: 100,
@@ -103,18 +103,12 @@
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                        padding: 10,
                         callbacks: {
-                            title: (ctx) => {
-                                return new Date(ctx[0].parsed.x).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
-                            },
+                            title: (ctx) => new Date(ctx[0].parsed.x).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' }),
                             label: (ctx) => {
                                 const temp = ctx.parsed.y.toFixed(1) + " °C";
                                 const grad = myChart.data.datasets[0].gradients[ctx.dataIndex];
-                                return [
-                                    "Hőfok: " + temp,
-                                    "Változás: " + (grad ? grad.toFixed(2) + " °C/perc" : "--")
-                                ];
+                                return ["Hőfok: " + temp, "Változás: " + (grad ? grad.toFixed(2) + " °C/p" : "--")];
                             }
                         }
                     },
@@ -124,19 +118,33 @@
                         limits: { x: { min: 'original', max: 'original' } }
                     }
                 }
-            }
+            },
+            plugins: [{
+                id: 'crosshair',
+                afterDraw: (chart) => {
+                    if (chart.tooltip?._active?.length) {
+                        let x = chart.tooltip._active[0].element.x;
+                        let yAxis = chart.scales.y;
+                        let ctx = chart.ctx;
+                        ctx.save(); ctx.beginPath(); ctx.setLineDash([5, 5]);
+                        ctx.moveTo(x, yAxis.top); ctx.lineTo(x, yAxis.bottom);
+                        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.stroke(); ctx.restore();
+                    }
+                }
+            }]
         });
     }
 
-    async function loadData() {
+    async function loadData(keepZoom = false) {
         const dateStr = document.getElementById('datePicker').value;
-        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${dateStr} 00:00:00&end=${dateStr} 23:59:59`;
+        // Az időzóna eltolódás miatti 00:00:00 és 23:59:59 precíz megadása
+        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${dateStr}%2000:00:00&end=${dateStr}%2023:59:59`;
 
         try {
             const response = await fetch(url);
             const data = await response.json();
             
-            // Adatok feldolgozása UTC korrekcióval (ha szükséges)
             const feeds = data.feeds.map(f => ({
                 x: new Date(f.created_at).getTime(),
                 y: parseFloat(f.field1)
@@ -145,27 +153,20 @@
             const gradients = [];
             if (feeds.length > 0) {
                 const windowMs = 5 * 60 * 1000;
-                feeds.forEach((curr, i) => {
+                feeds.forEach((curr) => {
                     const past = feeds.find(f => f.x >= curr.x - windowMs && f.x < curr.x);
-                    if (past) {
-                        const g = (curr.y - past.y) / ((curr.x - past.x) / 60000);
-                        gradients.push(g);
-                    } else {
-                        gradients.push(0);
-                    }
+                    const g = past ? (curr.y - past.y) / ((curr.x - past.x) / 60000) : 0;
+                    gradients.push(g);
                 });
 
-                // Statisztikák
                 const temps = feeds.map(f => f.y);
                 document.getElementById('statMax').innerText = Math.max(...temps).toFixed(1) + "°C";
                 document.getElementById('statMin').innerText = Math.min(...temps).toFixed(1) + "°C";
                 document.getElementById('statLast').innerText = temps[temps.length-1].toFixed(1) + "°C";
-                
                 document.getElementById('gradMax').innerText = "+" + Math.max(...gradients).toFixed(2);
                 document.getElementById('gradMin').innerText = Math.min(...gradients).toFixed(2);
                 document.getElementById('gradLast').innerText = gradients[gradients.length-1].toFixed(2) + " °C/p";
 
-                // Y skála dinamikus kiterjesztése
                 myChart.options.scales.y.max = Math.max(100, Math.ceil(Math.max(...temps)/10)*10);
                 myChart.options.scales.y.min = Math.min(0, Math.floor(Math.min(...temps)/10)*10);
                 
@@ -173,28 +174,25 @@
                 myChart.data.datasets[0].gradients = gradients;
             }
 
-            // --- 0-24h FIXÁLÁS ---
-            const startOfDay = new Date(dateStr);
-            startOfDay.setHours(0,0,0,0);
-            const endOfDay = new Date(dateStr);
-            endOfDay.setHours(23,59,59,999);
+            // --- Kényszerített Helyi Idő Szerinti 0-24 ---
+            // A dátumválasztó értékéből gyártunk tiszta éjfélt és napvégét a helyi zónában
+            const parts = dateStr.split('-');
+            const start = new Date(parts[0], parts[1]-1, parts[2], 0, 0, 0).getTime();
+            const end = new Date(parts[0], parts[1]-1, parts[2], 23, 59, 59).getTime();
 
-            myChart.options.scales.x.min = startOfDay.getTime();
-            myChart.options.scales.x.max = endOfDay.getTime();
-            myChart.options.plugins.zoom.limits.x.min = startOfDay.getTime();
-            myChart.options.plugins.zoom.limits.x.max = endOfDay.getTime();
+            myChart.options.scales.x.min = start;
+            myChart.options.scales.x.max = end;
+            myChart.options.plugins.zoom.limits.x.min = start;
+            myChart.options.plugins.zoom.limits.x.max = end;
 
-            myChart.resetZoom();
-            myChart.update();
+            if (!keepZoom) myChart.resetZoom();
+            myChart.update('none');
         } catch (e) { console.error(e); }
     }
 
-    document.getElementById('loadBtn').onclick = loadData;
+    document.getElementById('loadBtn').onclick = () => loadData(false);
     document.getElementById('resetBtn').onclick = () => myChart.resetZoom();
-    document.getElementById('refreshBtn').onclick = () => {
-        document.getElementById('datePicker').valueAsDate = new Date();
-        loadData();
-    };
+    document.getElementById('refreshBtn').onclick = () => loadData(true); // Megtartja a zoomot frissítéskor
 
     initChart();
     loadData();
