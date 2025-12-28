@@ -1,71 +1,159 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Szauna Monitor</title>
-    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szauna Hőmérséklet Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; background: #f4f4f4; padding: 15px; }
-        .box { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .nav { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        #chart { width: 100%; height: 500px; }
-        input, button { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-        button { background: #28a745; color: white; cursor: pointer; border: none; font-weight: bold; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: sans-serif;
+            overflow: hidden; /* Megakadályozza az oldal görgetését, csak a chart zoomolható */
+        }
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 2px 10px opacity 0.1;
+        }
+        .chart-container {
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+        }
     </style>
 </head>
 <body>
-    <div class="box">
-        <div class="nav">
-            <strong>Dátum kiválasztása:</strong> 
-            <input type="date" id="dateInput">
-            <button onclick="loadData()">Grafikon frissítése</button>
-        </div>
-        <div id="chart"></div>
-    </div>
 
-    <script>
-        const API_KEY = 'CM6CKHX2JG7IY375';
-        const CHAN_ID = '3213557';
-        document.getElementById('dateInput').valueAsDate = new Date();
+<div class="controls">
+    <input type="date" id="datePicker">
+    <button onclick="loadData()">Betöltés</button>
+    <button onclick="resetZoom()">Zoom Vissza</button>
+</div>
 
-        function loadData() {
-            const d = document.getElementById('dateInput').value;
-            const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${d}%2000:00:00&end=${d}%2023:59:59&timezone=Europe/Budapest`;
+<div class="chart-container">
+    <canvas id="saunaChart"></canvas>
+</div>
 
-            fetch(url).then(r => r.json()).then(data => {
-                const temp = [], hum = [];
-                data.feeds.forEach(f => {
-                    const t = new Date(f.created_at).getTime();
-                    if(f.field1) temp.push([t, parseFloat(f.field1)]);
-                    if(f.field2) hum.push([t, parseFloat(f.field2)]);
-                });
-                render(temp, hum);
-            });
+<script>
+    const API_KEY = 'CM6CKHX2JG7IY375';
+    const CHAN_ID = '3213557';
+    let myChart;
+
+    // Alapértelmezett dátum a mai nap
+    document.getElementById('datePicker').valueAsDate = new Date();
+
+    function initChart() {
+        const ctx = document.getElementById('saunaChart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Szauna Hőmérséklet (°C)',
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    borderWidth: 2,
+                    data: [],
+                    pointRadius: 0, // Teljes nézetben ne legyenek pöttyök a sebesség miatt
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            displayFormats: { hour: 'HH:mm' }
+                        },
+                        min: null, // Dinamikusan állítjuk
+                        max: null,
+                        title: { display: true, text: 'Idő' },
+                        grid: { sticky: true } // Segít a tengely láthatóságában
+                    },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        title: { display: true, text: 'Celsius' },
+                        grid: { sticky: true }
+                    }
+                },
+                plugins: {
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'xy',
+                        },
+                        zoom: {
+                            wheel: { enabled: true },
+                            pinch: { enabled: true },
+                            mode: 'xy',
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadData() {
+        const selectedDate = document.getElementById('datePicker').value;
+        if (!selectedDate) return;
+
+        const start = selectedDate + " 00:00:00";
+        const end = selectedDate + " 23:59:59";
+        
+        // ThinkSpeak API hívás (max 8000 pontot ad vissza, ami egy napra bőven elég)
+        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${start}&end=${end}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            const chartData = data.feeds.map(feed => ({
+                x: new Date(feed.created_at),
+                y: parseFloat(feed.field1)
+            }));
+
+            // Tengelyek fixálása 0-24h között
+            const d = new Date(selectedDate);
+            const minTime = new Date(d.setHours(0,0,0,0));
+            const maxTime = new Date(d.setHours(23,59,59,999));
+
+            myChart.options.scales.x.min = minTime;
+            myChart.options.scales.x.max = maxTime;
+            
+            myChart.data.datasets[0].data = chartData;
+            myChart.update();
+        } catch (error) {
+            console.error("Hiba az adatok letöltésekor:", error);
+            alert("Nem sikerült az adatokat letölteni a ThinkSpeak-ről.");
         }
+    }
 
-        function render(temp, hum) {
-            Highcharts.chart('chart', {
-                chart: { zoomType: 'x', panning: true, panKey: 'shift' },
-                title: { text: 'Kaisa Sauna Monitor' },
-                xAxis: { type: 'datetime', title: { text: 'Idő' } },
-                yAxis: [{ 
-                    title: { text: 'Hőmérséklet [°C]' },
-                    labels: { format: '{value}°C' }
-                }, { 
-                    title: { text: 'Páratartalom [%]' }, 
-                    opposite: true,
-                    labels: { format: '{value}%' }
-                }],
-                tooltip: { shared: true, xDateFormat: '%Y-%m-%d %H:%M:%S' },
-                series: [
-                    { name: 'Hőmérséklet', data: temp, color: '#ff4d4d', tooltip: { valueSuffix: ' °C' } },
-                    { name: 'Páratartalom', data: hum, color: '#4da6ff', yAxis: 1, tooltip: { valueSuffix: ' %' } }
-                ],
-                credits: { enabled: false }
-            });
-        }
-        loadData();
-    </script>
+    function resetZoom() {
+        myChart.resetZoom();
+    }
+
+    // Inicializálás
+    initChart();
+    loadData();
+</script>
+
 </body>
 </html>
