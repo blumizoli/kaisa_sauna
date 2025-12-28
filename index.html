@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Szauna Monitor Pro</title>
+    <title>Szauna Monitor Pro Final</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
@@ -28,8 +28,7 @@
         button, input { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; font-weight: bold; }
         button { cursor: pointer; background: #f8f9fa; color: #333; }
         #loadBtn { background: #e74c3c; color: white; border: none; }
-        #refreshBtn { background: #3498db; color: white; border: none; min-width: 100px; transition: 0.2s; }
-        .refreshing { opacity: 0.5; }
+        #refreshBtn { background: #3498db; color: white; border: none; min-width: 100px; }
     </style>
 </head>
 <body>
@@ -65,7 +64,7 @@
             type: 'line',
             data: {
                 datasets: [{
-                    label: 'Hőmérséklet',
+                    label: 'Hőfok',
                     borderColor: '#e74c3c',
                     backgroundColor: 'rgba(231, 76, 60, 0.1)',
                     borderWidth: 3,
@@ -83,24 +82,10 @@
                 scales: {
                     x: {
                         type: 'time',
-                        time: { 
-                            tooltipFormat: 'HH:mm:ss',
-                            displayFormats: {
-                                minute: 'HH:mm',
-                                hour: 'HH:mm'
-                            }
-                        },
-                        grid: { color: '#f0f0f0' },
-                        ticks: {
-                            autoSkip: true,
-                            maxRotation: 0
-                        }
+                        time: { displayFormats: { minute: 'HH:mm', hour: 'HH:mm' } },
+                        grid: { color: '#f0f0f0' }
                     },
-                    y: {
-                        min: 0, max: 100,
-                        grid: { color: '#f0f0f0' },
-                        ticks: { stepSize: 10 }
-                    }
+                    y: { min: 0, max: 100, grid: { color: '#f0f0f0' }, ticks: { stepSize: 10 } }
                 },
                 plugins: {
                     legend: { display: false },
@@ -121,30 +106,39 @@
                     zoom: {
                         pan: { 
                             enabled: true, 
-                            mode: 'x', // CSAK vízszintes mozgatás
-                            threshold: 10
+                            mode: 'x', 
+                            modifierKey: null // Engedi az egérrel való húzást kattintás után
                         },
                         zoom: { 
                             wheel: { enabled: true }, 
                             pinch: { enabled: true }, 
-                            mode: 'x', // CSAK vízszintes nagyítás!
+                            mode: 'x', // Ez biztosítja, hogy bármilyen pinch mozdulat csak az X-et vigye
+                            overScaleMode: 'y' // Trükk: ha függőlegesen pinch-elsz, akkor is az X-et zoomolja
                         },
-                        limits: { 
-                            x: { 
-                                min: 'original', 
-                                max: 'original', 
-                                minRange: 15 * 60 * 1000 // Limit: 15 perc
-                            }
-                        }
+                        limits: { x: { min: 'original', max: 'original', minRange: 15 * 60 * 1000 } }
                     }
                 }
-            }
+            },
+            plugins: [{
+                id: 'crosshair',
+                afterDraw: (chart) => {
+                    if (chart.tooltip?._active?.length) {
+                        let x = chart.tooltip._active[0].element.x;
+                        let yAxis = chart.scales.y;
+                        let ctx = chart.ctx;
+                        ctx.save(); ctx.beginPath(); ctx.setLineDash([5, 5]);
+                        ctx.moveTo(x, yAxis.top); ctx.lineTo(x, yAxis.bottom);
+                        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.stroke(); ctx.restore();
+                    }
+                }
+            }]
         });
     }
 
     async function loadData(keepZoom = false) {
         const btn = document.getElementById('refreshBtn');
-        btn.classList.add('refreshing');
+        const oldText = btn.innerText;
         btn.innerText = "TÖLTÉS...";
         
         const dateStr = document.getElementById('datePicker').value;
@@ -168,10 +162,9 @@
                     gradients.push(past ? (curr.y - past.y) / ((curr.x - past.x) / 60000) : 0);
                 });
 
-                const temps = feeds.map(f => f.y);
-                document.getElementById('statMax').innerText = Math.max(...temps).toFixed(1);
-                document.getElementById('statMin').innerText = Math.min(...temps).toFixed(1);
-                document.getElementById('statLast').innerText = temps[temps.length-1].toFixed(1);
+                document.getElementById('statMax').innerText = Math.max(...feeds.map(f => f.y)).toFixed(1);
+                document.getElementById('statMin').innerText = Math.min(...feeds.map(f => f.y)).toFixed(1);
+                document.getElementById('statLast').innerText = feeds[feeds.length-1].y.toFixed(1);
                 document.getElementById('gradMax').innerText = Math.max(...gradients).toFixed(2);
                 document.getElementById('gradMin').innerText = Math.min(...gradients).toFixed(2);
                 document.getElementById('gradLast').innerText = gradients[gradients.length-1].toFixed(2);
@@ -183,7 +176,6 @@
             const [y, m, d] = dateStr.split('-');
             const s = new Date(y, m-1, d, 0, 0, 0).getTime();
             const e = new Date(y, m-1, d, 23, 59, 59).getTime();
-
             myChart.options.scales.x.min = s;
             myChart.options.scales.x.max = e;
             myChart.options.plugins.zoom.limits.x.min = s;
@@ -192,20 +184,15 @@
             if (!keepZoom) myChart.resetZoom();
             myChart.update('none');
         } catch (e) { console.error(e); }
-        finally { 
-            btn.classList.remove('refreshing'); 
-            btn.innerText = "FRISSÍTÉS";
-        }
+        finally { btn.innerText = oldText; }
     }
 
     // Pull-to-refresh
     let touchStartY = 0;
     window.addEventListener('touchstart', e => { touchStartY = e.touches[0].pageY; }, {passive: true});
     window.addEventListener('touchmove', e => {
-        const touchY = e.touches[0].pageY;
-        if (window.scrollY === 0 && touchY > touchStartY + 150) {
-            loadData(true);
-            touchStartY = touchY;
+        if (window.scrollY === 0 && e.touches[0].pageY > touchStartY + 150) {
+            loadData(true); touchStartY = 10000;
         }
     }, {passive: true});
 
