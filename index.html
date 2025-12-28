@@ -18,7 +18,7 @@
         .stats-card {
             position: absolute; top: 10px; right: 10px; z-index: 100; 
             background: rgba(255, 255, 255, 0.95); padding: 12px; border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 12px; color: #333; pointer-events: none; border: 1px solid #eee; min-width: 180px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 12px; color: #333; pointer-events: none; border: 1px solid #eee;
         }
         .stats-card h3 { margin: 8px 0 3px 0; font-size: 11px; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; }
         .stats-card h3:first-child { margin-top: 0; }
@@ -56,7 +56,9 @@
     const CHAN_ID = '3213557';
     let myChart;
 
-    document.getElementById('datePicker').valueAsDate = new Date();
+    // Kezdő dátum beállítása helyi idő szerint
+    const now = new Date();
+    document.getElementById('datePicker').value = now.toLocaleDateString('sv'); // sv = YYYY-MM-DD formátum
 
     function initChart() {
         const ctx = document.getElementById('saunaChart').getContext('2d');
@@ -83,7 +85,8 @@
                     x: {
                         type: 'time',
                         time: { unit: 'hour', stepSize: 2, displayFormats: { hour: 'HH:mm' } },
-                        grid: { color: '#f0f0f0' }
+                        grid: { color: '#f0f0f0' },
+                        ticks: { source: 'bounds' }
                     },
                     y: {
                         min: 0, max: 100,
@@ -94,7 +97,7 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Átlátszóbb
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
                         padding: 10,
                         callbacks: {
                             title: (ctx) => new Date(ctx[0].parsed.x).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' }),
@@ -102,7 +105,7 @@
                                 const grad = myChart.data.datasets[0].gradients[ctx.dataIndex];
                                 return [
                                     "Hőmérséklet: " + ctx.parsed.y.toFixed(1) + " °C",
-                                    "Grádiens: " + (grad ? grad.toFixed(2) + " °C/perc" : "0.00 °C/perc")
+                                    "Grádiens: " + (grad ? grad.toFixed(2) + " °C/perc" : "0.00")
                                 ];
                             }
                         }
@@ -115,7 +118,7 @@
                 }
             },
             plugins: [{
-                id: 'custom_line',
+                id: 'crosshair',
                 afterDraw: (chart) => {
                     if (chart.tooltip?._active?.length) {
                         let x = chart.tooltip._active[0].element.x;
@@ -133,28 +136,23 @@
 
     async function loadData(keepZoom = false) {
         const btn = document.getElementById('refreshBtn');
-        const originalText = btn.innerText;
         btn.innerText = "TÖLTÉS...";
         
         const dateStr = document.getElementById('datePicker').value;
-        const d = new Date(dateStr);
-        
-        // --- IDŐZÓNA FIX (Kézi korrekció) ---
-        // Megnézzük a böngésző eltolódását percekben (pl. -60 télen) és átváltjuk ms-ra
-        const timezoneOffsetMs = d.getTimezoneOffset() * 60000;
-
-        // Lekérünk egy kicsit többet az átfedések miatt
-        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${dateStr}%2000:00:00&end=${dateStr}%2023:59:59`;
+        // ISO formátum kényszerítése az URL-ben a ThingSpeak felé
+        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${dateStr}T00:00:00Z&end=${dateStr}T23:59:59Z`;
 
         try {
             const response = await fetch(url);
             const data = await response.json();
             
+            // Helyi időzóna eltolódás ms-ban (Magyarország: +3600000 ms télen)
+            const localOffset = new Date().getTimezoneOffset() * 60000;
+
             const feeds = data.feeds.map(f => {
-                // A kapott időt eltoljuk a helyi zónára manuálisan
-                let utcDate = new Date(f.created_at).getTime();
+                const utcTime = new Date(f.created_at).getTime();
                 return {
-                    x: utcDate - timezoneOffsetMs, 
+                    x: utcTime - localOffset, // Korrigáljuk a pontot a te órádra
                     y: parseFloat(f.field1)
                 };
             }).filter(f => !isNaN(f.y));
@@ -183,10 +181,10 @@
                 myChart.data.datasets[0].gradients = gradients;
             }
 
-            // --- 0-24 MEGJELENÍTÉSI FIX ---
-            const parts = dateStr.split('-');
-            const s = new Date(parts[0], parts[1]-1, parts[2], 0, 0, 0).getTime();
-            const e = new Date(parts[0], parts[1]-1, parts[2], 23, 59, 59).getTime();
+            // --- SKÁLA FIXÁLÁSA A HELYI NAPHOZ ---
+            const [y, m, d] = dateStr.split('-');
+            const s = new Date(y, m-1, d, 0, 0, 0).getTime();
+            const e = new Date(y, m-1, d, 23, 59, 59).getTime();
 
             myChart.options.scales.x.min = s;
             myChart.options.scales.x.max = e;
@@ -197,9 +195,8 @@
             myChart.update('none');
         } catch (e) { 
             console.error(e);
-            alert("Hiba az adatok letöltésekor!");
         } finally {
-            btn.innerText = originalText;
+            btn.innerText = "FRISSÍTÉS";
         }
     }
 
