@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Szauna Monitor v4.4</title>
+    <title>Szauna Monitor v4.7</title>
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -26,22 +26,21 @@
         .stats-bar { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
         @media (min-width: 600px) { .stats-bar { flex-direction: row; } .card { flex: 1; } }
 
-        .card { background: white; padding: 10px 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .label { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .label { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; display: block; }
         
-        .values { font-size: 15px; display: flex; align-items: center; white-space: nowrap; color: #333; }
-        
-        /* Fekete címkék, azonos méretben az értékekkel */
-        .tag-label { color: #000; font-weight: bold; }
-        .val-num { font-weight: bold; margin-left: 4px; }
-        
-        .temp-val { color: #d32f2f !important; }
-        .grad-val { color: #800000 !important; }
+        /* Oszlopos elrendezés (Tabulátor-szerű) */
+        .values { font-size: 15px; display: flex; width: 100%; color: #333; }
+        .val-col { flex: 1; display: flex; align-items: center; justify-content: flex-start; }
 
-        .sep { color: #eee; margin: 0 8px; }
+        .tag-label { color: #000; font-weight: bold; white-space: nowrap; }
+        .val-num { font-weight: bold; margin-left: 6px; }
         
-        .status-badge { background: #333; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .eta-info { color: #d32f2f; font-weight: bold; font-size: 12px; margin-left: 10px; }
+        .temp-color { color: #d32f2f !important; }
+        .grad-color { color: #800000 !important; }
+
+        .status-badge { background: #333; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .eta-info { color: #d32f2f; font-weight: bold; font-size: 12px; }
 
         #container { flex-grow: 1; width: 100%; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     </style>
@@ -59,26 +58,38 @@
 
     <div class="stats-bar">
         <div class="card">
-            <span class="label" style="color:#d32f2f">Hőmérséklet</span>
+            <span class="label temp-color">Hőmérséklet [°C]</span>
             <div class="values">
-                <span id="t_time" class="tag-label">--:--:--</span>
-                <span id="t_akt" class="val-num temp-val">--</span>
-                <span class="sep">|</span>
-                <span class="tag-label">min:</span><span id="t_min" class="val-num">--</span>
-                <span class="sep">|</span>
-                <span class="tag-label">max:</span><span id="t_max" class="val-num">--</span>
+                <div class="val-col">
+                    <span id="t_time" class="tag-label">--:--:--</span>
+                    <span id="t_akt" class="val-num temp-color">--</span>
+                </div>
+                <div class="val-col">
+                    <span class="tag-label">min:</span>
+                    <span id="t_min" class="val-num temp-color">--</span>
+                </div>
+                <div class="val-col">
+                    <span class="tag-label">max:</span>
+                    <span id="t_max" class="val-num temp-color">--</span>
+                </div>
             </div>
         </div>
 
         <div class="card">
-            <span class="label" style="color:#800000">Gradiens</span>
+            <span class="label grad-color">Gradiens [°C/perc]</span>
             <div class="values">
-                <span id="g_time" class="tag-label">--:--:--</span>
-                <span id="g_akt" class="val-num grad-val">--</span>
-                <span class="sep">|</span>
-                <span class="tag-label">min:</span><span id="g_min" class="val-num">--</span>
-                <span class="sep">|</span>
-                <span class="tag-label">max:</span><span id="g_max" class="val-num">--</span>
+                <div class="val-col">
+                    <span id="g_time" class="tag-label">--:--:--</span>
+                    <span id="g_akt" class="val-num grad-color">--</span>
+                </div>
+                <div class="val-col">
+                    <span class="tag-label">min:</span>
+                    <span id="g_min" class="val-num grad-color">--</span>
+                </div>
+                <div class="val-col">
+                    <span class="tag-label">max:</span>
+                    <span id="g_max" class="val-num grad-color">--</span>
+                </div>
             </div>
         </div>
 
@@ -115,7 +126,7 @@
             },
             xAxis: { type: 'datetime', ordinal: false, crosshair: { width: 1, color: '#d32f2f' } },
             yAxis: { 
-                min: 0, max: 100, tickInterval: 10, endOnTick: true, showLastLabel: true,
+                min: 0, max: 100, tickInterval: 10, maxPadding: 0.15, 
                 title: { text: 'Hőmérséklet [°C]', style: { color: '#666', fontWeight: 'bold' } },
                 opposite: false 
             },
@@ -126,7 +137,7 @@
                     return `<div style="font-size:11px; line-height:1.4">
                             <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
                             Hőfok: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
-                            Változás: <b style="color:#800000">${p.grad.toFixed(2)} °C/p</b><br/>
+                            Változás: <b style="color:#800000">${p.grad.toFixed(2)} °C/perc</b><br/>
                             Státusz: <b>${p.stText.toUpperCase()}</b></div>`;
                 }
             },
@@ -156,7 +167,7 @@
                 statusMsg.innerText = "Frissítve: " + new Date().toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
                 setTimeout(() => btn.classList.remove('refresh-success'), 800);
             }
-        } catch (e) { console.log("Hiba."); }
+        } catch (e) { console.log("Adatlekérési hiba."); }
     }
 
     function processData(feeds, selectedDayStr, keepZoom) {
@@ -201,11 +212,11 @@
             document.getElementById('g_time').innerText = lastTime;
             
             const lastT = t_vals[t_vals.length-1], lastG = g_vals[g_vals.length-1];
-            document.getElementById('t_akt').innerText = lastT.toFixed(1) + " °C";
-            document.getElementById('t_min').innerText = Math.min(...t_vals).toFixed(1) + " °C";
-            document.getElementById('t_max').innerText = Math.max(...t_vals).toFixed(1) + " °C";
+            document.getElementById('t_akt').innerText = lastT.toFixed(1);
+            document.getElementById('t_min').innerText = Math.min(...t_vals).toFixed(1);
+            document.getElementById('t_max').innerText = Math.max(...t_vals).toFixed(1);
             
-            document.getElementById('g_akt').innerText = lastG.toFixed(2) + " °C/p";
+            document.getElementById('g_akt').innerText = lastG.toFixed(2);
             document.getElementById('g_min').innerText = Math.min(...g_vals).toFixed(2);
             document.getElementById('g_max').innerText = Math.max(...g_vals).toFixed(2);
             
@@ -213,7 +224,7 @@
             
             if (rollSt === "felfűtési" && lastG > 0.05 && lastT < 85) {
                 const mL = Math.round((85 - lastT) / lastG);
-                document.getElementById('eta').innerText = "ETA 85°C: " + mL + "p";
+                document.getElementById('eta').innerText = "ETA 85°C: " + mL + " perc";
             } else document.getElementById('eta').innerText = "";
         }
 
@@ -226,11 +237,11 @@
     document.getElementById('infoBtn').onclick = () => alert(
         "MÓDSZERTAN ÉS STÁTUSZOK:\n\n" +
         "• GRADIENS: Az utolsó 5 perc hőmérséklet-változásának meredeksége (°C/perc).\n" +
-        "• ETA (Várható idő): Felfűtés alatt a hátralévő idő = (85°C - Aktuális Hő) / Gradiens.\n\n" +
+        "• ETA: Felfűtés alatt a hátralévő idő = (85°C - Aktuális Hő) / Gradiens.\n\n" +
         "• KÉSZENLÉTI: 20°C alatt.\n" +
-        "• FELFŰTÉSI: 20-70°C között, ha a gradiens > 0.25°C/p.\n" +
+        "• FELFŰTÉSI: 20-70°C között, ha a gradiens > 0.25°C/perc.\n" +
         "• ÜZEMI: 70°C felett.\n" +
-        "• LEHŰLÉSI: 70°C alatt, ha a gradiens < -0.25°C/p."
+        "• LEHŰLÉSI: 70°C alatt, ha a gradiens < -0.25°C/perc."
     );
     
     document.getElementById('okBtn').onclick = () => fetchData(false);
