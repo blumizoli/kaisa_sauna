@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Szauna Monitor v3.2</title>
+    <title>Szauna Monitor v3.3</title>
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -11,15 +11,16 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; background: #f0f0f0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; overflow: hidden; }
         
         .toolbar { 
-            display: flex; align-items: center; gap: 8px; background: white; padding: 10px; 
+            display: flex; align-items: center; gap: 6px; background: white; padding: 10px; 
             border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); 
             margin-bottom: 10px; flex-wrap: nowrap;
         }
-        .toolbar input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 110px; }
+        .toolbar input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 100px; flex-shrink: 1; }
         .toolbar button { 
-            padding: 10px 14px; border: 1px solid #ddd; border-radius: 6px; 
+            padding: 10px; border: 1px solid #ddd; border-radius: 6px; 
             background: #fdfdfd; cursor: pointer; flex-shrink: 0; transition: 0.2s;
         }
+        .btn-info { color: #007bff; }
         .toolbar button:hover { background: #f0f0f0; }
         .refresh-success { background: #4caf50 !important; color: white !important; border-color: #4caf50 !important; }
         
@@ -29,11 +30,13 @@
         .card { background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
         
         .label { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; display: block; }
-        .values { font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; }
+        .values { font-size: 13px; font-family: 'Segoe UI', sans-serif; color: #555; }
+        .val-bold { font-weight: bold; font-family: 'Courier New', monospace; font-size: 14px; }
+        .sep { color: #ccc; margin: 0 3px; font-weight: normal; }
         
         .temp-text { color: #d32f2f; }
         .grad-text { color: #800000; }
-        .status-badge { background: #333; color: white; padding: 2px 6px; border-radius: 4px; font-size: 13px; display: inline-block; }
+        .status-badge { background: #333; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; display: inline-block; }
         .eta-info { color: #d32f2f; font-weight: bold; font-size: 11px; margin-top: 5px; min-height: 14px; }
 
         #container { flex-grow: 1; width: 100%; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
@@ -46,6 +49,7 @@
         <button id="okBtn">OK</button>
         <button id="homeBtn" title="Alaphelyzet"><i class="fas fa-home"></i></button>
         <button id="refreshBtn" title="Frissítés"><i class="fas fa-sync-alt"></i></button>
+        <button id="infoBtn" class="btn-info" title="Információ"><i class="fas fa-info-circle"></i></button>
         <span id="lastUpdate">-</span>
     </div>
 
@@ -53,18 +57,18 @@
         <div class="card">
             <span class="label temp-text">Hőfok [°C]</span>
             <div class="values temp-text">
-                <span id="t_akt">--</span> I <span id="t_min">--</span> I <span id="t_max">--</span>
+                akt: <span id="t_akt" class="val-bold">--</span><span class="sep">|</span>min: <span id="t_min" class="val-bold">--</span><span class="sep">|</span>max: <span id="t_max" class="val-bold">--</span>
             </div>
         </div>
         <div class="card">
-            <span class="label grad-text">Grad [°C/p]</span>
+            <span class="label grad-text">Gradiens [°C/p]</span>
             <div class="values grad-text">
-                <span id="g_akt">--</span> I <span id="g_min">--</span> I <span id="g_max">--</span>
+                akt: <span id="g_akt" class="val-bold">--</span><span class="sep">|</span>min: <span id="g_min" class="val-bold">--</span><span class="sep">|</span>max: <span id="g_max" class="val-bold">--</span>
             </div>
         </div>
         <div class="card">
-            <span class="label">Státusz</span>
-            <span id="status" class="status-badge">VÁRAKOZÁS</span>
+            <span class="label">Aktuális Státusz</span>
+            <span id="status" class="status-badge">KERESÉS</span>
             <div id="eta" class="eta-info"></div>
         </div>
     </div>
@@ -93,7 +97,7 @@
             xAxis: {
                 type: 'datetime',
                 ordinal: false,
-                minRange: 15 * 60 * 1000, // Max zoom 15 perc
+                minRange: 15 * 60 * 1000,
                 crosshair: { width: 1, color: '#d32f2f' }
             },
             yAxis: {
@@ -105,12 +109,17 @@
             tooltip: {
                 split: false,
                 shared: true,
+                useHTML: true,
                 formatter: function() {
                     let p = this.points[0].point;
                     if (p.y === null) return false;
-                    return `<b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
+                    let stColor = p.stText === "üzemi" ? "#d32f2f" : (p.stText === "felfűtési" ? "#ff9800" : "#555");
+                    return `<div style="padding:5px">
+                            <small>${Highcharts.dateFormat('%H:%M:%S', this.x)}</small><br/>
                             Hőfok: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
-                            Grad: <b style="color:#800000">${p.grad ? p.grad.toFixed(2) : '0.00'} °C/p</b>`;
+                            Grad: <b style="color:#800000">${p.grad.toFixed(2)} °C/p</b><br/>
+                            Státusz: <b style="color:${stColor}">${p.stText.toUpperCase()}</b>
+                            </div>`;
                 }
             },
             series: [{
@@ -127,51 +136,57 @@
         });
     }
 
+    // Státusz logika központosítva, hogy az archív adatokra is fusson
+    function calculateStatus(temp, grad, prevStatus) {
+        let statusText = prevStatus;
+        if (temp < 20) statusText = "készenléti";
+        else if (temp >= 20 && temp <= 70) {
+            if (grad > 0.25) statusText = "felfűtési";
+            else if (grad < -0.25) statusText = "lehűlési";
+        } else if (temp > 70) statusText = "üzemi";
+        return statusText;
+    }
+
     async function fetchData(keepZoom = false) {
         const btn = document.getElementById('refreshBtn');
-        const selectedDate = document.getElementById('datePicker').value;
         const statusMsg = document.getElementById('lastUpdate');
+        const selectedDate = document.getElementById('datePicker').value;
         
         statusMsg.innerText = "Töltés...";
         
-        const dayStartTS = new Date(selectedDate + "T00:00:00").getTime();
-        const dayEndTS = new Date(selectedDate + "T23:59:59").getTime();
+        const dayStart = new Date(selectedDate + "T00:00:00");
+        const fetchStart = new Date(dayStart.getTime() - 20 * 60000); // 20 perc puffer a gradiensekhez
 
-        // 15 perccel korábbról indítjuk a lekérést a gradiens számítás miatt
-        const fetchStart = new Date(dayStartTS - 15 * 60000).toISOString();
-        const fetchEnd = new Date(dayEndTS + 5 * 60000).toISOString();
-
-        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${fetchStart}&end=${fetchEnd}`;
+        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${fetchStart.toISOString()}&results=8000`;
 
         try {
             const response = await fetch(url);
+            if (!response.ok) throw new Error("API Limit");
             const data = await response.json();
             
             processData(data.feeds || [], selectedDate, keepZoom);
             
             btn.classList.add('refresh-success');
-            statusMsg.innerText = "Frissítve: " + new Date().toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+            statusMsg.innerText = new Date().toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
             setTimeout(() => btn.classList.remove('refresh-success'), 800);
             
         } catch (e) {
-            console.error("Hiba:", e);
-            statusMsg.innerText = "Szerver hiba";
+            statusMsg.innerText = "API Hiba!";
+            console.error(e);
         }
     }
 
     function processData(feeds, selectedDayStr, keepZoom) {
         const dayStart = new Date(selectedDayStr + "T00:00:00").getTime();
         const dayEnd = new Date(selectedDayStr + "T23:59:59").getTime();
-        
-        // Mentjük az aktuális zoom állást, ha meg akarjuk tartani
         const currentExtremes = chart.xAxis[0].getExtremes();
         
         let plotData = [];
         let t_values = [];
         let g_values = [];
+        let rollingStatus = "készenléti";
 
-        // Fiktív pontok a 0-24 navigatorhoz
-        plotData.push({ x: dayStart, y: null, grad: 0 });
+        plotData.push({ x: dayStart, y: null, grad: 0, stText: "" });
 
         feeds.forEach((f, i) => {
             const time = new Date(f.created_at).getTime();
@@ -188,18 +203,22 @@
                 }
             }
 
+            // Minden pontra kiszámoljuk a státuszt az archívumhoz
+            rollingStatus = calculateStatus(temp, grad, rollingStatus);
+
             if (time >= dayStart && time <= dayEnd) {
-                plotData.push({ x: time, y: temp, grad: grad });
+                plotData.push({ x: time, y: temp, grad: grad, stText: rollingStatus });
                 t_values.push(temp);
                 g_values.push(grad);
             }
         });
 
-        plotData.push({ x: dayEnd, y: null, grad: 0 });
+        plotData.push({ x: dayEnd, y: null, grad: 0, stText: "" });
 
         if (t_values.length > 0) {
             const lastT = t_values[t_values.length - 1];
             const lastG = g_values[g_values.length - 1];
+            currentStatus = rollingStatus; // Az utolsó ismert státusz lesz az aktuális
 
             document.getElementById('t_akt').innerText = lastT.toFixed(1);
             document.getElementById('t_min').innerText = Math.min(...t_values).toFixed(1);
@@ -207,7 +226,9 @@
             document.getElementById('g_akt').innerText = lastG.toFixed(2);
             document.getElementById('g_min').innerText = Math.min(...g_values).toFixed(2);
             document.getElementById('g_max').innerText = Math.max(...g_values).toFixed(2);
-            updateStatus(lastT, lastG);
+            
+            document.getElementById('status').innerText = currentStatus.toUpperCase();
+            updateETA(lastT, lastG);
             
             const maxDataT = Math.max(...t_values);
             chart.yAxis[0].update({ max: maxDataT > 100 ? Math.ceil(maxDataT / 10) * 10 : 100 }, false);
@@ -215,48 +236,42 @@
             document.getElementById('status').innerText = "NINCS ADAT";
         }
 
-        // Adatok betöltése
         chart.series[0].setData(plotData, true, false, false);
         
-        // NÉZET KEZELÉSE:
-        if (keepZoom) {
-            // Visszaállítjuk a mentett zoomot, hogy ne ugorjon el
+        if (keepZoom && currentExtremes.min) {
             chart.xAxis[0].setExtremes(currentExtremes.min, currentExtremes.max, true, false);
         } else {
-            // Alaphelyzet: 0-24h
             chart.xAxis[0].setExtremes(dayStart, dayEnd, true, false);
         }
-        
-        // A lenti navigator mindig mutassa a teljes napot
         chart.navigator.xAxis[0].setExtremes(dayStart, dayEnd, true, false);
     }
 
-    function updateStatus(temp, grad) {
-        let statusText = currentStatus;
-        if (temp < 20) statusText = "készenléti";
-        else if (temp >= 20 && temp <= 70) {
-            if (grad > 0.25) statusText = "felfűtési";
-            else if (grad < -0.25) statusText = "lehűlési";
-        } else if (temp > 70) statusText = "üzemi";
-
-        currentStatus = statusText;
-        document.getElementById('status').innerText = statusText.toUpperCase();
-        
+    function updateETA(temp, grad) {
         const etaEl = document.getElementById('eta');
-        if (statusText === "felfűtési" && grad > 0.1 && temp < 85) {
+        if (currentStatus === "felfűtési" && grad > 0.1 && temp < 85) {
             const minLeft = Math.round((85 - temp) / grad);
             const etaDate = new Date(Date.now() + minLeft * 60000);
             etaEl.innerHTML = `<i class="fas fa-clock"></i> 85°C ~${etaDate.toLocaleTimeString('hu-HU',{hour:'2-digit', minute:'2-digit'})} (${minLeft}p)`;
         } else { etaEl.innerText = ""; }
     }
 
+    // Info Modal / Alert
+    document.getElementById('infoBtn').onclick = () => {
+        alert("SZAUNA STÁTUSZOK:\n\n" +
+              "• KÉSZENLÉTI: 20°C alatt.\n" +
+              "• FELFŰTÉSI: 20-70°C között, ha a melegedés > 0.25°C/perc.\n" +
+              "• ÜZEMI: 70°C felett.\n" +
+              "• LEHŰLÉSI: 20-70°C között, ha a hűlés < -0.25°C/perc.\n\n" +
+              "A státusz csak akkor változik, ha a feltételek egyike teljesül (hiszterézis).");
+    };
+
     document.getElementById('okBtn').onclick = () => fetchData(false);
     document.getElementById('refreshBtn').onclick = () => fetchData(true);
     document.getElementById('homeBtn').onclick = () => {
         const sel = document.getElementById('datePicker').value;
-        const dStart = new Date(sel + "T00:00:00").getTime();
-        const dEnd = new Date(sel + "T23:59:59").getTime();
-        chart.xAxis[0].setExtremes(dStart, dEnd);
+        const dS = new Date(sel + "T00:00:00").getTime();
+        const dE = new Date(sel + "T23:59:59").getTime();
+        chart.xAxis[0].setExtremes(dS, dE);
     };
 
     initChart();
