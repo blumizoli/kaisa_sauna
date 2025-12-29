@@ -3,247 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Szauna Monitor Pro</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <title>Szauna Monitor - Smart Ticks</title>
+    
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <style>
-        body { background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; margin: 0; font-family: sans-serif; }
-        .header-controls { padding: 8px 15px; background: white; border-bottom: 1px solid #dee2e6; z-index: 10; }
-        .stats-bar { padding: 8px 15px; font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid #dee2e6; background: #fff; }
+        body { background: #f4f7f6; height: 100vh; display: flex; flex-direction: column; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .header-controls { padding: 10px 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .stats-bar { padding: 8px 20px; background: #fff; border-bottom: 1px solid #eee; font-weight: bold; font-size: 0.9rem; display: flex; flex-wrap: wrap; gap: 20px; }
         .temp-text { color: #d32f2f; }
         .grad-text { color: #800000; }
-        .chart-container { flex-grow: 1; position: relative; padding: 20px 20px 10px 20px; min-height: 0; }
-        .nav-container { height: 100px; padding: 0 20px 20px 20px; background: white; }
-        canvas { width: 100% !important; height: 100% !important; }
+        #container { flex-grow: 1; width: 100%; }
+        .btn-icon { width: 38px; }
     </style>
 </head>
 <body>
 
-<div class="header-controls d-flex align-items-center gap-2 flex-wrap">
+<div class="header-controls">
     <input type="date" id="datePicker" class="form-control form-control-sm w-auto">
-    <button onclick="loadData()" class="btn btn-primary btn-sm">OK</button>
-    <button onclick="resetView()" class="btn btn-outline-secondary btn-sm">
+    <button onclick="loadData()" class="btn btn-primary btn-sm px-3">OK</button>
+    <button onclick="resetView()" class="btn btn-outline-secondary btn-sm btn-icon" title="Alaphelyzet">
         <i class="fas fa-home"></i>
     </button>
-    <button onclick="loadData(true)" class="btn btn-outline-success btn-sm">
+    <button onclick="loadData()" class="btn btn-outline-success btn-sm btn-icon" title="Frissítés">
         <i class="fas fa-sync-alt"></i>
     </button>
 </div>
 
-<div class="stats-bar d-flex gap-4 flex-wrap">
-    <div class="temp-text">Temp [°C] <small>akt/min/max:</small> <span id="t-akt">-</span> / <span id="t-min">-</span> / <span id="t-max">-</span></div>
-    <div class="grad-text">Grad [°C/p] <small>akt/min/max:</small> <span id="g-akt">-</span> / <span id="g-min">-</span> / <span id="g-max">-</span></div>
+<div class="stats-bar">
+    <div class="temp-text">HŐMÉRSÉKLET [°C]: Akt: <span id="t-akt">-</span> | Min: <span id="t-min">-</span> | Max: <span id="t-max">-</span></div>
+    <div class="grad-text">GRADIENS [°C/perc]: Akt: <span id="g-akt">-</span> | Min: <span id="g-min">-</span> | Max: <span id="g-max">-</span></div>
 </div>
 
-<div class="chart-container">
-    <canvas id="mainChart"></canvas>
-</div>
-
-<div class="nav-container">
-    <canvas id="navChart"></canvas>
-</div>
+<div id="container"></div>
 
 <script>
 const API_KEY = 'CM6CKHX2JG7IY375';
 const CHAN_ID = '3213557';
-let mainChart, navChart;
-let fullDayStart, fullDayEnd;
+let chart;
 
-// Függőleges vonal plugin
-const crosshairPlugin = {
-    id: 'crosshair',
-    afterDraw: (chart) => {
-        if (chart.tooltip?._active?.length) {
-            const x = chart.tooltip._active[0].element.x;
-            const yAxis = chart.scales.y;
-            const ctx = chart.ctx;
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(x, yAxis.top);
-            ctx.lineTo(x, yAxis.bottom);
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-            ctx.setLineDash([5, 5]);
-            ctx.stroke();
-            ctx.restore();
-        }
-    }
-};
-
+// Alapértelmezett dátum a mai nap
 document.getElementById('datePicker').valueAsDate = new Date();
 
-async function loadData(keepZoom = false) {
+async function loadData() {
     const selectedDate = document.getElementById('datePicker').value;
-    fullDayStart = new Date(selectedDate + "T00:00:00");
-    fullDayEnd = new Date(fullDayStart.getTime() + 24 * 60 * 60 * 1000);
+    const startD = new Date(selectedDate + "T00:00:00");
+    const endD = new Date(startD.getTime() + 24 * 60 * 60 * 1000);
 
-    const queryStart = new Date(fullDayStart.getTime() - 3 * 60 * 60 * 1000).toISOString();
-    const queryEnd = new Date(fullDayEnd.getTime() + 3 * 60 * 60 * 1000).toISOString();
+    // +/- 3 óra lekérése a korrekciók miatt
+    const qStart = new Date(startD.getTime() - 3 * 60 * 60 * 1000).toISOString();
+    const qEnd = new Date(endD.getTime() + 3 * 60 * 60 * 1000).toISOString();
 
-    const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${queryStart}&end=${queryEnd}`;
-    
+    const url = `https://api.thingspeak.com/channels/${CHAN_ID}/fields/1.json?api_key=${API_KEY}&start=${qStart}&end=${qEnd}`;
+
     try {
         const response = await fetch(url);
-        const data = await response.json();
-        processData(data.feeds, keepZoom);
-    } catch (e) { console.error(e); }
+        const json = await response.json();
+        const data = processFeeds(json.feeds, startD, endD);
+        renderChart(data, startD, endD);
+    } catch (e) {
+        console.error("Adatlekérési hiba:", e);
+    }
 }
 
-function processData(feeds, keepZoom) {
-    let plotData = [];
-    feeds.forEach((f, i) => {
-        const time = new Date(f.created_at);
+function processFeeds(feeds, dayStart, dayEnd) {
+    let mainSeries = [];
+    let stats = { t: [], g: [] };
+
+    feeds.forEach((f) => {
+        const time = new Date(f.created_at).getTime();
         const val = parseFloat(f.field1);
-        if (!isNaN(val)) {
-            let grad = 0;
-            const fiveMinsAgo = new Date(time.getTime() - 5 * 60 * 1000);
-            const prev = feeds.find(p => new Date(p.created_at) >= fiveMinsAgo);
-            if (prev && prev !== f) {
-                const dt = (time - new Date(prev.created_at)) / 60000;
-                grad = (val - parseFloat(prev.field1)) / dt;
-            }
-            plotData.push({ x: time, y: val, grad: grad });
+        if (isNaN(val)) return;
+
+        // Gradiens (5 perces mozgóátlag alapú változás)
+        let grad = 0;
+        const prev = feeds.find(p => {
+            const pt = new Date(p.created_at).getTime();
+            return pt >= (time - 300000) && pt < time;
+        });
+        if (prev) {
+            const dt = (time - new Date(prev.created_at).getTime()) / 60000;
+            grad = (val - parseFloat(prev.field1)) / dt;
+        }
+
+        mainSeries.push({ x: time, y: val, grad: grad });
+
+        if (time >= dayStart.getTime() && time <= dayEnd.getTime()) {
+            stats.t.push(val);
+            stats.g.push(grad);
         }
     });
 
-    updateStats(plotData);
-    renderCharts(plotData, keepZoom);
+    if (stats.t.length > 0) {
+        document.getElementById('t-akt').innerText = stats.t[stats.t.length - 1].toFixed(1);
+        document.getElementById('t-min').innerText = Math.min(...stats.t).toFixed(1);
+        document.getElementById('t-max').innerText = Math.max(...stats.t).toFixed(1);
+        document.getElementById('g-akt').innerText = stats.g[stats.g.length - 1].toFixed(2);
+        document.getElementById('g-min').innerText = Math.min(...stats.g).toFixed(2);
+        document.getElementById('g-max').innerText = Math.max(...stats.g).toFixed(2);
+    }
+    return mainSeries;
 }
 
-function updateStats(data) {
-    const dayData = data.filter(d => d.x >= fullDayStart && d.x < fullDayEnd);
-    if (!dayData.length) return;
-    const t = dayData.map(d => d.y);
-    const g = dayData.map(d => d.grad);
-    document.getElementById('t-akt').innerText = t[t.length-1].toFixed(1);
-    document.getElementById('t-min').innerText = Math.min(...t).toFixed(1);
-    document.getElementById('t-max').innerText = Math.max(...t).toFixed(1);
-    document.getElementById('g-akt').innerText = g[g.length-1].toFixed(2);
-    document.getElementById('g-min').innerText = Math.min(...g).toFixed(2);
-    document.getElementById('g-max').innerText = Math.max(...g).toFixed(2);
-}
+function renderChart(data, dayStart, dayEnd) {
+    const todayData = data.filter(d => d.x >= dayStart.getTime() && d.x <= dayEnd.getTime());
+    const maxVal = todayData.length ? Math.max(...todayData.map(d => d.y)) : 0;
+    
+    // Fix 0-100, de ha túllépi, 10-esével bővül
+    const yAxisMax = maxVal > 100 ? Math.ceil(maxVal / 10) * 10 : 100;
 
-function renderCharts(data, keepZoom) {
-    const ctx = document.getElementById('mainChart').getContext('2d');
-    const navCtx = document.getElementById('navChart').getContext('2d');
-
-    const dayTemps = data.filter(d => d.x >= fullDayStart && d.x < fullDayEnd).map(d => d.y);
-    const currentMax = Math.max(...dayTemps, 0);
-    const yMax = currentMax > 100 ? Math.ceil(currentMax / 10) * 10 : 100;
-
-    // Gradiens (háttérszín kitöltéshez)
-    const fillGradient = ctx.createLinearGradient(0, 0, 0, 400);
-    fillGradient.addColorStop(0, 'rgba(217, 83, 79, 0.4)');
-    fillGradient.addColorStop(1, 'rgba(217, 83, 79, 0)');
-
-    const config = {
-        type: 'line',
-        data: {
-            datasets: [{
-                data: data,
-                borderColor: '#d9534f',
-                backgroundColor: fillGradient,
-                borderWidth: 2,
-                pointRadius: 0,
-                fill: true,
-                tension: 0.2
-            }]
+    chart = Highcharts.stockChart('container', {
+        chart: { spacingTop: 20 },
+        time: { useUTC: false },
+        rangeSelector: { enabled: false },
+        scrollbar: { enabled: false }, // Tisztább kinézet, a Navigator elég
+        navigator: {
+            enabled: true,
+            height: 60,
+            series: { color: '#d32f2f', fillOpacity: 0.1 },
+            xAxis: {
+                labels: { enabled: false }
+            }
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { left: 10, right: 30 } },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: { unit: 'minute', stepSize: 30, displayFormats: { minute: 'HH:mm', hour: 'HH:mm' } },
-                    min: fullDayStart,
-                    max: fullDayEnd,
-                    title: { display: true, text: 'Időpont', font: { weight: 'bold' } }
-                },
-                y: { 
-                    min: 0, 
-                    max: yMax, 
-                    title: { display: true, text: 'Hőmérséklet [°C]', font: { weight: 'bold' } },
-                    ticks: { stepSize: 10 }
-                }
+        xAxis: {
+            type: 'datetime',
+            min: dayStart.getTime(),
+            max: dayEnd.getTime(),
+            crosshair: {
+                width: 1,
+                color: '#555',
+                dashStyle: 'Dash'
             },
-            plugins: {
-                legend: false,
-                zoom: {
-                    zoom: {
-                        wheel: { enabled: true },
-                        pinch: { enabled: true },
-                        mode: 'x',
-                        onZoomComplete: ({chart}) => {
-                            const range = chart.scales.x.max - chart.scales.x.min;
-                            if (range < 15 * 60 * 1000) resetView(); // Max 15 perc zoom limit
-                        }
-                    },
-                    pan: { enabled: true, mode: 'x', limits: { x: { min: fullDayStart, max: fullDayEnd } } }
-                },
-                tooltip: {
-                    intersect: false,
-                    mode: 'index',
-                    backgroundColor: 'rgba(255,255,255,0.9)',
-                    titleColor: '#000',
-                    bodyColor: '#000',
-                    borderColor: '#ddd',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: (ctx) => [`Hő: ${ctx.raw.y.toFixed(1)} °C`, `Grad: ${ctx.raw.grad.toFixed(2)} °C/p`]
+            // KEREK IDŐPONTOK KÉNYSZERÍTÉSE
+            units: [
+                ['minute', [15, 30]], 
+                ['hour', [1, 2, 4, 6]]
+            ],
+            title: { text: 'Időpont', style: { fontWeight: 'bold' } },
+            events: {
+                afterSetExtremes: function(e) {
+                    // 15 perc zoom limit (900,000 ms)
+                    if (e.max - e.min < 900000) {
+                        this.setExtremes(e.min, e.min + 900000, true, false);
                     }
                 }
             }
         },
-        plugins: [crosshairPlugin]
-    };
-
-    if (mainChart) {
-        const m = mainChart.scales.x;
-        const oldMin = m.min; const oldMax = m.max;
-        mainChart.destroy();
-        if (keepZoom) { config.options.scales.x.min = oldMin; config.options.scales.x.max = oldMax; }
-    }
-    mainChart = new Chart(ctx, config);
-
-    // Alsó navigációs sáv (csúszka szerű működés)
-    if (navChart) navChart.destroy();
-    navChart = new Chart(navCtx, {
-        type: 'line',
-        data: config.data,
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { type: 'time', min: fullDayStart, max: fullDayEnd, ticks: { display: false }, grid: { display: false } },
-                y: { display: false, min: 0, max: yMax }
-            },
-            plugins: {
-                legend: false, tooltip: false,
-                zoom: {
-                    zoom: { drag: { enabled: true, backgroundColor: 'rgba(217, 83, 79, 0.2)' }, mode: 'x', 
-                    onZoomComplete: ({chart}) => {
-                        mainChart.options.scales.x.min = chart.scales.x.min;
-                        mainChart.options.scales.x.max = chart.scales.x.max;
-                        mainChart.update();
-                    }}
-                }
+        yAxis: {
+            min: 0,
+            max: yAxisMax,
+            tickInterval: 10,
+            opposite: false,
+            title: { text: 'Hőmérséklet [°C]', style: { fontWeight: 'bold' } },
+            gridLineColor: '#e6e6e6'
+        },
+        tooltip: {
+            split: false,
+            shared: true,
+            useHTML: true,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            formatter: function() {
+                const p = this.points[0].point;
+                return `<b>${Highcharts.dateFormat('%H:%M:%S', p.x)}</b><br/>
+                        Hőmérséklet: <span style="color:red">${p.y.toFixed(1)} °C</span><br/>
+                        Gradiens: <span style="color:brown">${p.grad.toFixed(2)} °C/p</span>`;
             }
-        }
+        },
+        series: [{
+            name: 'Szauna',
+            data: data,
+            type: 'areaspline',
+            color: '#d32f2f',
+            fillColor: {
+                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                stops: [
+                    [0, 'rgba(211, 47, 47, 0.5)'],
+                    [1, 'rgba(211, 47, 47, 0)']
+                ]
+            },
+            lineWidth: 2,
+            states: { hover: { lineWidth: 3 } },
+            threshold: null
+        }]
     });
 }
 
 function resetView() {
-    mainChart.options.scales.x.min = fullDayStart;
-    mainChart.options.scales.x.max = fullDayEnd;
-    mainChart.update();
-    navChart.resetZoom();
+    if (!chart) return;
+    const selectedDate = document.getElementById('datePicker').value;
+    const start = new Date(selectedDate + "T00:00:00").getTime();
+    const end = new Date(selectedDate + "T23:59:59").getTime();
+    chart.xAxis[0].setExtremes(start, end);
 }
 
+// Indítás
 loadData();
 </script>
 </body>
