@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Szauna Monitor v4.7</title>
+    <title>Szauna Monitor v4.8</title>
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -29,12 +29,15 @@
         .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .label { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; display: block; }
         
-        /* Oszlopos elrendezés (Tabulátor-szerű) */
-        .values { font-size: 15px; display: flex; width: 100%; color: #333; }
-        .val-col { flex: 1; display: flex; align-items: center; justify-content: flex-start; }
+        /* Harmonikus oszlopos elrendezés */
+        .values { font-size: 15px; display: flex; gap: 20px; color: #333; }
+        .val-col { display: flex; align-items: center; white-space: nowrap; }
+        
+        /* Az első oszlop (idő+akt) kicsit szélesebb lehet, a többi követi a tartalmat */
+        .val-col:nth-child(1) { min-width: 100px; } 
 
-        .tag-label { color: #000; font-weight: bold; white-space: nowrap; }
-        .val-num { font-weight: bold; margin-left: 6px; }
+        .tag-label { color: #000; font-weight: bold; }
+        .val-num { font-weight: bold; margin-left: 5px; }
         
         .temp-color { color: #d32f2f !important; }
         .grad-color { color: #800000 !important; }
@@ -126,7 +129,9 @@
             },
             xAxis: { type: 'datetime', ordinal: false, crosshair: { width: 1, color: '#d32f2f' } },
             yAxis: { 
-                min: 0, max: 100, tickInterval: 10, maxPadding: 0.15, 
+                min: 0, 
+                max: 110, // Kicsit feljebb tolva, hogy a 100-as vonal kényelmesen látszódjon
+                tickInterval: 10,
                 title: { text: 'Hőmérséklet [°C]', style: { color: '#666', fontWeight: 'bold' } },
                 opposite: false 
             },
@@ -136,8 +141,8 @@
                     let p = this.points[0].point;
                     return `<div style="font-size:11px; line-height:1.4">
                             <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
-                            Hőfok: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
-                            Változás: <b style="color:#800000">${p.grad.toFixed(2)} °C/perc</b><br/>
+                            Hőmérséklet: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
+                            Gradiens: <b style="color:#800000">${p.grad.toFixed(2)} °C/perc</b><br/>
                             Státusz: <b>${p.stText.toUpperCase()}</b></div>`;
                 }
             },
@@ -167,7 +172,7 @@
                 statusMsg.innerText = "Frissítve: " + new Date().toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
                 setTimeout(() => btn.classList.remove('refresh-success'), 800);
             }
-        } catch (e) { console.log("Adatlekérési hiba."); }
+        } catch (e) { console.log("Lekérési hiba."); }
     }
 
     function processData(feeds, selectedDayStr, keepZoom) {
