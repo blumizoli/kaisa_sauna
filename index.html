@@ -127,11 +127,24 @@
             scrollbar: { enabled: false },
             navigator: { 
                 enabled: true, height: 40,
-                xAxis: { labels: { enabled: true }, ordinal: false }, // Fix X a navigátorban
+                xAxis: { labels: { enabled: true }, ordinal: false },
+                yAxis: { min: 0, max: 100, tickInterval: 50 }, // FIX Y LENN
                 series: { type: 'area', color: '#888', fillColor: 'rgba(150,150,150,0.1)', dataGrouping: { enabled: false } }
             },
             xAxis: { type: 'datetime', ordinal: false, crosshair: { width: 1, color: '#d32f2f' } },
             yAxis: { min: 0, max: 105, tickInterval: 10, opposite: false },
+            tooltip: {
+                split: false, shared: true, useHTML: true,
+                formatter: function() {
+                    let p = this.points[0].point;
+                    if (p.y === null) return false;
+                    return `<div style="font-size:11px; line-height:1.4">
+                            <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
+                            Hőmérséklet: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
+                            Gradiens: <b style="color:#800000">${p.grad.toFixed(2)} °C/perc</b><br/>
+                            Státusz: <b>${p.stText.toUpperCase()}</b></div>`;
+                }
+            },
             series: [{ 
                 name: 'Szauna', type: 'area', color: '#d32f2f',
                 fillColor: { linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, stops: [[0, 'rgba(211,47,47,0.4)'], [1, 'rgba(211,47,47,0)']] },
@@ -155,7 +168,9 @@
         const dayEnd = new Date(selectedDayStr + "T23:59:59").getTime();
         const curExt = chart.xAxis[0].getExtremes();
         
-        let plotData = [], t_vals = [], g_vals = [], rollSt = "készenléti", lastTime = "--:--:--";
+        // FIX: Üres pontok a nap elején és végén a skála kényszerítéséhez
+        let plotData = [{ x: dayStart, y: null, grad: 0, stText: "" }];
+        let t_vals = [], g_vals = [], rollSt = "készenléti", lastTime = "--:--:--";
 
         feeds.forEach((f, i) => {
             const time = new Date(f.created_at).getTime();
@@ -182,6 +197,8 @@
             }
         });
 
+        plotData.push({ x: dayEnd, y: null, grad: 0, stText: "" });
+
         if (t_vals.length > 0) {
             const lastT = t_vals[t_vals.length-1], lastG = g_vals[g_vals.length-1];
             document.getElementById('t_time').innerText = lastTime;
@@ -200,15 +217,12 @@
 
         chart.series[0].setData(plotData, true);
         
-        // KRITIKUS: Fix 0-24 kényszerítése az X tengelyen
-        chart.xAxis[0].setExtremes(dayStart, dayEnd, false);
-        chart.navigator.xAxis[0].setExtremes(dayStart, dayEnd, false);
-
-        if (keepZoom && curExt.min && curExt.min > dayStart) {
+        if (keepZoom && curExt.min > dayStart + 1000) {
             chart.xAxis[0].setExtremes(curExt.min, curExt.max, true);
         } else {
             chart.xAxis[0].setExtremes(dayStart, dayEnd, true);
         }
+        chart.navigator.xAxis[0].setExtremes(dayStart, dayEnd, true);
     }
 
     const modal = document.getElementById("infoModal");
