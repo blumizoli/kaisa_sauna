@@ -99,15 +99,31 @@
 
     <div id="infoModal">
         <div class="modal-content">
-            <div class="modal-header"><h2>Információ és Segédlet</h2><span class="close-modal">&times;</span></div>
+            <div class="modal-header">
+                <h2>Információ és segédlet</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            
             <div class="info-section">
                 <h3>Ikonok jelentése</h3>
-                <div class="icon-guide"><i class="fas fa-search-plus"></i><span><b>Nagyítás:</b> Aktuális idő körüli 90 perc.</span></div>
-                <div class="icon-guide"><i class="fas fa-search-minus"></i><span><b>Alapnézet:</b> Fix 00:00 - 23:59 nézet.</span></div>
+                <div class="icon-guide"><i class="fas fa-search-plus"></i><span><b>Nagyítás:</b> Az aktuális idő körüli 90 perces sávra ugrik.</span></div>
+                <div class="icon-guide"><i class="fas fa-search-minus"></i><span><b>Alapnézet:</b> Visszaállítja a teljes napi nézetet.</span></div>
+                <div class="icon-guide"><i class="fas fa-sync-alt"></i><span><b>Frissítés:</b> Új adatok letöltése a jelenlegi zoom megtartásával.</span></div>
             </div>
+
+            <div class="info-section">
+                <h3>Gradiens számítása</h3>
+                <p>A gradiens a hőmérséklet változási sebessége. Az utolsó 5 perc adataiból számolt lineáris meredekség (°C / perc).</p>
+            </div>
+
             <div class="info-section">
                 <h3>Státuszok és ETA</h3>
-                <p><b>ETA:</b> Csak FELFŰTÉSI fázisban látható. Megmutatja, hány perc van hátra a 85°C-ig a jelenlegi melegedési sebesség (gradiens) alapján.</p>
+                <ul style="padding-left: 20px;">
+                    <li><b>KÉSZENLÉTI:</b> 20 °C alatti hőmérséklet.</li>
+                    <li><b>FELFŰTÉSI:</b> 20-70 °C között, emelkedő trendnél. Ekkor látható az <b>ETA</b> (becsült idő a 85°C eléréséig).</li>
+                    <li><b>ÜZEMI:</b> 70 °C feletti hőmérséklet.</li>
+                    <li><b>LEHŰLÉSI:</b> Eső hőmérséklet 20-70 °C között.</li>
+                </ul>
             </div>
         </div>
     </div>
