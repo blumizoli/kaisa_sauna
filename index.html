@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kaisa Sauna Monitor & Predict</title></title>
+    <title>Kaisa Sauna Monitor & Predict</title>
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -29,11 +29,8 @@
         .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .label { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; display: block; }
         
-        /* Harmonikus oszlopos elrendezés */
         .values { font-size: 15px; display: flex; gap: 20px; color: #333; }
         .val-col { display: flex; align-items: center; white-space: nowrap; }
-        
-        /* Az első oszlop (idő+akt) kicsit szélesebb lehet, a többi követi a tartalmat */
         .val-col:nth-child(1) { min-width: 100px; } 
 
         .tag-label { color: #000; font-weight: bold; }
@@ -53,6 +50,7 @@
     <div class="toolbar">
         <input type="date" id="datePicker">
         <button id="okBtn">OK</button>
+        <button id="zoomNowBtn" title="Nagyítás (Most -60/+30 perc)"><i class="fas fa-search-plus"></i></button>
         <button id="homeBtn"><i class="fas fa-home"></i></button>
         <button id="refreshBtn"><i class="fas fa-sync-alt"></i></button>
         <button id="infoBtn"><i class="fas fa-info-circle"></i></button>
@@ -125,13 +123,17 @@
             scrollbar: { enabled: false },
             navigator: { 
                 enabled: true, height: 40,
-                series: { type: 'area', color: '#999', fillOpacity: 0.1, dataGrouping: { enabled: false } }
+                outlineColor: '#ccc',
+                maskFill: 'rgba(200, 200, 200, 0.2)',
+                series: { type: 'area', color: '#888', fillOpacity: 0.2, dataGrouping: { enabled: false } },
+                yAxis: { min: 0, max: 100 } // Fix 0-100 az alsó nézeten is
             },
             xAxis: { type: 'datetime', ordinal: false, crosshair: { width: 1, color: '#d32f2f' } },
             yAxis: { 
                 min: 0, 
-                max: 105, // Kicsit feljebb tolva, hogy a 100-as vonal kényelmesen látszódjon
+                max: 105, // Kicsit 100 felett, hogy a felirat kényelmes legyen
                 tickInterval: 10,
+                gridLineColor: '#eee',
                 title: { text: 'Hőmérséklet [°C]', style: { color: '#666', fontWeight: 'bold' } },
                 opposite: false 
             },
@@ -148,9 +150,10 @@
             },
             series: [{ 
                 name: 'Szauna', type: 'area', color: '#d32f2f',
+                dataGrouping: { enabled: false },
                 fillColor: {
                     linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-                    stops: [[0, 'rgba(211,47,47,0.4)'], [1, 'rgba(211,47,47,0)']]
+                    stops: [[0, 'rgba(120,120,120,0.4)'], [1, 'rgba(200,200,200,0)']] // Szürkeárnyalatos kitöltés
                 },
                 connectNulls: true, data: [] 
             }]
@@ -239,6 +242,29 @@
         chart.navigator.xAxis[0].setExtremes(dayStart, dayEnd, true, false);
     }
 
+    // Intelligens 90 perces nagyítás funkció
+    function zoomToNow() {
+        const now = new Date().getTime();
+        const selectedDate = document.getElementById('datePicker').value;
+        const dayStart = new Date(selectedDate + "T00:00:00").getTime();
+        const dayEnd = new Date(selectedDate + "T23:59:59").getTime();
+
+        let start = now - (60 * 60 * 1000); // Most - 60 perc
+        let end = now + (30 * 60 * 1000);   // Most + 30 perc
+
+        // Korrekciók a nap elejére és végére
+        if (start < dayStart) {
+            start = dayStart;
+            end = dayStart + (90 * 60 * 1000);
+        }
+        if (end > dayEnd) {
+            end = dayEnd;
+            start = dayEnd - (90 * 60 * 1000);
+        }
+
+        chart.xAxis[0].setExtremes(start, end);
+    }
+
     document.getElementById('infoBtn').onclick = () => alert(
         "MÓDSZERTAN ÉS STÁTUSZOK:\n\n" +
         "• GRADIENS: Az utolsó 5 perc hőmérséklet-változásának meredeksége (°C/perc).\n" +
@@ -252,6 +278,7 @@
     document.getElementById('okBtn').onclick = () => fetchData(false);
     document.getElementById('refreshBtn').onclick = () => fetchData(true);
     document.getElementById('homeBtn').onclick = () => fetchData(false);
+    document.getElementById('zoomNowBtn').onclick = zoomToNow;
 
     initChart();
     fetchData();
