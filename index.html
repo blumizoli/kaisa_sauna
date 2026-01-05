@@ -57,10 +57,11 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
         }
-        .modal { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 400px; }
-        .modal h3 { margin-top: 0; font-size: 16px; }
-        .modal ul { font-size: 13px; padding-left: 20px; line-height: 1.6; }
-        .modal button { width: 100%; padding: 10px; margin-top: 15px; border-radius: 6px; border: none; background: #333; color: white; font-weight: bold; }
+        .modal { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 450px; position: relative; }
+        .modal h2 { margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .info-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; font-size: 13px; line-height: 1.4; }
+        .info-row b { min-width: 85px; display: inline-block; color: #444; }
+        .modal button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; background: #d32f2f; color: white; font-weight: bold; cursor: pointer; }
 
         #container { flex-grow: 1; width: 100%; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     </style>
@@ -126,18 +127,39 @@
 
     <div id="modalOverlay">
         <div class="modal">
-            <h3>Szauna Állapotok</h3>
-            <ul>
-                <li><b>KÉSZENLÉTI:</b> Hőmérséklet < 20°C.</li>
-                <li><b>FELFŰTÉSI:</b> Gradiens > 0 (20-60°C között).</li>
-                <li><b>LEHŰLÉSI:</b> Gradiens < 0 (20-60°C között).</li>
-                <li><b>STABIL:</b> Gradiens = 0,00.</li>
-                <li><b>ÜZEMI:</b> Hőmérséklet > 60°C.</li>
-            </ul>
-            <button onclick="document.getElementById('modalOverlay').style.display='none'">Értem</button>
+            <h2>Szauna Monitor Info</h2>
+            <div class="info-row"><b>KÉSZENLÉTI:</b> <span>A szauna még hideg, a hőmérséklet nem érte el a 20°C-ot.</span></div>
+            <div class="info-row"><b>FELFŰTÉSI:</b> <span>20 és 60°C között, ha a hőmérséklet emelkedik (Gradiens > 0).</span></div>
+            <div class="info-row"><b>LEHŰLÉSI:</b> <span>20 és 60°C között, ha a hőmérséklet csökken (Gradiens < 0).</span></div>
+            <div class="info-row"><b>STABIL:</b> <span>20 és 60°C között, ha a hőmérséklet pontosan stagnál (Gradiens = 0,00).</span></div>
+            <div class="info-row"><b>ÜZEMI:</b> <span>A hőmérséklet elérte a 60°C-ot, a szauna használatra kész.</span></div>
+            <div class="info-row" style="margin-top:10px; color:#888; font-style:italic;">* A gradiens számítása 5 perces átlag alapján történik a pontos trendmutatáshoz.</div>
+            <button onclick="document.getElementById('modalOverlay').style.display='none'">RENDBEN</button>
         </div>
     </div>
 
+  <div class="info-section">
+                <h3>Ikonok jelentése</h3>
+                <div class="icon-guide"><i class="fas fa-search-plus"></i><span><b>Nagyítás:</b> Az aktuális idő körüli 90 perces sávra ugrik.</span></div>
+                <div class="icon-guide"><i class="fas fa-search-minus"></i><span><b>Alapnézet:</b> Visszaállítja a teljes napi nézetet.</span></div>
+                <div class="icon-guide"><i class="fas fa-sync-alt"></i><span><b>Frissítés:</b> Új adatok letöltése a jelenlegi zoom megtartásával.</span></div>
+            </div>
+            <div class="info-section">
+                <h3>Gradiens számítása</h3>
+                <p>A gradiens a hőmérséklet változási sebessége. Az utolsó 5 perc adataiból számolt lineáris meredekség (°C / perc).</p>
+            </div>
+            <div class="info-section">
+                <h3>Státuszok és ETA</h3>
+                <ul style="padding-left: 20px;">
+                    <li><b>KÉSZENLÉTI:</b> 20 °C alatti hőmérséklet.</li>
+                    <li><b>FELFŰTÉSI:</b> 20-60 °C között, emelkedő trendnél. Ekkor látható az <b>ETA</b> (becsült idő a 60 °C eléréséig).</li>
+                    <li><b>ÜZEMI:</b> 60 °C feletti hőmérséklet.</li>
+                    <li><b>LEHŰLÉSI:</b> Eső hőmérséklet 20-60 °C között.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+   
 <script>
     const API_KEY = '4A8ZJFC1F0997T6A';
     const CHAN_ID = '3213557';
@@ -155,11 +177,17 @@
             credits: { enabled: false },
             xAxis: { type: 'datetime', ordinal: false, crosshair: { width: 1, color: '#d32f2f' } },
             yAxis: { 
-                minRange: 10, opposite: false,
+                tickInterval: 10,
+                opposite: false,
                 plotLines: [
-                    { value: 20, color: '#ccc', width: 2, zIndex: 3, label: { text: '20°C', align: 'right' } },
-                    { value: 60, color: '#999', width: 2, zIndex: 3, label: { text: '60°C', align: 'right' } }
+                    { value: 20, color: '#ddd', width: 2, dashStyle: 'Dash', zIndex: 3, label: { text: '20°C', align: 'right', style: {color:'#999'}} },
+                    { value: 60, color: '#ddd', width: 2, dashStyle: 'Dash', zIndex: 3, label: { text: '60°C', align: 'right', style: {color:'#999'}} }
                 ]
+            },
+            plotOptions: {
+                series: {
+                    states: { hover: { lineWidthPlus: 0 } } // Görbe ne legyen vastagabb hoveringkor
+                }
             },
             tooltip: { 
                 split: false, shared: true, useHTML: true,
@@ -191,7 +219,6 @@
         const selDate = picker.value;
         const isToday = new Date().toISOString().split('T')[0] === selDate;
         
-        // Gombok és elemek tiltása múltbeli dátumnál
         document.getElementById('refreshBtn').disabled = !isToday;
         document.getElementById('zoomNowBtn').disabled = !isToday;
         document.getElementById('t_akt_col').style.visibility = isToday ? 'visible' : 'hidden';
@@ -241,48 +268,11 @@
 
             if (t_vals.length > 0) {
                 const minT = Math.min(...t_vals), maxT = Math.max(...t_vals);
-                
-                // ADAPTÍV SKÁLÁZÁS FIX
                 let yMin = Math.min(0, Math.floor(minT/10)*10);
                 let yMax = Math.max(90, Math.ceil(maxT/10)*10);
+                
                 chart.yAxis[0].setExtremes(yMin, yMax, false);
                 chart.series[0].update({ threshold: yMin }, false);
-
                 chart.series[0].setData(plotData, true, false, false);
                 
                 document.getElementById('t_akt').innerText = lastT.toFixed(1);
-                document.getElementById('t_time').innerText = new Date(lastMs).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
-                document.getElementById('t_min').innerText = minT.toFixed(1);
-                document.getElementById('t_max').innerText = maxT.toFixed(1);
-                document.getElementById('g_akt').innerText = (lastG > 0 ? "+" : "") + lastG.toFixed(2);
-                document.getElementById('g_min').innerText = Math.min(...g_vals).toFixed(2);
-                document.getElementById('g_max').innerText = Math.max(...g_vals).toFixed(2);
-                
-                const sb = document.getElementById('status');
-                sb.innerText = rollSt;
-                sb.style.background = (rollSt==="felfűtési"?"#d32f2f":rollSt==="lehűlési"?"#1976d2":rollSt==="üzemi"?"#800000":rollSt==="stabil"?"#2e7d32":"#888");
-
-                const eb = document.getElementById('eta_box');
-                if (isToday && rollSt === "felfűtési" && lastG > 0.05 && lastT < 60) {
-                    const ms = ((60 - lastT) / lastG) * 60000;
-                    eb.style.display = "block";
-                    document.getElementById('eta_val').innerHTML = `${Math.round(ms/60000)}p <span style="font-size:9px; color:#666;">(${new Date(lastMs + ms).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'})})</span>`;
-                } else eb.style.display = "none";
-            }
-            if (!keepZoom) chart.xAxis[0].setExtremes(dStartMs, dEndMs);
-        } catch (e) { console.error(e); }
-        icon.classList.remove('spinning');
-        document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
-    }
-
-    document.getElementById('infoBtn').onclick = () => document.getElementById('modalOverlay').style.display='flex';
-    document.getElementById('homeBtn').onclick = () => chart.xAxis[0].setExtremes(new Date(picker.value + "T00:00:00").getTime(), new Date(picker.value + "T23:59:59").getTime());
-    document.getElementById('zoomNowBtn').onclick = () => { const n = new Date().getTime(); chart.xAxis[0].setExtremes(n - 3600000, n + 1800000); };
-    document.getElementById('refreshBtn').onclick = () => fetchData(true);
-    picker.onchange = () => fetchData(false);
-
-    initChart();
-    fetchData();
-</script>
-</body>
-</html>
