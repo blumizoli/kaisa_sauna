@@ -37,7 +37,7 @@
         .grad-color { color: #800000 !important; }
 
         .status-badge { background: #888; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; transition: 0.3s; }
-        .eta-info { color: #d32f2f; font-weight: bold; font-size: 12px; text-align: right; }
+        .eta-info { color: #d32f2f; font-weight: bold; font-size: 12px; text-align: right; line-height: 1.2; }
 
         #container { flex-grow: 1; width: 100%; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 
@@ -112,35 +112,74 @@
     const picker = document.getElementById('datePicker');
     picker.valueAsDate = new Date();
 
-    // 4. pont: Automatikus frissítés dátumválasztáskor
     picker.onchange = () => fetchData(false);
 
     function initChart() {
         chart = Highcharts.stockChart('container', {
-            chart: { zoomType: 'x' },
+            chart: { zoomType: 'x', animation: false },
             rangeSelector: { enabled: false },
             scrollbar: { enabled: false },
             credits: { enabled: false },
             xAxis: { 
                 type: 'datetime', 
                 ordinal: false, 
-                crosshair: true,
-                plotLines: [] 
+                crosshair: { width: 1, color: '#d32f2f' }
             },
             yAxis: { 
                 min: 0, max: 90, 
                 tickInterval: 10, 
                 opposite: false,
-                // 3. pont: Vízszintes szakaszhatárok
                 plotLines: [
-                    { value: 30, color: '#ccc', width: 1, dashStyle: 'dash', label: { text: '30°C', align: 'right', style: {color: '#999'} } },
-                    { value: 60, color: '#ccc', width: 1, dashStyle: 'dash', label: { text: '60°C', align: 'right', style: {color: '#999'} } }
+                    { value: 30, color: '#999', width: 2, dashStyle: 'solid', zIndex: 3, label: { text: '30°C', align: 'right', style: {color: '#666', fontWeight: 'bold'} } },
+                    { value: 60, color: '#999', width: 2, dashStyle: 'solid', zIndex: 3, label: { text: '60°C', align: 'right', style: {color: '#666', fontWeight: 'bold'} } }
                 ]
             },
-            tooltip: { split: false, shared: true, useHTML: true },
+            tooltip: { 
+                split: false, 
+                shared: true, 
+                useHTML: true,
+                formatter: function() {
+                    let p = this.points[0].point;
+                    let etaText = "";
+                    
+                    // Tooltip ETA számítás ha felfűtési
+                    if (p.stText === "felfűtési" && p.grad > 0.05 && p.y < 60) {
+                        const msToTarget = ((60 - p.y) / p.grad) * 60000;
+                        const targetTime = p.x + msToTarget;
+                        const timeStr = Highcharts.dateFormat('%H:%M', targetTime);
+                        etaText = `<br/>ETA 60°C: <b>${Math.round(msToTarget/60000)} perc (${timeStr})</b>`;
+                    }
+
+                    return `<div style="font-size:11px; line-height:1.4">
+                            <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
+                            Hőmérséklet: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
+                            Gradiens: <b style="color:#800000">${p.grad.toFixed(2)} °C/perc</b><br/>
+                            Státusz: <b>${p.stText.toUpperCase()}</b>${etaText}</div>`;
+                }
+            },
             series: [
-                { name: 'Szauna', type: 'area', color: '#d32f2f', data: [], connectNulls: true, zIndex: 2 },
-                { name: 'Trend (Regresszió)', type: 'line', color: 'rgba(0,0,0,0.3)', dashStyle: 'shortdot', data: [], marker: { enabled: false }, enableMouseTracking: false, zIndex: 1 }
+                { 
+                    name: 'Szauna', 
+                    type: 'area', 
+                    color: '#d32f2f',
+                    fillColor: { 
+                        linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, 
+                        stops: [[0, 'rgba(211,47,47,0.4)'], [1, 'rgba(211,47,47,0)']] 
+                    },
+                    data: [], 
+                    connectNulls: true, 
+                    zIndex: 4 
+                },
+                { 
+                    name: 'Trend', 
+                    type: 'line', 
+                    color: 'rgba(0,0,0,0.3)', 
+                    dashStyle: 'shortdot', 
+                    data: [], 
+                    marker: { enabled: false }, 
+                    enableMouseTracking: false, 
+                    zIndex: 2 
+                }
             ]
         });
     }
@@ -149,7 +188,6 @@
         const selectedDate = picker.value;
         const isToday = new Date().toISOString().split('T')[0] === selectedDate;
         
-        // 6. pont elve: UI elemek elrejtése ha nem ma van
         document.getElementById('t_akt_wrapper').style.visibility = isToday ? 'visible' : 'hidden';
         document.getElementById('g_akt_wrapper').style.visibility = isToday ? 'visible' : 'hidden';
 
@@ -183,7 +221,6 @@
                 }
             }
 
-            // 1. pont: Új státusz logika
             if (temp < 30) { 
                 rollSt = "készenléti"; badgeCol = "#888"; 
             } else if (temp >= 30 && temp <= 60) {
@@ -201,18 +238,13 @@
             }
         });
 
-        // 7. pont: Dinamikus Y skála
         if (t_vals.length > 0) {
             const minT = Math.min(...t_vals);
             const maxT = Math.max(...t_vals);
-            let yMin = 0, yMax = 90;
-            if (minT < 0) yMin = Math.floor(minT / 10) * 10;
-            if (maxT > 90) yMax = Math.ceil(maxT / 10) * 10;
+            let yMax = Math.max(90, Math.ceil(maxT / 10) * 10);
+            let yMin = Math.min(0, Math.floor(minT / 10) * 10);
             chart.yAxis[0].setExtremes(yMin, yMax, false);
-        }
 
-        // UI Frissítés
-        if (t_vals.length > 0) {
             document.getElementById('t_time').innerText = new Date(lastTimeMs).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
             document.getElementById('t_akt').innerText = lastT.toFixed(1);
             document.getElementById('t_min').innerText = Math.min(...t_vals).toFixed(1);
@@ -225,42 +257,30 @@
             sb.style.background = badgeCol;
         }
 
-        // 2. pont: Regresszió és ETA
         let regressionPoints = [];
         const etaDiv = document.getElementById('eta');
         etaDiv.innerText = "";
 
-        if (rollSt === "felfűtési" && lastG > 0.05) {
-            // Egyszerű lineáris regresszió az utolsó 15 percre az adatok alapján
+        if (rollSt === "felfűtési" && lastG > 0.05 && lastT < 60) {
             const now = lastTimeMs;
             const targetT = 60;
             const msToTarget = ((targetT - lastT) / lastG) * 60000;
             const targetTime = now + msToTarget;
 
-            regressionPoints = [
-                [now, lastT],
-                [targetTime, targetT]
-            ];
-
+            regressionPoints = [[now, lastT], [targetTime, targetT]];
             const timeStr = new Date(targetTime).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
-            etaDiv.innerHTML = `ETA 60°C: ${Math.round(msToTarget/60000)} perc<br>(${timeStr})`;
+            etaDiv.innerHTML = `ETA 60°C: ${Math.round(msToTarget/60000)} perc<br/>(${timeStr})`;
         }
 
         chart.series[0].setData(plotData, false);
         chart.series[1].setData(regressionPoints, false);
-        
-        const curExt = chart.xAxis[0].getExtremes();
-        if (keepZoom && curExt.min > dayStart) {
-            chart.redraw();
-        } else {
-            chart.xAxis[0].setExtremes(dayStart, dayEnd);
-        }
-    }
+        chart.redraw();
 
-    // 5. pont: Magyarázat a naptár színezéshez
-    // A ThingSpeak API nem tudja egyszerre lekérdezni az év összes napjának állapotát a limit (8000 pont) miatt. 
-    // Ehhez egy saját backend vagy egy "statisztika" csatorna kellene, ahová a szauna napi maxát mented.
-    // Kliens oldalon ezt csak úgy lehetne, ha minden napot végigpörgetnénk, ami 365 kérés lenne (tiltást vonna maga után).
+        const curExt = chart.xAxis[0].getExtremes();
+        if (!keepZoom) chart.xAxis[0].setExtremes(dayStart, dayEnd);
+        
+        document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
+    }
 
     document.getElementById("infoBtn").onclick = () => document.getElementById("infoModal").style.display = "block";
     document.querySelector(".close-modal").onclick = () => document.getElementById("infoModal").style.display = "none";
