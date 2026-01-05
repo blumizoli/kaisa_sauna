@@ -27,11 +27,12 @@
         .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .label { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; display: block; }
         
-        .values { font-size: 15px; display: flex; gap: 20px; color: #333; }
+        .values { font-size: 15px; display: flex; gap: 15px; color: #333; }
         .val-col { display: flex; align-items: center; white-space: nowrap; }
 
         .tag-label { color: #000; font-weight: bold; }
         .val-num { font-weight: bold; margin-left: 5px; }
+        .time-label { font-size: 11px; color: #666; margin-right: 5px; font-weight: normal; }
         
         .temp-color { color: #d32f2f !important; }
         .grad-color { color: #800000 !important; }
@@ -68,7 +69,7 @@
         <div class="card">
             <span class="label temp-color">Hőmérséklet [°C]</span>
             <div class="values">
-                <div class="val-col" id="t_akt_wrapper"><span id="t_time" class="tag-label">--:--</span><span id="t_akt" class="val-num temp-color">--</span></div>
+                <div class="val-col" id="t_akt_wrapper"><span class="time-label" id="t_time">--:--:--</span><span id="t_akt" class="val-num temp-color">--</span></div>
                 <div class="val-col"><span class="tag-label">min:</span><span id="t_min" class="val-num temp-color">--</span></div>
                 <div class="val-col"><span class="tag-label">max:</span><span id="t_max" class="val-num temp-color">--</span></div>
             </div>
@@ -76,7 +77,7 @@
         <div class="card">
             <span class="label grad-color">Gradiens [°C/perc]</span>
             <div class="values">
-                <div class="val-col" id="g_akt_wrapper"><span id="g_time" class="tag-label">--:--</span><span id="g_akt" class="val-num grad-color">--</span></div>
+                <div class="val-col" id="g_akt_wrapper"><span class="time-label" id="g_time">--:--:--</span><span id="g_akt" class="val-num grad-color">--</span></div>
                 <div class="val-col"><span class="tag-label">min:</span><span id="g_min" class="val-num grad-color">--</span></div>
                 <div class="val-col"><span class="tag-label">max:</span><span id="g_max" class="val-num grad-color">--</span></div>
             </div>
@@ -135,50 +136,35 @@
                 ]
             },
             tooltip: { 
-                split: false, 
-                shared: true, 
-                useHTML: true,
+                split: false, shared: true, useHTML: true,
                 formatter: function() {
                     let p = this.points[0].point;
                     let etaText = "";
-                    
-                    // Tooltip ETA számítás ha felfűtési
                     if (p.stText === "felfűtési" && p.grad > 0.05 && p.y < 60) {
                         const msToTarget = ((60 - p.y) / p.grad) * 60000;
                         const targetTime = p.x + msToTarget;
-                        const timeStr = Highcharts.dateFormat('%H:%M', targetTime);
-                        etaText = `<br/>ETA 60°C: <b>${Math.round(msToTarget/60000)} perc (${timeStr})</b>`;
+                        etaText = `<br/>ETA 60°C: <b>${Math.round(msToTarget/60000)} p (${Highcharts.dateFormat('%H:%M', targetTime)})</b>`;
                     }
-
                     return `<div style="font-size:11px; line-height:1.4">
                             <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
                             Hőmérséklet: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
-                            Gradiens: <b style="color:#800000">${p.grad.toFixed(2)} °C/perc</b><br/>
+                            Gradiens: <b style="color:#800000">${p.grad.toFixed(2)} °C/p</b><br/>
                             Státusz: <b>${p.stText.toUpperCase()}</b>${etaText}</div>`;
                 }
             },
             series: [
                 { 
-                    name: 'Szauna', 
-                    type: 'area', 
-                    color: '#d32f2f',
+                    name: 'Szauna', type: 'area', color: '#d32f2f',
+                    threshold: -50, // FIX: Mindig az aktuális minimum alá színezzen
                     fillColor: { 
                         linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, 
                         stops: [[0, 'rgba(211,47,47,0.4)'], [1, 'rgba(211,47,47,0)']] 
                     },
-                    data: [], 
-                    connectNulls: true, 
-                    zIndex: 4 
+                    data: [], connectNulls: true, zIndex: 4 
                 },
                 { 
-                    name: 'Trend', 
-                    type: 'line', 
-                    color: 'rgba(0,0,0,0.3)', 
-                    dashStyle: 'shortdot', 
-                    data: [], 
-                    marker: { enabled: false }, 
-                    enableMouseTracking: false, 
-                    zIndex: 2 
+                    name: 'Trend', type: 'line', color: 'rgba(0,0,0,0.3)', dashStyle: 'shortdot', 
+                    data: [], marker: { enabled: false }, enableMouseTracking: false, zIndex: 2 
                 }
             ]
         });
@@ -221,15 +207,12 @@
                 }
             }
 
-            if (temp < 30) { 
-                rollSt = "készenléti"; badgeCol = "#888"; 
-            } else if (temp >= 30 && temp <= 60) {
+            if (temp < 30) { rollSt = "készenléti"; badgeCol = "#888"; }
+            else if (temp >= 30 && temp <= 60) {
                 if (grad > 0.15) { rollSt = "felfűtési"; badgeCol = "#d32f2f"; }
                 else if (grad < -0.15) { rollSt = "lehűlési"; badgeCol = "#1976d2"; }
                 else { rollSt = "temperálás"; badgeCol = "#000"; }
-            } else {
-                rollSt = "üzemi"; badgeCol = "#800000";
-            }
+            } else { rollSt = "üzemi"; badgeCol = "#800000"; }
 
             if (time >= dayStart && time <= dayEnd) {
                 plotData.push({ x: time, y: temp, grad: grad, stText: rollSt });
@@ -241,14 +224,17 @@
         if (t_vals.length > 0) {
             const minT = Math.min(...t_vals);
             const maxT = Math.max(...t_vals);
-            let yMax = Math.max(90, Math.ceil(maxT / 10) * 10);
             let yMin = Math.min(0, Math.floor(minT / 10) * 10);
+            let yMax = Math.max(90, Math.ceil(maxT / 10) * 10);
             chart.yAxis[0].setExtremes(yMin, yMax, false);
+            chart.series[0].update({ threshold: yMin }, false); // A színezés alapját a skála aljához igazítjuk
 
-            document.getElementById('t_time').innerText = new Date(lastTimeMs).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+            const timeStr = new Date(lastTimeMs).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            document.getElementById('t_time').innerText = timeStr;
+            document.getElementById('g_time').innerText = timeStr;
             document.getElementById('t_akt').innerText = lastT.toFixed(1);
-            document.getElementById('t_min').innerText = Math.min(...t_vals).toFixed(1);
-            document.getElementById('t_max').innerText = Math.max(...t_vals).toFixed(1);
+            document.getElementById('t_min').innerText = minT.toFixed(1);
+            document.getElementById('t_max').innerText = maxT.toFixed(1);
             document.getElementById('g_akt').innerText = lastG.toFixed(2);
             document.getElementById('g_min').innerText = Math.min(...g_vals).toFixed(2);
             document.getElementById('g_max').innerText = Math.max(...g_vals).toFixed(2);
@@ -262,23 +248,16 @@
         etaDiv.innerText = "";
 
         if (rollSt === "felfűtési" && lastG > 0.05 && lastT < 60) {
-            const now = lastTimeMs;
-            const targetT = 60;
-            const msToTarget = ((targetT - lastT) / lastG) * 60000;
-            const targetTime = now + msToTarget;
-
-            regressionPoints = [[now, lastT], [targetTime, targetT]];
-            const timeStr = new Date(targetTime).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
-            etaDiv.innerHTML = `ETA 60°C: ${Math.round(msToTarget/60000)} perc<br/>(${timeStr})`;
+            const msToTarget = ((60 - lastT) / lastG) * 60000;
+            const targetTime = lastTimeMs + msToTarget;
+            regressionPoints = [[lastTimeMs, lastT], [targetTime, 60]];
+            etaDiv.innerHTML = `ETA 60°C: ${Math.round(msToTarget/60000)} perc<br/>(${new Date(targetTime).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'})})`;
         }
 
         chart.series[0].setData(plotData, false);
         chart.series[1].setData(regressionPoints, false);
         chart.redraw();
-
-        const curExt = chart.xAxis[0].getExtremes();
         if (!keepZoom) chart.xAxis[0].setExtremes(dayStart, dayEnd);
-        
         document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
     }
 
