@@ -9,8 +9,7 @@
     
     <style>
         * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #f0f0f0; }
-        body { display: flex; flex-direction: column; padding: 8px; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #f0f0f0; display: flex; flex-direction: column; padding: 8px; }
         
         .toolbar { 
             display: flex; align-items: center; gap: 6px; background: white; padding: 8px; 
@@ -20,10 +19,7 @@
         .toolbar button { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd; cursor: pointer; color: #555; transition: 0.2s; }
         .toolbar button:disabled { opacity: 0.3; cursor: not-allowed; }
         
-        /* Frissítés animáció */
         .spinning { animation: fa-spin 1s infinite linear; color: #d32f2f !important; }
-
-        #lastUpdate { font-size: 11px; color: #888; margin-left: auto; }
 
         .stats-bar { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
         @media (min-width: 600px) { .stats-bar { flex-direction: row; } .card { flex: 1; } }
@@ -38,9 +34,6 @@
         .val-num { font-weight: bold; margin-left: 5px; }
         .time-label { font-size: 11px; color: #666; margin-right: 5px; font-weight: normal; }
         
-        .temp-color { color: #d32f2f !important; }
-        .grad-color { color: #800000 !important; }
-
         .status-badge { background: #888; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; transition: 0.3s; }
         .eta-info { color: #d32f2f; font-weight: bold; font-size: 12px; text-align: right; line-height: 1.2; }
 
@@ -52,27 +45,26 @@
     <div class="toolbar">
         <input type="date" id="datePicker">
         <button id="zoomNowBtn" title="Jelenlegi idő nagyítása"><i class="fas fa-search-plus"></i></button>
-        <button id="homeBtn" title="Teljes nap (0-24h)"><i class="fas fa-search-minus"></i></button>
+        <button id="homeBtn" title="Teljes nap (00-24h)"><i class="fas fa-search-minus"></i></button>
         <button id="refreshBtn"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
-        <button id="infoBtn"><i class="fas fa-info-circle"></i></button>
-        <span id="lastUpdate">-</span>
+        <span id="lastUpdate" style="font-size: 11px; color: #888; margin-left: auto;">-</span>
     </div>
 
     <div class="stats-bar">
         <div class="card">
-            <span class="label temp-color">Hőmérséklet [°C]</span>
+            <span class="label" style="color:#d32f2f">Hőmérséklet [°C]</span>
             <div class="values">
-                <div class="val-col" id="t_akt_wrapper"><span class="time-label" id="t_time">--:--:--</span><span id="t_akt" class="val-num temp-color">--</span></div>
-                <div class="val-col"><span class="tag-label">min:</span><span id="t_min" class="val-num temp-color">--</span></div>
-                <div class="val-col"><span class="tag-label">max:</span><span id="t_max" class="val-num temp-color">--</span></div>
+                <div class="val-col" id="t_akt_wrapper"><span class="time-label" id="t_time">--:--:--</span><span id="t_akt" class="val-num" style="color:#d32f2f">--</span></div>
+                <div class="val-col"><span class="tag-label">min:</span><span id="t_min" class="val-num" style="color:#d32f2f">--</span></div>
+                <div class="val-col"><span class="tag-label">max:</span><span id="t_max" class="val-num" style="color:#d32f2f">--</span></div>
             </div>
         </div>
         <div class="card">
-            <span class="label grad-color">Gradiens [°C/perc]</span>
+            <span class="label" style="color:#800000">Gradiens [°C/perc]</span>
             <div class="values">
-                <div class="val-col" id="g_akt_wrapper"><span class="time-label" id="g_time">--:--:--</span><span id="g_akt" class="val-num grad-color">--</span></div>
-                <div class="val-col"><span class="tag-label">min:</span><span id="g_min" class="val-num grad-color">--</span></div>
-                <div class="val-col"><span class="tag-label">max:</span><span id="g_max" class="val-num grad-color">--</span></div>
+                <div class="val-col" id="g_akt_wrapper"><span class="time-label" id="g_time">--:--:--</span><span id="g_akt" class="val-num" style="color:#800000">--</span></div>
+                <div class="val-col"><span class="tag-label">min:</span><span id="g_min" class="val-num" style="color:#800000">--</span></div>
+                <div class="val-col"><span class="tag-label">max:</span><span id="g_max" class="val-num" style="color:#800000">--</span></div>
             </div>
         </div>
         <div class="card" style="display: flex; align-items: center; justify-content: space-between;">
@@ -103,12 +95,7 @@
             xAxis: { 
                 type: 'datetime', 
                 ordinal: false, 
-                crosshair: { width: 1, color: '#d32f2f' },
-                events: {
-                    afterSetExtremes: function() {
-                        // Ha manuálisan zoomolnak, a "Most" funkció nem zavar be
-                    }
-                }
+                crosshair: { width: 1, color: '#d32f2f' }
             },
             yAxis: { 
                 min: 0, max: 90, tickInterval: 10, opposite: false,
@@ -121,10 +108,11 @@
                 split: false, shared: true, useHTML: true,
                 formatter: function() {
                     let p = this.points[0].point;
+                    if (p.y === null) return false; // Ne mutasson buborékot az üres szélsőértékeken
+
                     let etaText = "";
                     let regData = [];
 
-                    // Dinamikus regresszió számítás mozgás közben
                     if (p.stText === "felfűtési" && p.grad > 0.05 && p.y < 60) {
                         const msToTarget = ((60 - p.y) / p.grad) * 60000;
                         const targetTime = p.x + msToTarget;
@@ -132,8 +120,13 @@
                         regData = [[p.x, p.y], [targetTime, 60]];
                     }
                     
-                    // Regressziós vonal frissítése mozgáskor
-                    chart.series[1].setData(regData, true, false);
+                    // Optimalizált trendvonal frissítés (csak ha változik)
+                    const trendSeries = chart.series[1];
+                    if (regData.length > 0) {
+                        trendSeries.setData(regData, true, false, false);
+                    } else if (trendSeries.data.length > 0) {
+                        trendSeries.setData([], true, false, false);
+                    }
 
                     return `<div style="font-size:11px; line-height:1.4">
                             <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
@@ -145,7 +138,7 @@
             series: [
                 { 
                     name: 'Szauna', type: 'area', color: '#d32f2f', zIndex: 4,
-                    data: [], connectNulls: true, threshold: null,
+                    data: [], connectNulls: false, threshold: null,
                     fillColor: { 
                         linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, 
                         stops: [[0, 'rgba(211,47,47,0.4)'], [1, 'rgba(211,47,47,0)']] 
@@ -161,113 +154,112 @@
 
     async function fetchData(keepZoom = false) {
         const icon = document.getElementById('refreshIcon');
-        icon.classList.add('spinning'); // Animáció start
+        icon.classList.add('spinning');
 
-        const selectedDate = picker.value;
-        const isToday = new Date().toISOString().split('T')[0] === selectedDate;
+        const selDate = picker.value;
+        const isToday = new Date().toISOString().split('T')[0] === selDate;
         
-        // Gombok tiltása archiv napokon
         document.getElementById('refreshBtn').disabled = !isToday;
         document.getElementById('zoomNowBtn').disabled = !isToday;
         document.getElementById('t_akt_wrapper').style.visibility = isToday ? 'visible' : 'hidden';
         document.getElementById('g_akt_wrapper').style.visibility = isToday ? 'visible' : 'hidden';
 
-        const fetchStart = new Date(new Date(selectedDate + "T00:00:00").getTime() - 20 * 60000).toISOString();
+        const dStartMs = new Date(selDate + "T00:00:00").getTime();
+        const dEndMs = new Date(selDate + "T23:59:59").getTime();
+
         try {
-            const response = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${fetchStart}&results=8000`);
+            const response = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 1200000).toISOString()}&results=8000`);
             const data = await response.json();
-            if (data && data.feeds) processData(data.feeds, selectedDate, keepZoom);
-        } catch (e) { console.log("Hiba."); }
-        
-        setTimeout(() => icon.classList.remove('spinning'), 600); // Animáció stop
-    }
+            
+            let plotData = [{ x: dStartMs, y: null }]; // 00:00-as kényszerített pont
+            let t_vals = [], g_vals = [];
+            let lastT = 0, lastG = 0, lastMs = 0, rollSt = "";
 
-    function processData(feeds, selectedDayStr, keepZoom) {
-        const dayStart = new Date(selectedDayStr + "T00:00:00").getTime();
-        const dayEnd = new Date(selectedDayStr + "T23:59:59").getTime();
-        
-        let plotData = [], t_vals = [], g_vals = [];
-        let rollSt = "készenléti", badgeCol = "#888";
-        let lastT = 0, lastG = 0, lastTimeMs = 0;
-        let minIdx = 0, maxIdx = 0;
+            if (data.feeds) {
+                data.feeds.forEach((f, i) => {
+                    const time = new Date(f.created_at).getTime();
+                    const temp = parseFloat(f.field1);
+                    if (isNaN(temp)) return;
 
-        feeds.forEach((f, i) => {
-            const time = new Date(f.created_at).getTime();
-            const temp = parseFloat(f.field1);
-            if (isNaN(temp)) return;
+                    let grad = 0;
+                    for (let j = i - 1; j >= 0; j--) {
+                        const dM = (time - new Date(data.feeds[j].created_at).getTime()) / 60000;
+                        if (dM > 0.1) {
+                            grad = (temp - parseFloat(data.feeds[j].field1)) / dM;
+                            if (dM >= 5) break;
+                        }
+                    }
 
-            let grad = 0;
-            for (let j = i - 1; j >= 0; j--) {
-                const dM = (time - new Date(feeds[j].created_at).getTime()) / 60000;
-                if (dM > 0.1) {
-                    grad = (temp - parseFloat(feeds[j].field1)) / dM;
-                    if (dM >= 5) break;
-                }
+                    if (temp < 30) rollSt = "készenléti";
+                    else if (temp <= 60) {
+                        if (grad > 0.15) rollSt = "felfűtési";
+                        else if (grad < -0.15) rollSt = "lehűlési";
+                        else rollSt = "temperálás";
+                    } else rollSt = "üzemi";
+
+                    if (time >= dStartMs && time <= dEndMs) {
+                        plotData.push({ x: time, y: temp, grad: grad, stText: rollSt, marker: { enabled: false } });
+                        t_vals.push(temp); g_vals.push(grad);
+                        lastT = temp; lastG = grad; lastMs = time;
+                    }
+                });
+            }
+            plotData.push({ x: dEndMs, y: null }); // 23:59-es kényszerített pont
+
+            if (t_vals.length > 0) {
+                const minT = Math.min(...t_vals), maxT = Math.max(...t_vals);
+                plotData.forEach(p => {
+                    if (p.y === minT) p.marker = { enabled: true, fillColor: '#1976d2', radius: 4 };
+                    if (p.y === maxT) p.marker = { enabled: true, fillColor: '#800000', radius: 5, symbol: 'diamond' };
+                });
+
+                let yMin = Math.min(0, Math.floor(minT/10)*10);
+                let yMax = Math.max(90, Math.ceil(maxT/10)*10);
+                chart.yAxis[0].setExtremes(yMin, yMax, false);
+                chart.series[0].update({ threshold: yMin }, false);
+                chart.series[0].setData(plotData, true, false, false);
+                
+                const timeStr = new Date(lastMs).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+                document.getElementById('t_time').innerText = timeStr;
+                document.getElementById('g_time').innerText = timeStr;
+                document.getElementById('t_akt').innerText = lastT.toFixed(1);
+                document.getElementById('t_min').innerText = minT.toFixed(1);
+                document.getElementById('t_max').innerText = maxT.toFixed(1);
+                document.getElementById('g_akt').innerText = lastG.toFixed(2);
+                document.getElementById('g_min').innerText = Math.min(...g_vals).toFixed(2);
+                document.getElementById('g_max').innerText = Math.max(...g_vals).toFixed(2);
+                
+                const sb = document.getElementById('status');
+                sb.innerText = rollSt.toUpperCase();
+                sb.style.background = (rollSt==="felfűtési"?"#d32f2f":rollSt==="lehűlési"?"#1976d2":rollSt==="üzemi"?"#800000":rollSt==="temperálás"?"#000":"#888");
+
+                const etaDiv = document.getElementById('eta');
+                if (isToday && rollSt === "felfűtési" && lastG > 0.05 && lastT < 60) {
+                    const ms = ((60 - lastT) / lastG) * 60000;
+                    etaDiv.innerHTML = `ETA 60°C: ${Math.round(ms/60000)} perc<br/>(${new Date(lastMs + ms).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'})})`;
+                } else etaDiv.innerText = "";
             }
 
-            if (temp < 30) { rollSt = "készenléti"; badgeCol = "#888"; }
-            else if (temp >= 30 && temp <= 60) {
-                if (grad > 0.15) { rollSt = "felfűtési"; badgeCol = "#d32f2f"; }
-                else if (grad < -0.15) { rollSt = "lehűlési"; badgeCol = "#1976d2"; }
-                else { rollSt = "temperálás"; badgeCol = "#000"; }
-            } else { rollSt = "üzemi"; badgeCol = "#800000"; }
+            if (!keepZoom) chart.xAxis[0].setExtremes(dStartMs, dEndMs);
 
-            if (time >= dayStart && time <= dayEnd) {
-                plotData.push({ x: time, y: temp, grad: grad, stText: rollSt, marker: { enabled: false } });
-                t_vals.push(temp); g_vals.push(grad);
-                lastT = temp; lastG = grad; lastTimeMs = time;
-            }
-        });
-
-        if (t_vals.length > 0) {
-            // Min/Max keresés jelölőkhöz
-            const minT = Math.min(...t_vals);
-            const maxT = Math.max(...t_vals);
-            plotData.forEach(p => {
-                if (p.y === minT) p.marker = { enabled: true, fillColor: '#1976d2', radius: 4, symbol: 'circle' };
-                if (p.y === maxT) p.marker = { enabled: true, fillColor: '#800000', radius: 5, symbol: 'diamond' };
-            });
-
-            let yMin = Math.min(0, Math.floor(minT / 10) * 10);
-            let yMax = Math.max(90, Math.ceil(maxT / 10) * 10);
-            chart.yAxis[0].setExtremes(yMin, yMax, false);
-            chart.series[0].update({ threshold: yMin }, false);
-
-            const timeStr = new Date(lastTimeMs).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-            document.getElementById('t_time').innerText = timeStr;
-            document.getElementById('g_time').innerText = timeStr;
-            document.getElementById('t_akt').innerText = lastT.toFixed(1);
-            document.getElementById('t_min').innerText = minT.toFixed(1);
-            document.getElementById('t_max').innerText = maxT.toFixed(1);
-            document.getElementById('g_akt').innerText = lastG.toFixed(2);
-            document.getElementById('g_min').innerText = Math.min(...g_vals).toFixed(2);
-            document.getElementById('g_max').innerText = Math.max(...g_vals).toFixed(2);
-            const sb = document.getElementById('status');
-            sb.innerText = rollSt.toUpperCase();
-            sb.style.background = badgeCol;
-
-            // ETA kijelzés csak az utolsó pontra a kártyán
-            const etaDiv = document.getElementById('eta');
-            if (rollSt === "felfűtési" && lastG > 0.05 && lastT < 60) {
-                const ms = ((60 - lastT) / lastG) * 60000;
-                etaDiv.innerHTML = `ETA 60°C: ${Math.round(ms/60000)} perc<br/>(${new Date(lastTimeMs + ms).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'})})`;
-            } else etaDiv.innerText = "";
-        }
-
-        chart.series[0].setData(plotData, true);
+        } catch (e) { console.error(e); }
         
-        // Alapértelmezett nézet: MINDIG 00:00 - 24:00 (Kérésed szerint!)
-        if (!keepZoom) chart.xAxis[0].setExtremes(dayStart, dayEnd);
-        
+        icon.classList.remove('spinning');
         document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
     }
 
-    document.getElementById('refreshBtn').onclick = () => fetchData(true);
-    document.getElementById('homeBtn').onclick = () => chart.xAxis[0].setExtremes(new Date(picker.value + "T00:00:00").getTime(), new Date(picker.value + "T23:59:59").getTime());
+    document.getElementById('homeBtn').onclick = () => {
+        const dStart = new Date(picker.value + "T00:00:00").getTime();
+        const dEnd = new Date(picker.value + "T23:59:59").getTime();
+        chart.xAxis[0].setExtremes(dStart, dEnd);
+    };
+
     document.getElementById('zoomNowBtn').onclick = () => {
         const now = new Date().getTime();
         chart.xAxis[0].setExtremes(now - 3600000, now + 1800000);
     };
+
+    document.getElementById('refreshBtn').onclick = () => fetchData(true);
 
     initChart();
     fetchData();
