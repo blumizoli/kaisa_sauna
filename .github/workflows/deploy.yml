@@ -21,15 +21,16 @@ jobs:
         env:
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # 1. Letakarítjuk a korábbi hibás mappákat
+          # 1. Töröljük a zavaró mappákat
           rm -rf encrypted
           
-          # 2. Titkosítás:
-          # --short: engedi a 14 karakternél rövidebb jelszót
-          # --shorten: rövidebb URL-t generál
-          # -o index.html: közvetlenül a főoldalt írja felül, nem mappát csinál
-          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
-
+          # 2. Titkosítunk egy ÚJ, ideiglenes fájlba (temp.html)
+          # A --short és -p "$PASSWORD" kezelik a rövid jelszót
+          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o temp.html
+          
+          # 3. Kicseréljük az eredetit az új titkosítottra
+          mv temp.html index.html
+          
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
