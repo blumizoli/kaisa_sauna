@@ -19,11 +19,16 @@ jobs:
 
       - name: Encrypt index.html with Staticrypt
         env:
-          # Ez a sor köti össze a széfet a programmal
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # A -p jelzővel adjuk át közvetlenül a jelszót
-          npx staticrypt index.html -p "$PASSWORD" --shorten -o index.html
+          # 1. Titkosítunk egy ÚJ fájlba (secret.html)
+          npx staticrypt index.html -p "$PASSWORD" --shorten -o secret.html
+          
+          # 2. Megnézzük, létrejött-e (biztonsági ellenőrzés a naplóban)
+          ls -l secret.html
+          
+          # 3. Kicseréljük az eredeti index.html-t a titkosítottra
+          mv secret.html index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
