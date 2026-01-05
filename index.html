@@ -11,15 +11,17 @@
         * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #f0f0f0; display: flex; flex-direction: column; padding: 8px; }
         
+        /* Toolbar */
         .toolbar { 
             display: flex; align-items: center; gap: 6px; background: white; padding: 8px; 
             border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 8px; flex-shrink: 0;
         }
         .toolbar input { padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 135px; }
         .toolbar button { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd; cursor: pointer; color: #555; transition: 0.2s; }
-        .toolbar button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .toolbar button:disabled { opacity: 0.3; cursor: not-allowed; background: #eee; color: #aaa; }
         .spinning { animation: fa-spin 1s infinite linear; color: #d32f2f !important; }
 
+        /* Stats Bar */
         .stats-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
         @media (min-width: 768px) { .stats-bar { flex-direction: row; } }
 
@@ -38,15 +40,27 @@
         .val-data { font-size: 15px; font-weight: bold; color: #333; }
         .val-time { font-size: 9px; font-weight: normal; color: #999; margin-left: 4px; }
 
+        /* Status */
         .status-box { display: flex; align-items: center; justify-content: space-between; width: 100%; }
         .status-badge { 
             padding: 6px 12px; border-radius: 6px; color: white; 
             font-size: 13px; font-weight: bold; text-transform: uppercase;
-            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.1);
         }
         .eta-box { text-align: right; line-height: 1.2; }
         .eta-label { font-size: 10px; color: #888; text-transform: uppercase; }
         .eta-val { font-size: 13px; font-weight: bold; color: #d32f2f; }
+
+        /* Modal Info */
+        #infoBtn { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px; padding: 0 5px; }
+        #infoBtn:hover { color: #333; }
+        #modalOverlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal { background: white; padding: 20px; border-radius: 12px; width: 85%; max-width: 400px; }
+        .modal h3 { margin-top: 0; font-size: 16px; }
+        .modal ul { font-size: 13px; padding-left: 20px; line-height: 1.6; }
+        .modal button { width: 100%; padding: 10px; margin-top: 15px; border-radius: 6px; border: none; background: #333; color: white; font-weight: bold; }
 
         #container { flex-grow: 1; width: 100%; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     </style>
@@ -58,6 +72,7 @@
         <button id="zoomNowBtn" title="Most"><i class="fas fa-search-plus"></i></button>
         <button id="homeBtn" title="00-24 nézet"><i class="fas fa-search-minus"></i></button>
         <button id="refreshBtn"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
+        <button id="infoBtn"><i class="fas fa-question-circle"></i></button>
         <span id="lastUpdate" style="font-size: 11px; color: #888; margin-left: auto;">-</span>
     </div>
 
@@ -68,12 +83,12 @@
                 <span class="card-title">Hőmérséklet [°C]</span>
             </div>
             <div class="values-grid">
-                <div class="val-item">
+                <div class="val-item" id="t_akt_col">
                     <span class="val-label">Aktuális</span>
                     <span class="val-data" style="color: #d32f2f;"><span id="t_akt">--</span><span class="val-time" id="t_time"></span></span>
                 </div>
-                <div class="val-item"><span class="val-label">Minimum</span><span class="val-data" id="t_min">--</span></div>
-                <div class="val-item"><span class="val-label">Maximum</span><span class="val-data" id="t_max">--</span></div>
+                <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="t_min">--</span></div>
+                <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="t_max">--</span></div>
             </div>
         </div>
 
@@ -83,22 +98,22 @@
                 <span class="card-title">Változás [°C/perc]</span>
             </div>
             <div class="values-grid">
-                <div class="val-item">
+                <div class="val-item" id="g_akt_col">
                     <span class="val-label">Aktuális</span>
                     <span class="val-data" style="color: #800000;" id="g_akt">--</span>
                 </div>
-                <div class="val-item"><span class="val-label">Minimum</span><span class="val-data" id="g_min">--</span></div>
-                <div class="val-item"><span class="val-label">Maximum</span><span class="val-data" id="g_max">--</span></div>
+                <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="g_min">--</span></div>
+                <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="g_max">--</span></div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-header">
                 <i class="fas fa-info-circle" style="color: #444;"></i>
-                <span class="card-title">Rendszerállapot</span>
+                <span class="card-title">Státusz</span>
             </div>
             <div class="status-box">
-                <span id="status" class="status-badge" style="background: #888;">Ismeretlen</span>
+                <span id="status" class="status-badge" style="background: #888;">...</span>
                 <div id="eta_box" class="eta-box" style="display: none;">
                     <div class="eta-label">ETA 60°C</div>
                     <div class="eta-val" id="eta_val">--</div>
@@ -108,6 +123,20 @@
     </div>
 
     <div id="container"></div>
+
+    <div id="modalOverlay">
+        <div class="modal">
+            <h3>Szauna Állapotok</h3>
+            <ul>
+                <li><b>KÉSZENLÉTI:</b> Hőmérséklet < 20°C.</li>
+                <li><b>FELFŰTÉSI:</b> Gradiens > 0 (20-60°C között).</li>
+                <li><b>LEHŰLÉSI:</b> Gradiens < 0 (20-60°C között).</li>
+                <li><b>STABIL:</b> Gradiens = 0,00.</li>
+                <li><b>ÜZEMI:</b> Hőmérséklet > 60°C.</li>
+            </ul>
+            <button onclick="document.getElementById('modalOverlay').style.display='none'">Értem</button>
+        </div>
+    </div>
 
 <script>
     const API_KEY = '4A8ZJFC1F0997T6A';
@@ -126,10 +155,10 @@
             credits: { enabled: false },
             xAxis: { type: 'datetime', ordinal: false, crosshair: { width: 1, color: '#d32f2f' } },
             yAxis: { 
-                min: 0, tickInterval: 10, opposite: false,
+                minRange: 10, opposite: false,
                 plotLines: [
-                    { value: 20, color: '#ccc', width: 2, zIndex: 3, label: { text: '20°C', align: 'right'} },
-                    { value: 60, color: '#999', width: 2, zIndex: 3, label: { text: '60°C', align: 'right'} }
+                    { value: 20, color: '#ccc', width: 2, zIndex: 3, label: { text: '20°C', align: 'right' } },
+                    { value: 60, color: '#999', width: 2, zIndex: 3, label: { text: '60°C', align: 'right' } }
                 ]
             },
             tooltip: { 
@@ -137,15 +166,13 @@
                 formatter: function() {
                     let p = this.points[0].point;
                     if (p.y === null) return false;
-                    
                     let etaTxt = "";
                     if (p.stText === "felfűtési" && p.grad > 0.05 && p.y < 60) {
                         const ms = ((60 - p.y) / p.grad) * 60000;
-                        etaTxt = `<br/>ETA 60°C: <b style="color:#d32f2f">${Math.round(ms/60000)} perc</b> (${Highcharts.dateFormat('%H:%M', p.x + ms)})`;
+                        etaTxt = `<br/>ETA 60°C: <b style="color:#d32f2f">${Math.round(ms/60000)}p</b> (${Highcharts.dateFormat('%H:%M', p.x + ms)})`;
                     }
-
-                    return `<div style="font-size:11px; line-height:1.4; padding: 5px;">
-                            <b style="font-size:12px;">${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
+                    return `<div style="font-size:11px; padding: 5px;">
+                            <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
                             Hőfok: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
                             Változás: <b style="color:#800000">${p.grad.toFixed(2)} °C/p</b><br/>
                             Állapot: <b>${p.stText.toUpperCase()}</b>${etaTxt}</div>`;
@@ -164,6 +191,12 @@
         const selDate = picker.value;
         const isToday = new Date().toISOString().split('T')[0] === selDate;
         
+        // Gombok és elemek tiltása múltbeli dátumnál
+        document.getElementById('refreshBtn').disabled = !isToday;
+        document.getElementById('zoomNowBtn').disabled = !isToday;
+        document.getElementById('t_akt_col').style.visibility = isToday ? 'visible' : 'hidden';
+        document.getElementById('g_akt_col').style.visibility = isToday ? 'visible' : 'hidden';
+
         const dStartMs = new Date(selDate + "T00:00:00").getTime();
         const dEndMs = new Date(selDate + "T23:59:59").getTime();
 
@@ -208,12 +241,13 @@
 
             if (t_vals.length > 0) {
                 const minT = Math.min(...t_vals), maxT = Math.max(...t_vals);
-                plotData.forEach(p => {
-                    if (p.y === minT) p.marker = { enabled: true, fillColor: '#1976d2', radius: 4 };
-                    if (p.y === maxT) p.marker = { enabled: true, fillColor: '#800000', radius: 5, symbol: 'diamond' };
-                });
+                
+                // ADAPTÍV SKÁLÁZÁS FIX
+                let yMin = Math.min(0, Math.floor(minT/10)*10);
+                let yMax = Math.max(90, Math.ceil(maxT/10)*10);
+                chart.yAxis[0].setExtremes(yMin, yMax, false);
+                chart.series[0].update({ threshold: yMin }, false);
 
-                chart.yAxis[0].setExtremes(0, Math.max(90, Math.ceil(maxT/10)*10), false);
                 chart.series[0].setData(plotData, true, false, false);
                 
                 document.getElementById('t_akt').innerText = lastT.toFixed(1);
@@ -241,17 +275,9 @@
         document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
     }
 
-    document.getElementById('homeBtn').onclick = () => {
-        const dStart = new Date(picker.value + "T00:00:00").getTime();
-        const dEnd = new Date(picker.value + "T23:59:59").getTime();
-        chart.xAxis[0].setExtremes(dStart, dEnd);
-    };
-
-    document.getElementById('zoomNowBtn').onclick = () => {
-        const now = new Date().getTime();
-        chart.xAxis[0].setExtremes(now - 3600000, now + 1800000);
-    };
-
+    document.getElementById('infoBtn').onclick = () => document.getElementById('modalOverlay').style.display='flex';
+    document.getElementById('homeBtn').onclick = () => chart.xAxis[0].setExtremes(new Date(picker.value + "T00:00:00").getTime(), new Date(picker.value + "T23:59:59").getTime());
+    document.getElementById('zoomNowBtn').onclick = () => { const n = new Date().getTime(); chart.xAxis[0].setExtremes(n - 3600000, n + 1800000); };
     document.getElementById('refreshBtn').onclick = () => fetchData(true);
     picker.onchange = () => fetchData(false);
 
