@@ -14,18 +14,20 @@ jobs:
 
       - name: Insert API Key
         run: |
-          # Először behelyettesítjük az API kulcsot a fájlba
+          # Behelyettesítjük az API kulcsot a main ágról érkező fájlba
           sed -i "s/REPLACE_ME/${{ secrets.THINGSPEAK_KEY }}/g" index.html
 
       - name: Encrypt index.html with Staticrypt
         env:
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # 1. Kitöröljük a zavaró mappákat
+          # 1. Letakarítjuk a korábbi hibás mappákat
           rm -rf encrypted
           
-          # 2. Titkosítunk a --short kapcsolóval (ez a legfontosabb!)
-          # Az eredményt egyből az index.html-be mentjük
+          # 2. Titkosítás:
+          # --short: engedi a 14 karakternél rövidebb jelszót
+          # --shorten: rövidebb URL-t generál
+          # -o index.html: közvetlenül a főoldalt írja felül, nem mappát csinál
           npx staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
 
       - name: Deploy to GitHub Pages
@@ -34,3 +36,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           publish_branch: gh-pages
+          force_orphan: true # Ez kényszeríti a GitHubot, hogy az új, titkosított verziót mutassa
