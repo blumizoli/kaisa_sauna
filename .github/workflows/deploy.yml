@@ -21,7 +21,8 @@ jobs:
         env:
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # A --short kapcsoló engedélyezi a 16 karakternél rövidebb jelszót
+          # A --short engedi a rövid jelszót
+          # Az -o index.html kényszeríti, hogy a fő fájlt írja felül, ne mappát hozzon létre
           npx staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
 
       - name: Deploy to GitHub Pages
