@@ -14,12 +14,11 @@ jobs:
 
       - name: Insert API Key
         run: |
-          # Ez a parancs pontosan megkeresi a placeholder-t és kicseréli a Secret-re
-          sed -i "s/___THINGSPEAK_API_KEY_PLACEHOLDER___/${{ secrets.THINGSPEAK_KEY }}/g" index.html
+          sed -i "s/REPLACE_ME/${{ secrets.THINGSPEAK_KEY }}/g" index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
-          publish_branch: gh-pages  # Ez biztosítja, hogy tiszta legyen a deployment
+          publish_branch: gh-pages
