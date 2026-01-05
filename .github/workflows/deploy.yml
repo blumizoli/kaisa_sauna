@@ -21,9 +21,14 @@ jobs:
         env:
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # A --short engedi a rövid jelszót
-          # Az -o index.html kényszeríti, hogy a fő fájlt írja felül, ne mappát hozzon létre
-          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
+          # 1. Letakarítjuk a korábbi hibás próbálkozások mappáit, ha vannak
+          rm -rf encrypted
+          
+          # 2. Titkosítunk egy átmeneti fájlba
+          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o secret.html
+          
+          # 3. Kicseréljük a fő index.html-t a titkosítottra
+          mv secret.html index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
