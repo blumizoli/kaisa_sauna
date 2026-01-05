@@ -10,33 +10,22 @@
     <style>
         * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background: #f0f0f0; display: flex; flex-direction: column; padding: 8px; }
-        
-        .toolbar { 
-            display: flex; align-items: center; gap: 6px; background: white; padding: 8px; 
-            border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 8px; flex-shrink: 0;
-        }
+        .toolbar { display: flex; align-items: center; gap: 6px; background: white; padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 8px; flex-shrink: 0; }
         .toolbar input { padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 135px; }
         .toolbar button { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd; cursor: pointer; color: #555; transition: 0.2s; }
         .toolbar button:disabled { opacity: 0.3; cursor: not-allowed; }
-        
         .spinning { animation: fa-spin 1s infinite linear; color: #d32f2f !important; }
-
         .stats-bar { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
         @media (min-width: 600px) { .stats-bar { flex-direction: row; } .card { flex: 1; } }
-
         .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .label { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; display: block; }
-        
         .values { font-size: 15px; display: flex; gap: 15px; color: #333; }
         .val-col { display: flex; align-items: center; white-space: nowrap; }
-
         .tag-label { color: #000; font-weight: bold; }
         .val-num { font-weight: bold; margin-left: 5px; }
         .time-label { font-size: 11px; color: #666; margin-right: 5px; font-weight: normal; }
-        
-        .status-badge { background: #888; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; transition: 0.3s; }
+        .status-badge { background: #888; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
         .eta-info { color: #d32f2f; font-weight: bold; font-size: 12px; text-align: right; line-height: 1.2; }
-
         #container { flex-grow: 1; width: 100%; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     </style>
 </head>
@@ -44,8 +33,8 @@
 
     <div class="toolbar">
         <input type="date" id="datePicker">
-        <button id="zoomNowBtn" title="Jelenlegi idő nagyítása"><i class="fas fa-search-plus"></i></button>
-        <button id="homeBtn" title="Teljes nap (00-24h)"><i class="fas fa-search-minus"></i></button>
+        <button id="zoomNowBtn" title="Most"><i class="fas fa-search-plus"></i></button>
+        <button id="homeBtn" title="00-24 nézet"><i class="fas fa-search-minus"></i></button>
         <button id="refreshBtn"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
         <span id="lastUpdate" style="font-size: 11px; color: #888; margin-left: auto;">-</span>
     </div>
@@ -84,78 +73,42 @@
     const picker = document.getElementById('datePicker');
     picker.valueAsDate = new Date();
 
-    picker.onchange = () => fetchData(false);
-
     function initChart() {
         chart = Highcharts.stockChart('container', {
             chart: { zoomType: 'x', animation: false },
             rangeSelector: { enabled: false },
             scrollbar: { enabled: false },
             credits: { enabled: false },
-            xAxis: { 
-                type: 'datetime', 
-                ordinal: false, 
-                crosshair: { width: 1, color: '#d32f2f' }
-            },
+            xAxis: { type: 'datetime', ordinal: false, crosshair: { width: 1, color: '#d32f2f' } },
             yAxis: { 
                 min: 0, max: 90, tickInterval: 10, opposite: false,
                 plotLines: [
-                    { value: 30, color: '#999', width: 2, zIndex: 3, label: { text: '30°C', align: 'right', style: {fontWeight:'bold'}} },
-                    { value: 60, color: '#999', width: 2, zIndex: 3, label: { text: '60°C', align: 'right', style: {fontWeight:'bold'}} }
+                    { value: 30, color: '#999', width: 2, zIndex: 3, label: { text: '30°C', align: 'right' } },
+                    { value: 60, color: '#999', width: 2, zIndex: 3, label: { text: '60°C', align: 'right' } }
                 ]
             },
             tooltip: { 
                 split: false, shared: true, useHTML: true,
                 formatter: function() {
                     let p = this.points[0].point;
-                    if (p.y === null) return false; // Ne mutasson buborékot az üres szélsőértékeken
-
-                    let etaText = "";
-                    let regData = [];
-
-                    if (p.stText === "felfűtési" && p.grad > 0.05 && p.y < 60) {
-                        const msToTarget = ((60 - p.y) / p.grad) * 60000;
-                        const targetTime = p.x + msToTarget;
-                        etaText = `<br/>ETA 60°C: <b>${Math.round(msToTarget/60000)} p (${Highcharts.dateFormat('%H:%M', targetTime)})</b>`;
-                        regData = [[p.x, p.y], [targetTime, 60]];
-                    }
-                    
-                    // Optimalizált trendvonal frissítés (csak ha változik)
-                    const trendSeries = chart.series[1];
-                    if (regData.length > 0) {
-                        trendSeries.setData(regData, true, false, false);
-                    } else if (trendSeries.data.length > 0) {
-                        trendSeries.setData([], true, false, false);
-                    }
-
+                    if (p.y === null) return false;
                     return `<div style="font-size:11px; line-height:1.4">
                             <b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
-                            Hőmérséklet: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
-                            Gradiens: <b style="color:#800000">${p.grad.toFixed(2)} °C/p</b><br/>
-                            Státusz: <b>${p.stText.toUpperCase()}</b>${etaText}</div>`;
+                            Temp: <b style="color:#d32f2f">${p.y.toFixed(1)} °C</b><br/>
+                            Grad: <b style="color:#800000">${p.grad.toFixed(2)}</b><br/>
+                            Státusz: <b>${p.stText.toUpperCase()}</b></div>`;
                 }
             },
-            series: [
-                { 
-                    name: 'Szauna', type: 'area', color: '#d32f2f', zIndex: 4,
-                    data: [], connectNulls: false, threshold: null,
-                    fillColor: { 
-                        linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, 
-                        stops: [[0, 'rgba(211,47,47,0.4)'], [1, 'rgba(211,47,47,0)']] 
-                    }
-                },
-                { 
-                    name: 'Trend', type: 'line', color: 'rgba(0,0,0,0.3)', dashStyle: 'shortdot', 
-                    data: [], marker: { enabled: false }, enableMouseTracking: false, zIndex: 2 
-                }
-            ]
+            series: [{ 
+                name: 'Szauna', type: 'area', color: '#d32f2f', zIndex: 4, data: [], threshold: null,
+                fillColor: { linearGradient: {x1:0,y1:0,x2:0,y2:1}, stops: [[0,'rgba(211,47,47,0.4)'],[1,'rgba(211,47,47,0)']] }
+            }]
         });
     }
 
     async function fetchData(keepZoom = false) {
         const icon = document.getElementById('refreshIcon');
         icon.classList.add('spinning');
-
         const selDate = picker.value;
         const isToday = new Date().toISOString().split('T')[0] === selDate;
         
@@ -171,7 +124,7 @@
             const response = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 1200000).toISOString()}&results=8000`);
             const data = await response.json();
             
-            let plotData = [{ x: dStartMs, y: null }]; // 00:00-as kényszerített pont
+            let plotData = [{ x: dStartMs, y: null }];
             let t_vals = [], g_vals = [];
             let lastT = 0, lastG = 0, lastMs = 0, rollSt = "";
 
@@ -204,7 +157,7 @@
                     }
                 });
             }
-            plotData.push({ x: dEndMs, y: null }); // 23:59-es kényszerített pont
+            plotData.push({ x: dEndMs, y: null });
 
             if (t_vals.length > 0) {
                 const minT = Math.min(...t_vals), maxT = Math.max(...t_vals);
@@ -214,8 +167,7 @@
                 });
 
                 let yMin = Math.min(0, Math.floor(minT/10)*10);
-                let yMax = Math.max(90, Math.ceil(maxT/10)*10);
-                chart.yAxis[0].setExtremes(yMin, yMax, false);
+                chart.yAxis[0].setExtremes(yMin, Math.max(90, Math.ceil(maxT/10)*10), false);
                 chart.series[0].update({ threshold: yMin }, false);
                 chart.series[0].setData(plotData, true, false, false);
                 
@@ -239,11 +191,8 @@
                     etaDiv.innerHTML = `ETA 60°C: ${Math.round(ms/60000)} perc<br/>(${new Date(lastMs + ms).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'})})`;
                 } else etaDiv.innerText = "";
             }
-
             if (!keepZoom) chart.xAxis[0].setExtremes(dStartMs, dEndMs);
-
         } catch (e) { console.error(e); }
-        
         icon.classList.remove('spinning');
         document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
     }
@@ -260,6 +209,7 @@
     };
 
     document.getElementById('refreshBtn').onclick = () => fetchData(true);
+    picker.onchange = () => fetchData(false);
 
     initChart();
     fetchData();
