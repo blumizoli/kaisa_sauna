@@ -16,17 +16,19 @@ jobs:
         run: |
           sed -i "s/REPLACE_ME/${{ secrets.THINGSPEAK_KEY }}/g" index.html
 
-      - name: Encrypt index.html with Staticrypt
+      - name: Encrypt index.html
         env:
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # 1. Letakarítjuk a korábbi próbálkozások maradványait
-          rm -rf encrypted
-          rm -f temp.html
+          # 1. Először telepítjük a programot fixen
+          npm install -g staticrypt
           
-          # 2. Titkosítás - itt a titok: a --short engedi a rövid jelszavadat
-          # Azonnal az index.html-be mentünk, így nem kell az 'mv' parancs
-          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
+          # 2. Letakarítjuk a maradványokat
+          rm -rf encrypted
+          
+          # 3. TITKOSÍTÁS - Itt a trükk: a '--short' kapcsoló elengedhetetlen!
+          # Az '-o index.html' kényszeríti, hogy rögtön a főfájlt írja felül.
+          staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
