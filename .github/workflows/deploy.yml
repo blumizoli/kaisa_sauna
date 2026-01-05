@@ -14,27 +14,24 @@ jobs:
 
       - name: Insert API Key
         run: |
-          # Behelyettesítjük az API kulcsot a main ágról érkező fájlba
           sed -i "s/REPLACE_ME/${{ secrets.THINGSPEAK_KEY }}/g" index.html
 
       - name: Encrypt index.html with Staticrypt
         env:
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # 1. Töröljük a zavaró mappákat
+          # 1. Letakarítjuk a korábbi próbálkozások maradványait
           rm -rf encrypted
+          rm -f temp.html
           
-          # 2. Titkosítunk egy ÚJ, ideiglenes fájlba (temp.html)
-          # A --short és -p "$PASSWORD" kezelik a rövid jelszót
-          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o temp.html
-          
-          # 3. Kicseréljük az eredetit az új titkosítottra
-          mv temp.html index.html
-          
+          # 2. Titkosítás - itt a titok: a --short engedi a rövid jelszavadat
+          # Azonnal az index.html-be mentünk, így nem kell az 'mv' parancs
+          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           publish_branch: gh-pages
-          force_orphan: true # Ez kényszeríti a GitHubot, hogy az új, titkosított verziót mutassa
+          force_orphan: true
