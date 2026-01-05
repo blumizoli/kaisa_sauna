@@ -21,14 +21,8 @@ jobs:
         env:
           PASSWORD: ${{ secrets.WEB_PASSWORD }}
         run: |
-          # 1. Titkosítunk egy ÚJ fájlba (secret.html)
-          npx staticrypt index.html -p "$PASSWORD" --shorten -o secret.html
-          
-          # 2. Megnézzük, létrejött-e (biztonsági ellenőrzés a naplóban)
-          ls -l secret.html
-          
-          # 3. Kicseréljük az eredeti index.html-t a titkosítottra
-          mv secret.html index.html
+          # A --short kapcsoló engedélyezi a 16 karakternél rövidebb jelszót
+          npx staticrypt index.html -p "$PASSWORD" --short --shorten -o index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
