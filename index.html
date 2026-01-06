@@ -3,63 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kaisa Sauna Monitor Pro</title>
+    <title>Kaisa Sauna Monitor Pro v2</title>
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
-        html, body { height: 100%; margin: 0; padding: 0; background: #f4f4f7; display: flex; flex-direction: column; padding: 5px; overflow: hidden; }
-        .toolbar { display: flex; align-items: center; gap: 5px; background: white; padding: 8px; border-radius: 10px; margin-bottom: 5px; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .toolbar input { padding: 5px; border: 1px solid #ddd; border-radius: 5px; width: 130px; }
-        .toolbar button { padding: 8px; border: 1px solid #eee; border-radius: 5px; background: white; cursor: pointer; min-width: 35px; }
-        .stats-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; flex-shrink: 0; }
-        .card { background: white; padding: 10px; border-radius: 10px; flex: 1; min-width: 140px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card-title { font-size: 10px; font-weight: bold; color: #777; text-transform: uppercase; margin-bottom: 5px; display: block; }
-        .val-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
-        .v-label { font-size: 8px; color: #999; text-transform: uppercase; }
-        .v-data { font-size: 13px; font-weight: bold; }
-        .status-badge { padding: 10px; border-radius: 5px; color: white; text-align: center; font-weight: bold; font-size: 11px; width: 100%; display: block; }
-        #container { flex-grow: 1; background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .spinning { animation: fa-spin 1s infinite linear; color: red !important; }
-        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-c { background: white; padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; }
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-dim: #b0b0b0;
+            --border: #333;
+            --accent: #d32f2f;
+        }
+
+        * { font-family: 'Segoe UI', sans-serif; box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; padding: 5px; overflow: hidden; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; }
+        
+        .toolbar { 
+            display: flex; align-items: center; gap: 6px; background: var(--card-bg); padding: 8px; 
+            border-radius: 10px; margin-bottom: 8px; flex-shrink: 0; border: 1px solid var(--border);
+        }
+        .toolbar input { background: #2a2a2a; color: white; border: 1px solid var(--border); padding: 6px; border-radius: 6px; font-size: 13px; width: 125px; }
+        .toolbar button { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #2a2a2a; cursor: pointer; color: var(--text-main); }
+        .spinning { animation: fa-spin 1s infinite linear; color: var(--accent) !important; }
+
+        .stats-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
+        @media (min-width: 768px) { .stats-bar { flex-direction: row; } }
+
+        .card { 
+            background: var(--card-bg); padding: 12px; border-radius: 10px; 
+            border: 1px solid var(--border); flex: 1;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .card-title { font-size: 10px; font-weight: bold; text-transform: uppercase; color: var(--text-dim); }
+
+        .values-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .val-item { display: flex; flex-direction: column; }
+        .val-label { font-size: 9px; color: #777; margin-bottom: 2px; text-transform: uppercase; }
+        .val-data { font-size: 15px; font-weight: bold; }
+
+        .status-badge { padding: 6px; border-radius: 6px; color: white; font-size: 11px; font-weight: bold; text-align: center; flex-grow: 1; }
+        
+        .blink { animation: blinker 1.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0.3; } }
+
+        #container { flex-grow: 1; width: 100%; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border); }
+
+        /* Modal / Info ablak */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
+        .modal-content { background: var(--card-bg); margin: 10% auto; padding: 20px; border-radius: 15px; width: 85%; max-width: 500px; border: 1px solid var(--border); font-size: 14px; line-height: 1.6; }
+        .close { float: right; font-size: 24px; cursor: pointer; }
+        .info-grid { display: grid; grid-template-columns: 30px 1fr; gap: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="toolbar">
         <input type="date" id="datePicker">
-        <button id="zoomNowBtn"><i class="fas fa-search-plus"></i></button>
-        <button id="homeBtn"><i class="fas fa-search-minus"></i></button>
+        <button id="zoomNowBtn" title="Most"><i class="fas fa-search-plus"></i></button>
+        <button id="homeBtn" title="00-24 nézet"><i class="fas fa-search-minus"></i></button>
         <button id="refreshBtn"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
-        <button onclick="document.getElementById('modal').style.display='flex'"><i class="fas fa-question-circle"></i></button>
-        <span id="lastUpdate" style="font-size: 9px; margin-left: auto; color: #999;">Frissítve: --</span>
+        <button id="infoBtn"><i class="fas fa-question-circle"></i></button>
+        <span id="lastUpdate" style="font-size: 10px; color: #777; margin-left: auto;">Frissítve: -</span>
     </div>
 
     <div class="stats-bar">
         <div class="card">
-            <span class="card-title"><i class="fas fa-thermometer-half"></i> Hőmérséklet</span>
-            <div class="val-grid">
-                <div><div class="v-label">ÉLŐ</div><div class="v-data" id="t_akt" style="color:red">--</div><div id="t_time" style="font-size:7px; color:#999"></div></div>
-                <div><div class="v-label">MIN</div><div class="v-data" id="t_min">--</div></div>
-                <div><div class="v-label">MAX</div><div class="v-data" id="t_max">--</div></div>
+            <div class="card-header"><i class="fas fa-thermometer-half" style="color: #d32f2f;"></i><span class="card-title">Hőmérséklet [°C]</span></div>
+            <div class="values-grid">
+                <div class="val-item"><span class="val-label">Aktuális ÉLŐ</span><span class="val-data" style="color: #ff4444;"><span id="t_akt">--</span><div id="t_time" style="font-size:9px; color:#777;"></div></span></div>
+                <div class="val-item"><span class="val-label">Napi Min</span><span class="val-data" id="t_min">--</span></div>
+                <div class="val-item"><span class="val-label">Napi Max</span><span class="val-data" id="t_max">--</span></div>
             </div>
         </div>
         <div class="card">
-            <span class="card-title"><i class="fas fa-chart-line"></i> Változás</span>
-            <div class="val-grid">
-                <div><div class="v-label">ÉLŐ</div><div class="v-data" id="g_akt" style="color:brown">--</div></div>
-                <div><div class="v-label">MIN</div><div class="v-data" id="g_min">--</div></div>
-                <div><div class="v-label">MAX</div><div class="v-data" id="g_max">--</div></div>
+            <div class="card-header"><i class="fas fa-chart-line" style="color: #ff8c00;"></i><span class="card-title">Változás [°C/p]</span></div>
+            <div class="values-grid">
+                <div class="val-item"><span class="val-label">Aktuális ÉLŐ</span><span class="val-data" style="color: #ff8c00;" id="g_akt">--</span></div>
+                <div class="val-item"><span class="val-label">Napi Min</span><span class="val-data" id="g_min">--</span></div>
+                <div class="val-item"><span class="val-label">Napi Max</span><span class="val-data" id="g_max">--</span></div>
             </div>
         </div>
-        <div class="card" style="min-width: 180px;">
-            <span class="card-title">Állapot & ETA</span>
-            <div style="display:flex; gap: 5px; align-items:center;">
-                <div id="status" class="status-badge" style="background:#888">BETÖLTÉS...</div>
-                <div id="eta_box" style="display:none; text-align:right; min-width:60px">
-                    <div style="font-size:7px; color:#999">ETA 60°C</div>
-                    <div id="eta_val" style="font-size:12px; font-weight:bold; color:red">--</div>
+        <div class="card">
+            <div class="card-header"><i class="fas fa-info-circle" style="color: #aaa;"></i><span class="card-title">Állapot & ETA</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="status" class="status-badge" style="background: #444;">...</span>
+                <div id="eta_box" style="display: none; text-align: right; min-width: 60px;">
+                    <div style="font-size: 8px; color: #777;">ETA 60°C</div>
+                    <div id="eta_val" style="font-size: 13px; font-weight: bold; color: #ff4444;">--</div>
                 </div>
             </div>
         </div>
@@ -67,11 +100,23 @@
 
     <div id="container"></div>
 
-    <div id="modal" onclick="this.style.display='none'">
-        <div class="modal-c" onclick="event.stopPropagation()">
-            <h3>Információ</h3>
-            <p>ÜZEMI: >60°C<br>FELFŰTÉS: >0.75 °C/p<br>LASSULÓ: 0.1 - 0.75 °C/p</p>
-            <button onclick="document.getElementById('modal').style.display='none'" style="width:100%; padding:10px;">Bezárás</button>
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Szauna Monitor Segédlet</h3>
+            <div class="info-grid">
+                <i class="fas fa-search-plus"></i> <span><b>Most:</b> Utolsó 1.5 óra mutatása.</span>
+                <i class="fas fa-search-minus"></i> <span><b>24h:</b> Teljes napi nézet visszaállítása.</span>
+                <i class="fas fa-sync-alt"></i> <span><b>Frissítés:</b> Manuális adatlekérés.</span>
+            </div>
+            <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+            <b>Státuszok:</b>
+            <div style="font-size: 12px; margin-top:5px;">
+                <span style="color:#d32f2f">● FELFŰTÉS:</span> Gyors emelkedés (>0.75°C/p)<br>
+                <span style="color:#800000">● ÜZEMI:</span> Hőfok 60°C felett<br>
+                <span style="color:#1976d2">● LEHŰLÉS:</span> Csökkenő hőmérséklet<br>
+                <span style="color:#000000; background:#555; padding:0 3px;">● KÉSZENLÉT:</span> 20°C alatti hőfok
+            </div>
         </div>
     </div>
 
@@ -80,125 +125,179 @@
     const CHAN_ID = '3213557';
     let chart;
 
-    const COLORS = { üzemi: "#800000", felfűtési: "#d32f2f", lassuló: "#ff8c00", stagnáló: "#888888", lehűlési: "#1976d2", készenléti: "#000000" };
+    const COLORS = { 
+        üzemi: "#800000", felfűtési: "#d32f2f", lassuló: "#ff8c00", 
+        stagnáló: "#888888", lehűlési: "#1976d2", készenléti: "#000000" 
+    };
 
-    function getStatusType(t, g) {
-        if (t >= 60) return "üzemi";
-        if (t < 20) return "készenléti";
-        if (g >= 0.75) return "felfűtési";
-        if (g >= 0.1) return "lassuló";
-        if (g >= -0.1) return "stagnáló";
+    Highcharts.setOptions({ 
+        time: { useUTC: false }, 
+        chart: { backgroundColor: 'transparent' },
+        title: { style: { color: '#eee' } }
+    });
+
+    const picker = document.getElementById('datePicker');
+    picker.valueAsDate = new Date();
+
+    function getStatusType(temp, grad) {
+        if (temp >= 60) return "üzemi";
+        if (temp < 20) return "készenléti";
+        if (grad >= 0.75) return "felfűtési";
+        if (grad >= 0.1) return "lassuló";
+        if (grad >= -0.1) return "stagnáló";
         return "lehűlési";
     }
 
-    async function fetchData() {
+    function calculateETA(t_now, g_now) {
+        if (t_now < 60 && g_now > 0.05) {
+            const mins = (60 - t_now) / g_now;
+            const arrival = new Date(Date.now() + mins * 60000);
+            return {
+                mins: Math.round(mins),
+                time: arrival.toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'})
+            };
+        }
+        return null;
+    }
+
+    async function updateLiveHeader() {
+        try {
+            // 15 eredményt kérünk le (kb 5-7 percnyi adat), hogy stabilabb legyen a gradiens
+            const resp = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&results=15`);
+            const data = await resp.json();
+            if (!data.feeds || data.feeds.length < 5) return;
+
+            const last = data.feeds[data.feeds.length - 1];
+            const first = data.feeds[0];
+            
+            const t_now = parseFloat(last.field1);
+            const dt = (new Date(last.created_at) - new Date(first.created_at)) / 60000;
+            const g_now = (t_now - parseFloat(first.field1)) / dt;
+            const st = getStatusType(t_now, g_now);
+
+            document.getElementById('t_akt').innerText = t_now.toFixed(1);
+            document.getElementById('t_time').innerText = new Date(last.created_at).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+            document.getElementById('g_akt').innerText = (g_now > 0 ? "+" : "") + g_now.toFixed(2);
+            
+            const sb = document.getElementById('status');
+            sb.innerText = st.toUpperCase();
+            sb.style.background = COLORS[st];
+
+            const eta = calculateETA(t_now, g_now);
+            const eb = document.getElementById('eta_box');
+            if (eta && (st === "felfűtési" || st === "lassuló")) {
+                eb.style.display = "block";
+                document.getElementById('eta_val').innerText = eta.mins + "p";
+                if (st === "lassuló") eb.classList.add('blink'); else eb.classList.remove('blink');
+            } else {
+                eb.style.display = "none";
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function updateArchiveData(keepZoom = false) {
         const icon = document.getElementById('refreshIcon');
         icon.classList.add('spinning');
-        
-        const selDate = document.getElementById('datePicker').value;
-        const start = selDate + "T00:00:00Z";
-        const end = selDate + "T23:59:59Z";
+
+        const selDate = picker.value;
+        const dStartMs = new Date(selDate + "T00:00:00").getTime();
+        const dEndMs = new Date(selDate + "T23:59:59").getTime();
 
         try {
-            // 1. ÉLŐ ADATOK (Utolsó 15 perc)
-            const liveR = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&minutes=15`);
-            const liveD = await liveR.json();
+            const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs).toISOString()}&end=${new Date(dEndMs).toISOString()}`;
+            const response = await fetch(url);
+            const data = await response.json();
             
-            if (liveD.feeds && liveD.feeds.length > 0) {
-                const last = liveD.feeds[liveD.feeds.length - 1];
-                const t_now = parseFloat(last.field1);
-                
-                let prev = liveD.feeds[0];
-                const lastMs = new Date(last.created_at).getTime();
-                for(let i=liveD.feeds.length-1; i>=0; i--) {
-                    if ((lastMs - new Date(liveD.feeds[i].created_at).getTime()) > 300000) { prev = liveD.feeds[i]; break; }
-                }
-                const dt = (lastMs - new Date(prev.created_at).getTime())/60000;
-                const g_now = dt > 0 ? (t_now - parseFloat(prev.field1))/dt : 0;
-                const st = getStatusType(t_now, g_now);
+            let plotData = [];
+            let t_vals = [], g_vals = [];
 
-                document.getElementById('t_akt').innerText = t_now.toFixed(1);
-                document.getElementById('t_time').innerText = new Date(last.created_at).toLocaleTimeString();
-                document.getElementById('g_akt').innerText = (g_now > 0 ? "+":"") + g_now.toFixed(2);
-                const sB = document.getElementById('status');
-                sB.innerText = st.toUpperCase();
-                sB.style.background = COLORS[st];
-
-                const eB = document.getElementById('eta_box');
-                if ((st === "felfűtési" || st === "lassuló") && t_now < 60 && g_now > 0.05) {
-                    const mins = Math.round((60 - t_now) / g_now);
-                    document.getElementById('eta_val').innerText = mins + "p";
-                    eB.style.display = "block";
-                } else { eB.style.display = "none"; }
-            }
-
-            // 2. GRAFIKON ADATOK
-            const archR = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${start}&end=${end}`);
-            const archD = await archR.json();
-            
-            let points = [], temps = [], grads = [];
-            if (archD.feeds) {
-                archD.feeds.forEach((f, i) => {
-                    const t = parseFloat(f.field1);
-                    const ts = new Date(f.created_at).getTime();
-                    let g = 0;
-                    if (i > 0) {
-                        const dt = (ts - new Date(archD.feeds[i-1].created_at).getTime())/60000;
-                        g = dt > 0 ? (t - parseFloat(archD.feeds[i-1].field1))/dt : 0;
+            if (data.feeds && data.feeds.length > 0) {
+                data.feeds.forEach((f, i) => {
+                    const time = new Date(f.created_at).getTime();
+                    const temp = parseFloat(f.field1);
+                    if (isNaN(temp)) return;
+                    
+                    let grad = 0;
+                    if (i > 5) {
+                        const prev = data.feeds[i-5];
+                        const dt = (time - new Date(prev.created_at).getTime()) / 60000;
+                        grad = (temp - parseFloat(prev.field1)) / dt;
                     }
-                    points.push({x: ts, y: t, g: g, st: getStatusType(t, g)});
-                    temps.push(t); grads.push(g);
+
+                    plotData.push({ x: time, y: temp, grad: grad, stText: getStatusType(temp, grad) });
+                    t_vals.push(temp);
+                    g_vals.push(grad);
                 });
             }
 
-            chart.series[0].setData(points);
-            if (temps.length > 0) {
-                document.getElementById('t_min').innerText = Math.min(...temps).toFixed(1);
-                document.getElementById('t_max').innerText = Math.max(...temps).toFixed(1);
-                document.getElementById('g_min').innerText = Math.min(...grads).toFixed(2);
-                document.getElementById('g_max').innerText = Math.max(...grads).toFixed(2);
-                
-                const minAx = Math.min(0, Math.floor(Math.min(...temps)/10)*10);
-                const maxAx = Math.max(90, Math.ceil(Math.max(...temps)/10)*10);
-                chart.yAxis[0].setExtremes(minAx, maxAx);
+            chart.series[0].setData(plotData, true);
+
+            if (t_vals.length > 0) {
+                const minT = Math.min(...t_vals);
+                const maxT = Math.max(...t_vals);
+                document.getElementById('t_min').innerText = minT.toFixed(1);
+                document.getElementById('t_max').innerText = maxT.toFixed(1);
+                document.getElementById('g_min').innerText = Math.min(...g_vals).toFixed(2);
+                document.getElementById('g_max').innerText = Math.max(...g_vals).toFixed(2);
+
+                // Dinamikus skála beállítása
+                let yMin = Math.min(0, Math.floor(minT / 10) * 10);
+                let yMax = Math.max(90, Math.ceil(maxT / 10) * 10);
+                chart.yAxis[0].setExtremes(yMin, yMax);
             }
 
-        } catch (err) { console.error(err); }
+            if (!keepZoom) chart.xAxis[0].setExtremes(dStartMs, dEndMs);
+        } catch (e) { console.error(e); }
         
         icon.classList.remove('spinning');
-        document.getElementById('lastUpdate').innerText = "Frissítve: " + new Date().toLocaleTimeString();
+        document.getElementById('lastUpdate').innerText = "Frissítve: " + new Date().toLocaleTimeString('hu-HU');
     }
 
-    // Inicializálás
-    document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
-    
-    chart = Highcharts.stockChart('container', {
-        rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
-        xAxis: { type: 'datetime', ordinal: false },
-        yAxis: { min: 0, max: 90, tickInterval: 10, opposite: false },
-        tooltip: {
-            split: false, shared: true, useHTML: true,
-            formatter: function() {
-                const p = this.points[0].point;
-                return `<b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br>Hőfok: ${p.y.toFixed(1)}°C<br>Gradiens: ${p.g.toFixed(2)}<br>Státusz: ${p.st}`;
-            }
-        },
-        series: [{ name: 'Szauna', data: [], type: 'area', color: '#d32f2f', lineWidth: 2, fillColor: { linearGradient: {x1:0,y1:0,x2:0,y2:1}, stops: [[0,'rgba(211,47,47,0.3)'],[1,'rgba(211,47,47,0)']] } }]
-    });
+    function initChart() {
+        chart = Highcharts.stockChart('container', {
+            chart: { zoomType: 'x' },
+            rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
+            xAxis: { type: 'datetime', ordinal: false, lineWidth: 0, tickColor: '#333', labels: { style: { color: '#777' } } },
+            yAxis: { 
+                gridLineColor: '#222', tickInterval: 10, opposite: false,
+                labels: { style: { color: '#777' } },
+                plotLines: [{ value: 60, color: '#444', width: 1, dashStyle: 'LongDash' }] 
+            },
+            tooltip: {
+                split: false, shared: true, useHTML: true,
+                backgroundColor: 'rgba(30, 30, 30, 0.9)', style: { color: '#eee' }, borderColor: '#444',
+                formatter: function() {
+                    let p = this.points[0].point;
+                    const eta = calculateETA(p.y, p.grad);
+                    const etaHtml = eta ? `<br/>ETA (60°C): <b style="color:#ff4444">${eta.time} (${eta.mins}p)</b>` : "";
+                    return `<b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
+                            Hőfok: <b style="color:#ff4444">${p.y.toFixed(1)} °C</b><br/>
+                            Változás: <b>${p.grad.toFixed(2)} °C/p</b>${etaHtml}`;
+                }
+            },
+            series: [{ 
+                name: 'Szauna', type: 'area', color: '#d32f2f', lineWidth: 1.5,
+                data: [], threshold: null,
+                fillColor: { linearGradient: {x1:0,y1:0,x2:0,y2:1}, stops: [[0,'rgba(211,47,47,0.2)'],[1,'transparent']] } 
+            }]
+        });
+    }
 
-    document.getElementById('refreshBtn').onclick = () => fetchData();
-    document.getElementById('datePicker').onchange = () => fetchData();
-    document.getElementById('homeBtn').onclick = () => {
-        const d = document.getElementById('datePicker').value;
-        chart.xAxis[0].setExtremes(new Date(d+"T00:00:00").getTime(), new Date(d+"T23:59:59").getTime());
-    };
-    document.getElementById('zoomNowBtn').onclick = () => {
-        const now = Date.now();
-        chart.xAxis[0].setExtremes(now - 3600000, now + 600000);
-    };
+    // Modal kezelés
+    const modal = document.getElementById("infoModal");
+    document.getElementById("infoBtn").onclick = () => modal.style.display = "block";
+    document.querySelector(".close").onclick = () => modal.style.display = "none";
+    window.onclick = (event) => { if (event.target == modal) modal.style.display = "none"; }
 
-    fetchData();
-    setInterval(fetchData, 60000);
+    document.getElementById('homeBtn').onclick = () => chart.xAxis[0].setExtremes(new Date(picker.value + "T00:00:00").getTime(), new Date(picker.value + "T23:59:59").getTime());
+    document.getElementById('zoomNowBtn').onclick = () => { const n = Date.now(); chart.xAxis[0].setExtremes(n - 5400000, n + 1800000); };
+    document.getElementById('refreshBtn').onclick = () => { updateLiveHeader(); updateArchiveData(true); };
+    picker.onchange = () => updateArchiveData(false);
+
+    initChart();
+    updateLiveHeader();
+    updateArchiveData();
+    setInterval(() => { updateLiveHeader(); updateArchiveData(true); }, 30000);
 </script>
 </body>
 </html>
