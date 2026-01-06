@@ -179,7 +179,7 @@
         const dEndMs = new Date(selDate + "T23:59:59").getTime();
 
         try {
-            const response = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 1200000).toISOString()}&results=8000`);
+            const response = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs).toISOString()}&end=${new Date(dEndMs).toISOString()}`);
             const data = await response.json();
             let plotData = [{ x: dStartMs, y: null }];
             let t_vals = [], g_vals = [];
