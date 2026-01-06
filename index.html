@@ -15,7 +15,7 @@
             display: flex; align-items: center; gap: 6px; background: white; padding: 8px; 
             border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 8px; flex-shrink: 0;
         }
-        .toolbar input { padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 135px; }
+        .toolbar input { padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 130px; }
         .toolbar button { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd; cursor: pointer; color: #555; transition: 0.2s; }
         .spinning { animation: fa-spin 1s infinite linear; color: #d32f2f !important; }
 
@@ -34,17 +34,25 @@
         .values-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .val-item { display: flex; flex-direction: column; }
         .val-label { font-size: 9px; color: #999; margin-bottom: 2px; text-transform: uppercase; }
-        .val-data { font-size: 15px; font-weight: bold; color: #333; }
-        .live-tag { color: #d32f2f; font-size: 8px; vertical-align: top; margin-left: 2px; }
+        .val-data { font-size: 14px; font-weight: bold; color: #333; }
 
         .status-box { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
-        .status-badge { padding: 6px 10px; border-radius: 6px; color: white; font-size: 11px; font-weight: bold; text-transform: uppercase; flex-grow: 1; text-align: center; }
+        .status-badge { padding: 6px 10px; border-radius: 6px; color: white; font-size: 10px; font-weight: bold; text-transform: uppercase; flex-grow: 1; text-align: center; }
         
-        .eta-val { font-size: 14px; font-weight: bold; color: #d32f2f; text-align: right; }
+        .eta-val { font-size: 13px; font-weight: bold; color: #d32f2f; text-align: right; }
         .blink { animation: blinker 1.2s linear infinite; }
         @keyframes blinker { 50% { opacity: 0.1; } }
 
         #container { flex-grow: 1; width: 100%; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+        #modalOverlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal { background: white; padding: 20px; border-radius: 15px; width: 92%; max-width: 480px; }
+        .modal h2 { margin: 0 0 15px 0; font-size: 18px; color: #333; border-bottom: 2px solid #d32f2f; padding-bottom: 8px; }
+        .info-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+        .info-row b { min-width: 90px; }
     </style>
 </head>
 <body>
@@ -54,14 +62,15 @@
         <button id="zoomNowBtn" title="Most"><i class="fas fa-search-plus"></i></button>
         <button id="homeBtn" title="00-24 nézet"><i class="fas fa-search-minus"></i></button>
         <button id="refreshBtn"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
-        <span id="lastUpdate" style="font-size: 11px; color: #888; margin-left: auto;">-</span>
+        <button id="infoBtn"><i class="fas fa-question-circle"></i></button>
+        <span id="lastUpdate" style="font-size: 10px; color: #888; margin-left: auto;">-</span>
     </div>
 
     <div class="stats-bar">
         <div class="card">
             <div class="card-header"><i class="fas fa-thermometer-half" style="color: #d32f2f;"></i><span class="card-title">Hőmérséklet [°C]</span></div>
             <div class="values-grid">
-                <div class="val-item"><span class="val-label">Aktuális ÉLŐ</span><span class="val-data" style="color: #d32f2f;"><span id="t_akt">--</span><span id="t_time" style="font-size:9px; color:#999; margin-left:3px;"></span></span></div>
+                <div class="val-item"><span class="val-label">ÉLŐ</span><span class="val-data" style="color: #d32f2f;"><span id="t_akt">--</span><div id="t_time" style="font-size:8px; color:#999; font-weight:normal;"></div></span></div>
                 <div class="val-item"><span class="val-label">Napi Min</span><span class="val-data" id="t_min">--</span></div>
                 <div class="val-item"><span class="val-label">Napi Max</span><span class="val-data" id="t_max">--</span></div>
             </div>
@@ -69,7 +78,7 @@
         <div class="card">
             <div class="card-header"><i class="fas fa-chart-line" style="color: #800000;"></i><span class="card-title">Változás [°C/p]</span></div>
             <div class="values-grid">
-                <div class="val-item"><span class="val-label">Aktuális ÉLŐ</span><span class="val-data" style="color: #800000;" id="g_akt">--</span></div>
+                <div class="val-item"><span class="val-label">ÉLŐ</span><span class="val-data" style="color: #800000;" id="g_akt">--</span></div>
                 <div class="val-item"><span class="val-label">Napi Min</span><span class="val-data" id="g_min">--</span></div>
                 <div class="val-item"><span class="val-label">Napi Max</span><span class="val-data" id="g_max">--</span></div>
             </div>
@@ -88,6 +97,19 @@
 
     <div id="container"></div>
 
+    <div id="modalOverlay">
+        <div class="modal">
+            <h2>Szauna Monitor Állapotok</h2>
+            <div class="info-row"><b style="color:#800000">ÜZEMI:</b> 60 °C felett</div>
+            <div class="info-row"><b style="color:#d32f2f">FELFŰTÉS:</b> 20-60 °C, változás > 0.75</div>
+            <div class="info-row"><b style="color:#ff8c00">LASSULÓ:</b> 20-60 °C, változás 0.1 - 0.75</div>
+            <div class="info-row"><b style="color:#888888">STAGNÁLÓ:</b> 20-60 °C, változás -0.1 - 0.1</div>
+            <div class="info-row"><b style="color:#1976d2">LEHŰLÉS:</b> 20-60 °C, változás < -0.1</div>
+            <div class="info-row"><b style="color:#000000">KÉSZENLÉT:</b> 20 °C alatt</div>
+            <button style="width:100%; padding:10px; margin-top:15px; cursor:pointer;" onclick="document.getElementById('modalOverlay').style.display='none'">RENDBEN</button>
+        </div>
+    </div>
+
 <script>
     const API_KEY = '4A8ZJFC1F0997T6A';
     const CHAN_ID = '3213557';
@@ -102,7 +124,6 @@
     const picker = document.getElementById('datePicker');
     picker.valueAsDate = new Date();
 
-    // Segédfüggvény a státusz meghatározásához
     function getStatusType(temp, grad) {
         if (temp >= 60) return "üzemi";
         if (temp < 20) return "készenléti";
@@ -112,25 +133,31 @@
         return "lehűlési";
     }
 
-    // 1. FUNKCIÓ: KIZÁRÓLAG AZ ÉLŐ ADATOK FRISSÍTÉSE (Felső kártyák)
+    // 1. ÉLŐ ADATOK (15 percnyi adatból 5 perces gradiens)
     async function updateLiveHeader() {
         try {
-            // Utolsó 15 perc (kb 5-10 rekord) lekérése a gradienshez
-            const resp = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&results=5`);
+            const resp = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&minutes=15`);
             const data = await resp.json();
             if (!data.feeds || data.feeds.length < 2) return;
 
-            const last = data.feeds[data.feeds.length - 1];
-            const first = data.feeds[0];
-            
+            const feeds = data.feeds;
+            const last = feeds[feeds.length - 1];
             const t_now = parseFloat(last.field1);
-            const dt = (new Date(last.created_at) - new Date(first.created_at)) / 60000;
-            const g_now = (t_now - parseFloat(first.field1)) / dt;
+            
+            // Megkeressük a kb. 5 perccel korábbi pontot
+            let prevPoint = feeds[0];
+            const lastMs = new Date(last.created_at).getTime();
+            for (let i = feeds.length - 1; i >= 0; i--) {
+                const diffMin = (lastMs - new Date(feeds[i].created_at).getTime()) / 60000;
+                if (diffMin >= 5) { prevPoint = feeds[i]; break; }
+            }
+
+            const dt = (lastMs - new Date(prevPoint.created_at).getTime()) / 60000;
+            const g_now = dt > 0 ? (t_now - parseFloat(prevPoint.field1)) / dt : 0;
             const st = getStatusType(t_now, g_now);
 
-            // UI frissítés (csak az élő elemeket!)
             document.getElementById('t_akt').innerText = t_now.toFixed(1);
-            document.getElementById('t_time').innerText = new Date(last.created_at).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+            document.getElementById('t_time').innerText = new Date(last.created_at).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
             document.getElementById('g_akt').innerText = (g_now > 0 ? "+" : "") + g_now.toFixed(2);
             
             const sb = document.getElementById('status');
@@ -145,17 +172,14 @@
                 eb.style.display = "block";
                 ev.innerHTML = `${Math.round(ms/60000)}p <span style="font-size:8px; color:#999;">(${new Date(Date.now() + ms).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'})})</span>`;
                 if (st === "lassuló") ev.classList.add('blink'); else ev.classList.remove('blink');
-            } else {
-                eb.style.display = "none";
-            }
-        } catch (e) { console.error("Live Update Error:", e); }
+            } else { eb.style.display = "none"; }
+        } catch (e) { console.error("Live Error:", e); }
     }
 
-    // 2. FUNKCIÓ: KIZÁRÓLAG A GRAFIKON ÉS ARCHÍV STATS FRISSÍTÉSE
+    // 2. ARCHÍV ADATOK ÉS DINAMIKUS SKÁLA
     async function updateArchiveData(keepZoom = false) {
         const icon = document.getElementById('refreshIcon');
         icon.classList.add('spinning');
-
         const selDate = picker.value;
         const dStartMs = new Date(selDate + "T00:00:00").getTime();
         const dEndMs = new Date(selDate + "T23:59:59").getTime();
@@ -165,10 +189,9 @@
             const response = await fetch(url);
             const data = await response.json();
             
-            let plotData = [];
-            let t_vals = [], g_vals = [];
+            let plotData = [], t_vals = [], g_vals = [];
 
-            if (data.feeds && data.feeds.length > 0) {
+            if (data.feeds) {
                 data.feeds.forEach((f, i) => {
                     const time = new Date(f.created_at).getTime();
                     const temp = parseFloat(f.field1);
@@ -176,45 +199,34 @@
                     
                     let grad = 0;
                     if (i > 0) {
-                        const prev = data.feeds[i-1];
-                        const dt = (time - new Date(prev.created_at).getTime()) / 60000;
-                        if (dt > 0) grad = (temp - parseFloat(prev.field1)) / dt;
+                        const dt = (time - new Date(data.feeds[i-1].created_at).getTime()) / 60000;
+                        if (dt > 0) grad = (temp - parseFloat(data.feeds[i-1].field1)) / dt;
                     }
-
-                    const st = getStatusType(temp, grad);
-                    plotData.push({ x: time, y: temp, grad: grad, stText: st });
-                    t_vals.push(temp);
-                    g_vals.push(grad);
+                    plotData.push({ x: time, y: temp, grad: grad, stText: getStatusType(temp, grad) });
+                    t_vals.push(temp); g_vals.push(grad);
                 });
             }
 
-            // Grafikon frissítése
             chart.series[0].setData(plotData, true, false, false);
 
-            // Napi Min/Max frissítése (Ez a kiválasztott napra vonatkozik)
             if (t_vals.length > 0) {
-                document.getElementById('t_min').innerText = Math.min(...t_vals).toFixed(1);
-                document.getElementById('t_max').innerText = Math.max(...t_vals).toFixed(1);
+                const minT = Math.min(...t_vals), maxT = Math.max(...t_vals);
+                document.getElementById('t_min').innerText = minT.toFixed(1);
+                document.getElementById('t_max').innerText = maxT.toFixed(1);
                 document.getElementById('g_min').innerText = Math.min(...g_vals).toFixed(2);
                 document.getElementById('g_max').innerText = Math.max(...g_vals).toFixed(2);
-            } else {
-                document.getElementById('t_min').innerText = "--";
-                document.getElementById('t_max').innerText = "--";
-                document.getElementById('g_min').innerText = "--";
-                document.getElementById('g_max').innerText = "--";
+
+                // Dinamikus skála logika (0-90 alap, de bővül 10 fokonként)
+                let yMin = Math.min(0, Math.floor(minT / 10) * 10);
+                let yMax = Math.max(90, Math.ceil(maxT / 10) * 10);
+                chart.yAxis[0].setExtremes(yMin, yMax);
             }
 
             if (!keepZoom) chart.xAxis[0].setExtremes(dStartMs, dEndMs);
-        } catch (e) { console.error("Archive Update Error:", e); }
+        } catch (e) { console.error("Archive Error:", e); }
         
         icon.classList.remove('spinning');
-        document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
-    }
-
-    // 3. ÖSSZEFOGÓ FUNKCIÓ (Minden frissítése)
-    function refreshAll(keepZoom = false) {
-        updateLiveHeader();    // Mindig a legfrissebbet hozza
-        updateArchiveData(keepZoom); // A naptár szerinti napot hozza
+        document.getElementById('lastUpdate').innerText = "Frissítve: " + new Date().toLocaleTimeString('hu-HU');
     }
 
     function initChart() {
@@ -223,42 +235,19 @@
             rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
             xAxis: { type: 'datetime', ordinal: false },
             yAxis: { 
-                tickInterval: 10, opposite: false, 
-                plotLines: [
-                    { value: 20, color: '#ddd', width: 2, dashStyle: 'Dash' }, 
-                    { value: 60, color: '#ddd', width: 2, dashStyle: 'Dash' }
-                ] 
+                tickInterval: 10, opposite: false, min: 0, max: 90,
+                plotLines: [{ value: 20, color: '#eee', width: 1, dashStyle: 'Dash' }, { value: 60, color: '#eee', width: 1, dashStyle: 'Dash' }] 
             },
+            plotOptions: { area: { lineWidth: 2, states: { hover: { lineWidth: 2 } } } },
             tooltip: {
                 split: false, shared: true, useHTML: true,
                 formatter: function() {
                     let p = this.points[0].point;
-                    const color = COLORS[p.stText] || "#888";
+                    let etaTxt = "";
+                    if ((p.stText === "felfűtési" || p.stText === "lassuló") && p.y < 60 && p.grad > 0.05) {
+                        const ms = ((60 - p.y) / p.grad) * 60000;
+                        etaTxt = `<br/>ETA 60°C: <b style="color:#d32f2f">${Math.round(ms/60000)}p</b> (${Highcharts.dateFormat('%H:%M', p.x + ms)})`;
+                    }
                     return `<b>${Highcharts.dateFormat('%H:%M:%S', this.x)}</b><br/>
                             Hőfok: <b>${p.y.toFixed(1)} °C</b><br/>
-                            Változás: <b>${p.grad.toFixed(2)} °C/p</b><br/>
-                            Státusz: <span style="background:${color}; color:white; padding:2px 5px; border-radius:3px; font-size:10px;">${p.stText.toUpperCase()}</span>`;
-                }
-            },
-            series: [{ 
-                name: 'Szauna', type: 'area', color: '#d32f2f', data: [], threshold: null, 
-                fillColor: { linearGradient: {x1:0,y1:0,x2:0,y2:1}, stops: [[0,'rgba(211,47,47,0.4)'],[1,'rgba(211,47,47,0)']] } 
-            }]
-        });
-    }
-
-    // Eseménykezelők
-    document.getElementById('homeBtn').onclick = () => chart.xAxis[0].setExtremes(new Date(picker.value + "T00:00:00").getTime(), new Date(picker.value + "T23:59:59").getTime());
-    document.getElementById('zoomNowBtn').onclick = () => { const n = Date.now(); chart.xAxis[0].setExtremes(n - 3600000, n + 1800000); };
-    document.getElementById('refreshBtn').onclick = () => refreshAll(true);
-    picker.onchange = () => refreshAll(false);
-
-    // Start
-    initChart();
-    refreshAll();
-    
-    // Automatikus frissítés: 60 másodpercenként mindent frissít
-    setInterval(() => refreshAll(true), 60000);
-</script>
-</body>
-</html>
+                            Változás:
