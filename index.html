@@ -5,10 +5,9 @@
 <head>
 
     <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-    <title>Kaisa Sauna Monitor & Predict</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff" id="theme-meta"> <title>Hőmérséklet Monitor</title>
+    
 
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
 
@@ -94,7 +93,25 @@
 
         * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
 
-        html, body { height: 100%; margin: 0; padding: 8px; overflow: hidden; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+/* 1. Kényszerítjük a HTML-t, hogy mindig a háttérszínt használja */
+html {
+    background-color: var(--bg);
+    transition: background-color 0.3s ease;
+}
+
+/* 2. A body is kapja meg a hátteret, és töltsön ki mindent */
+body {
+    height: 100vh;
+    margin: 0;
+    padding: 8px;
+    overflow: hidden;
+    background-color: var(--bg); /* Ez színezi a 8px-es sávot */
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box; /* Ez fontos, hogy a 8px befelé számítson! */
+    transition: background-color 0.3s ease;
+}
 
         
 
@@ -842,13 +859,13 @@ tooltip: {
 
                         const blink = p.stText === "lassuló" ? "class='blink'" : "";
 
-                        etaStr = `<br/>ETA 60°C: <b style="color:#d32f2f" ${blink}>${mins}p</b> (${time})`;
+                        etaStr = `<br/>ETA: <b style="color:#d32f2f" ${blink}>${mins}p</b> (${time})`;
 
                     }
 
                     // Itt a localTime változót használjuk az elején:
 
-                    return `<b>${localTime}</b><br/>Hőmérséklet: <b>${p.y.toFixed(1)} °C</b><br/>Változás: <b>${p.grad.toFixed(2)} °C/p</b><br/>Státusz: <span style="background:${color};color:white;padding:2px 5px;border-radius:3px;font-size:10px;">${p.stText.toUpperCase()}</span>${etaStr}`;
+                    return `<b>${localTime}</b><br/>Hőmérséklet: <b>${p.y.toFixed(1)} °C</b><br/>Változás: <b>${p.grad.toFixed(2)} °C/p</b><br/>Állapot: <span style="background:${color};color:white;padding:2px 5px;border-radius:3px;font-size:10px;">${p.stText.toUpperCase()}</span>${etaStr}`;
 
                 }
 
@@ -901,57 +918,41 @@ series: [{
 
 
 document.getElementById('themeBtn').onclick = () => {
-
     const b = document.body;
-
     const isDark = b.getAttribute('data-theme') === 'dark';
-
     const newTheme = isDark ? 'light' : 'dark';
-
-    b.setAttribute('data-theme', newTheme);
-
-    document.getElementById('themeIcon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
-
     
-
-    // Teljes grafikon frissítés
-
-
-chart.update({
-    chart: { backgroundColor: 'transparent' },
-    xAxis: { 
-        labels: { 
-            autoRotation: false, // Itt is tiltani kell a dőlést váltáskor
-            style: { 
-                color: newTheme === 'dark' ? '#b0b0b0' : '#666',
-                fontSize: '11px'
+    // Téma és ikon váltása
+    b.setAttribute('data-theme', newTheme);
+    document.getElementById('themeIcon').className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    
+    // Böngésző felső sávjának színezése
+    const metaThemeColor = document.getElementById('theme-meta');
+    if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#121212' : '#ffffff');
+    }
+    
+    // Grafikon színeinek frissítése
+    chart.update({
+        chart: { backgroundColor: 'transparent' },
+        xAxis: { 
+            labels: { 
+                autoRotation: false,
+                style: { 
+                    color: newTheme === 'dark' ? '#b0b0b0' : '#666',
+                    fontSize: '11px'
+                } 
             } 
-        } 
-    },
-
-
-
-
+        },
         yAxis: { 
-
             gridLineColor: newTheme === 'dark' ? '#333' : '#eee',
-
             labels: { style: { color: newTheme === 'dark' ? '#b0b0b0' : '#666' } },
-
-            // A szaggatott vonalak színe sötétben világítson
-
             plotLines: [
-
-                { value: 20, color: newTheme === 'dark' ? '#00ccff' : '#888', width: 2, dashStyle: 'Dash', zIndex: 3 }, 
-
-                { value: 60, color: newTheme === 'dark' ? '#ffcc00' : '#888', width: 2, dashStyle: 'Dash', zIndex: 3 }
-
+                { id: 'limit-20', value: 20, color: newTheme === 'dark' ? '#00ccff' : '#888', width: 2, dashStyle: 'Dash', zIndex: 3 }, 
+                { id: 'limit-60', value: 60, color: newTheme === 'dark' ? '#ffcc00' : '#888', width: 2, dashStyle: 'Dash', zIndex: 3 }
             ]
-
         }
-
     });
-
 };
 
 
@@ -1107,7 +1108,7 @@ document.getElementById('homeBtn').onclick = () => {
 
     link.setAttribute("href", url);
 
-    link.setAttribute("download", `szauna_naplo_${selDate}.csv`);
+    link.setAttribute("download", `kaisa_sauna_export_${selDate}.csv`);
 
     document.body.appendChild(link);
 
@@ -1133,22 +1134,23 @@ document.getElementById('homeBtn').onclick = () => {
 
 
 
-    initChart(); 
+// Indítás
+initChart(); 
+updateArchiveData(); 
 
-    updateArchiveData(); 
-
+// Percenkénti automatikus frissítés - CSAK HA MAI NAP VAN KIVÁLASZTVA
+setInterval(() => { 
+    const today = new Date().toISOString().split('T')[0];
+    const selectedDate = document.getElementById('datePicker').value;
     
-
-    // Percenkénti automatikus frissítés
-
-    setInterval(() => { 
-
+    if (selectedDate === today) {
+        console.log("Automatikus frissítés: Mai nap adatai...");
         updateArchiveData(true); 
-
-    }, 60000);
+    } else {
+        console.log("Frissítés kihagyva: Archív nap nézete.");
+    }
+}, 60000);
 
 </script>
-
 </body>
-
 </html>
