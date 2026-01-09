@@ -178,14 +178,28 @@ body {
 
         .status-badge { padding: 6px 10px; border-radius: 6px; color: white; font-size: 10px; font-weight: bold; text-transform: uppercase; flex-grow: 1; text-align: center; min-width: 100px; display: inline-block; }
 
+/* Alapbeállítás (PC és tablet) */
 #container {
     flex-grow: 1;
     width: 100%;
-    min-height: 350px; /* Mobilon kell egy minimum magasság, hogy látszódjon */
+    min-height: 400px;
     background: var(--card);
     border-radius: 10px;
     border: 1px solid var(--border);
-    margin-bottom: 20px; /* Hogy ne tapadjon a képernyő aljára */
+    margin-bottom: 20px; /* PC-n csak egy kicsi, esztétikus margó */
+}
+
+/* CSAK MOBILON (768px szélesség alatt) */
+@media (max-width: 768px) {
+    #container {
+        /* Itt adjuk meg az extra helyet a telefon gombjai miatt */
+        margin-bottom: 120px; 
+    }
+    
+    body {
+        /* Biztosítjuk, hogy legyen miért görgetni */
+        padding-bottom: 100px; 
+    }
 }
 
         
@@ -799,10 +813,10 @@ function initChart() {
         chart = Highcharts.stockChart('container', {
 
             chart: { 
-                zoomType: 'x', 
-                backgroundColor: 'transparent',
-                spacingBottom: 25 // Ez ad extra helyet alul a csúszkának és az óráknak
-            },
+    zoomType: 'x', 
+    backgroundColor: 'transparent',
+    spacingBottom: 30 // Ez PC-n is jól néz ki, és mobilon is segít
+},
 
             rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
 
