@@ -192,32 +192,21 @@
 
 
 
-    <div class="toolbar">
-
-        <input type="date" id="datePicker">
-
-        <button id="zoomNowBtn" title="Aktuális nézet"><i class="fas fa-search-plus"></i></button>
-
-        <button id="homeBtn" title="Napi nézet"><i class="fas fa-search-minus"></i></button>
-
-        <button id="themeBtn" title="Téma"><i id="themeIcon" class="fas fa-moon"></i></button>
-
-<button id="csvBtn" title="CSV export"><i class="fas fa-file-csv"></i></button>
-
-        <button id="infoBtn" title="Jelmagyarázat"><i class="fas fa-info-circle"></i></button>
-
-        
-
-<div style="margin-left: auto; display: flex; align-items: center; gap: 6px; padding-right: 4px;">
-
-    <i id="refreshIcon" class="fas fa-sync-alt" style="font-size: 11px; color: #888;"></i>
-
-    <span id="lastUpdate" style="font-size: 11px; color: #888;">-</span>
-
+<div class="toolbar">
+    <input type="date" id="datePicker">
+    <button id="zoomNowBtn" title="Aktuális nézet"><i class="fas fa-search-plus"></i></button>
+    <button id="homeBtn" title="Napi nézet"><i class="fas fa-search-minus"></i></button>
+    <button id="refreshBtn" title="Frissítés"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
+    <button id="themeBtn" title="Téma"><i id="themeIcon" class="fas fa-moon"></i></button>
+    <button id="csvBtn" title="CSV export"><i class="fas fa-file-csv"></i></button>
+    <button id="infoBtn" title="Jelmagyarázat"><i class="fas fa-info-circle"></i></button>
 </div>
 
-    </div>
 
+
+
+
+</div>
 
 
 <div class="stats-bar">
@@ -296,7 +285,7 @@
 
         <div class="card">
 
-            <div class="card-header"><i class="fas fa-tasks" style="color: var(--text);"></i><span class="card-title">Aktuális állapot és ETA</span></div>
+            <div class="card-header"><i class="fas fa-tasks" style="color: var(--text);"></i><span class="card-title">Állapot és ETA</span></div>
 
             <div style="display: flex; align-items: center; gap: 8px;">
 
@@ -354,11 +343,9 @@
 
 
 
-                <p>Az aktuális (korábbi nap esetén is) továbbá az adott napi legkisebb (min) és legnagyobb (max) mért hőmérséklet értékek.<br>
+                <p>Az aktuális továbbá az adott napi legkisebb (min) és legnagyobb (max) mért hőmérséklet értékek. Az értékeket a szenzor 0,1 °C változás esetén, de leggyakrabban 20 másodpercenként rögzíti.<br>
 
 
-
-                <small style="color:#888;">A hőmérséklet értékeket a szenzor 0,1 °C változás esetén, de leggyakrabban 20 másodpercenként rögzíti.</small></p>
 
 
 
@@ -378,7 +365,7 @@
 
 
 
-                <p>Az aktuális (korábbi nap esetén is) továbbá az adott napi legkisebb (min) és legnagyobb (max) számított hőmérséklet-változás értékek (5 perces mozgóátlagból számítva).</p>
+                <p>Az aktuális továbbá az adott napi legkisebb (min) és legnagyobb (max) számított hőmérséklet-változás értékek (5 perces mozgóátlagból számítva).</p>
 
 
 
@@ -398,23 +385,23 @@
 
 
 
-                <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-plus"></i></div><div><b>Nagyító (+):</b> aktuális időszakra nagyítás (utolsó 1 óra)</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-plus"></i></div><div><b>Aktuális nézet:</b> aktuális időszakra nagyítás (utolsó 1 óra)</div></div>
 
 
 
-                <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-minus"></i></div><div><b>Nagyító (-):</b> a napi nézet visszaállítása (00-24h)</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-minus"></i></div><div><b>Napi nézet:</b> a napi nézet visszaállítása (00-24h)</div></div>
+
+
+                <div class="info-row"><div class="info-icon-box"><i class="fas fa-sync-alt"></i></div><div><b>Frissítés:</b> adatfrissítés (automatikusan: perces)</div></div>
+
+                <div class="info-row"><div class="info-icon-box"><i class="fas fa-moon"></i></div><div><b>Téma:</b> nappali / éjszakai (sötét) nézet váltása</div></div>
 
 
 
-                <div class="info-row"><div class="info-icon-box"><i class="fas fa-moon"></i></div><div><b>Hold:</b> nappali / éjszakai (sötét) nézet váltása</div></div>
+<div class="info-row"><div class="info-icon-box"><i class="fas fa-file-csv"></i></div><div><b>CSV export:</b> Napi adatok CSV exportja</div></div>
 
 
 
-<div class="info-row"><div class="info-icon-box"><i class="fas fa-file-csv"></i></div><div><b>CSV:</b> Napi adatok CSV exportja</div></div>
-
-
-
-<div class="info-row" style="color: #888;"><div class="info-icon-box"><i class="fas fa-sync-alt" style="color: #888;"></i></div><div><b style="color: #888;">Frissítés:</b> automatikus adatfrissítés 60 másodpercenként</div></div>
 
 
 
@@ -426,7 +413,7 @@
 
 <div class="info-sec">
 
-    <h4><i class="fas fa-tasks"></i> Állapotok logikája</h4>
+    <h4><i class="fas fa-tasks"></i> Állapot</h4>
 
     <table style="width:100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; text-align: center;">
 
@@ -460,7 +447,7 @@
 
                 <td style="padding: 8px 0;"><span class="status-badge" style="background:#d32f2f; min-width: 90px; margin: 0 auto;">Felfűtési</span></td>
 
-                <td style="padding: 8px 4px;">20°C < <b><i>T</i></b> < 60°C</td>
+                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
 
                 <td style="padding: 8px 4px;"><b><i>G</i></b> ≥ +0,75 °C/p</td>
 
@@ -470,7 +457,7 @@
 
                 <td style="padding: 8px 0;"><span class="status-badge" style="background:#ff8c00; min-width: 90px; margin: 0 auto;">Lassuló</span></td>
 
-                <td style="padding: 8px 4px;">20°C < <b><i>T</i></b> < 60°C</td>
+                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
 
                 <td style="padding: 8px 4px;">+0,10 ≤ <b><i>G</i></b> < +0,75</td>
 
@@ -480,7 +467,7 @@
 
                 <td style="padding: 8px 0;"><span class="status-badge" style="background:#888888; min-width: 90px; margin: 0 auto;">Stagnáló</span></td>
 
-                <td style="padding: 8px 4px;">20°C < <b><i>T</i></b> < 60°C</td>
+                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
 
                 <td style="padding: 8px 4px;">-0,10 ≤ <b><i>G</i></b> < +0,10</td>
 
@@ -490,7 +477,7 @@
 
                 <td style="padding: 8px 0;"><span class="status-badge" style="background:#1976d2; min-width: 90px; margin: 0 auto;">Lehűlési</span></td>
 
-                <td style="padding: 8px 4px;">20°C < <b><i>T</i></b> < 60°C</td>
+                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
 
                 <td style="padding: 8px 4px;"><b><i>G</i></b> < -0,10 °C/p</td>
 
@@ -505,6 +492,19 @@
                 <td style="padding: 8px 4px; color: #999;">—</td>
 
             </tr>
+
+
+<tr style="border-top: 2px solid var(--border); background: rgba(93, 64, 55, 0.1);">
+    <td style="padding: 8px 0;">
+        <span class="status-badge" style="background:#5D4037; min-width: 90px; margin: 0 auto;">Archív</span>
+    </td>
+    <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">
+        Archív napokon részletek a tooltip-ben (adatbubi).
+    </td>
+</tr>
+
+
+
 
         </tbody>
 
@@ -530,7 +530,7 @@
 
 
 
-                <i class="fas fa-exclamation-triangle" style="color:#ff8c00"></i> <i>Lassuló állapot esetén az érték villog, figyelmeztetve, hogy fát kell tenni a tűzre.</i></p>
+                <i class="fas fa-exclamation-triangle blink" style="color:#ff8c00"></i> <i>Lassuló állapot esetén az érték villog, figyelmeztetve, hogy fát kell tenni a tűzre.</i></p>
 
 
 
@@ -576,67 +576,7 @@
 
 
 
-    async function updateLiveHeader() {
 
-        try {
-
-            const resp = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&results=25`);
-
-            const data = await resp.json();
-
-            if (!data.feeds || data.feeds.length < 5) return;
-
-            const last = data.feeds[data.feeds.length - 1];
-
-            const t_now = parseFloat(last.field1);
-
-            const nowTime = new Date(last.created_at).getTime();
-
-            const prev = data.feeds.find(f => (nowTime - new Date(f.created_at).getTime()) >= 300000) || data.feeds[0];
-
-            const dt = (nowTime - new Date(prev.created_at).getTime()) / 60000;
-
-            const g_now = (t_now - parseFloat(prev.field1)) / dt;
-
-            const st = getStatusType(t_now, g_now);
-
-
-
-            document.getElementById('t_akt').innerText = t_now.toFixed(1);
-
-            document.getElementById('t_time').innerText = new Date(last.created_at).toLocaleTimeString('hu-HU');
-
-            document.getElementById('g_time').innerText = new Date(last.created_at).toLocaleTimeString('hu-HU');
-
-            document.getElementById('g_akt').innerText = (g_now > 0 ? "+" : "") + g_now.toFixed(2);
-
-            const sb = document.getElementById('status');
-
-            sb.innerText = st.toUpperCase();
-
-            sb.style.background = COLORS[st];
-
-
-
-            const eb = document.getElementById('eta_box');
-
-            if ((st === "felfűtési" || st === "lassuló") && t_now < 60 && g_now > 0.05) {
-
-                const mins = Math.round((60 - t_now) / g_now);
-
-                eb.style.display = "block";
-
-                document.getElementById('eta_val').innerText = mins + "p";
-
-                if (st === "lassuló") document.getElementById('eta_val').classList.add('blink');
-
-                else document.getElementById('eta_val').classList.remove('blink');
-
-            } else { eb.style.display = "none"; }
-
-        } catch (e) { console.error(e); }
-
-    }
 
 
 
@@ -706,6 +646,54 @@
 
             plotData.sort((a,b) => a.x - b.x);
 
+// Felső sáv szinkronizálása (Archív nap esetén ARCHÍV felirat és kötőjelek)
+const realPoints = plotData.filter(p => p.y !== null);
+const isToday = new Date().toISOString().split('T')[0] === document.getElementById('datePicker').value;
+
+if (realPoints.length > 0) {
+    const last = realPoints[realPoints.length - 1];
+    const tAkt = document.getElementById('t_akt');
+    const gAkt = document.getElementById('g_akt');
+    const stAkt = document.getElementById('status');
+    const tTime = document.getElementById('t_time');
+    const gTime = document.getElementById('g_time');
+    const eb = document.getElementById('eta_box');
+
+    if (!isToday) {
+        // --- ARCHÍV MÓD ---
+        tAkt.innerText = "-.-";
+        gAkt.innerText = "-.--";
+        stAkt.innerText = "ARCHÍV";
+        stAkt.style.background = "#5D4037"; // Barna háttér
+        stAkt.style.textDecoration = "none";
+        tTime.style.display = "none";
+        gTime.style.display = "none";
+        eb.style.display = "none";
+    } else {
+        // --- AKTUÁLIS MÓD (MAI NAP) ---
+        tAkt.innerText = last.y.toFixed(1);
+        gAkt.innerText = (last.grad > 0 ? "+" : "") + last.grad.toFixed(2);
+        stAkt.innerText = last.stText.toUpperCase();
+        stAkt.style.background = COLORS[last.stText];
+        stAkt.style.textDecoration = "none";
+        
+        tTime.style.display = "block";
+        gTime.style.display = "block";
+        tTime.innerText = new Date(last.x).toLocaleTimeString('hu-HU');
+        gTime.innerText = new Date(last.x).toLocaleTimeString('hu-HU');
+
+        // ETA számítás csak akkor, ha ma van
+        if ((last.stText === "felfűtési" || last.stText === "lassuló") && last.y < 60 && last.grad > 0.05) {
+            const mins = Math.round((60 - last.y) / last.grad);
+            eb.style.display = "block";
+            document.getElementById('eta_val').innerText = mins + "p";
+            document.getElementById('eta_val').classList.toggle('blink', last.stText === "lassuló");
+        } else { 
+            eb.style.display = "none"; 
+        }
+    }
+}
+
             chart.series[0].setData(plotData, true);
 
 
@@ -748,8 +736,6 @@
 
         setTimeout(() => { icon.classList.remove('spinning'); }, 500);
 
-document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString('hu-HU');
-
     }
 
 
@@ -766,7 +752,33 @@ document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString(
 
             plotOptions: { area: { states: { hover: { lineWidthPlus: 0 }, inactive: { opacity: 1 } } } },
 
-            xAxis: { type: 'datetime', ordinal: false, tickInterval: 3600000, labels: { format: '{value:%H:%M}' } },
+
+
+xAxis: {
+    type: 'datetime',
+    ordinal: false,
+labels: { 
+    format: '{value:%H:%M}',
+    autoRotation: false, // Ez tiltja le a bedöntést
+    style: { 
+        color: document.body.getAttribute('data-theme') === 'dark' ? '#b0b0b0' : '#666',
+        fontSize: '11px' // Érdemes kicsit kisebbre venni, hogy vízszintesen is kiférjenek
+    }
+},
+    // Gyári automatika a sűrűségre:
+    dateTimeLabelFormats: {
+        minute: '%H:%M',
+        hour: '%H:%M'
+    },
+    units: [
+        ['minute', [1, 5, 10, 15, 30]], // Engedélyezett perces osztások
+        ['hour', [1, 2, 3, 6]]          // Engedélyezett órás osztások
+    ],
+    tickPixelInterval: 50 // Ez határozza meg, milyen közel kerülhetnek egymáshoz (minél kisebb, annál sűrűbb)
+},
+
+
+
 
 yAxis: { 
 
@@ -904,15 +916,21 @@ document.getElementById('themeBtn').onclick = () => {
 
     // Teljes grafikon frissítés
 
-    chart.update({
 
-        chart: { backgroundColor: 'transparent' }, // Mindig átlátszó, a CSS háttér látszik
+chart.update({
+    chart: { backgroundColor: 'transparent' },
+    xAxis: { 
+        labels: { 
+            autoRotation: false, // Itt is tiltani kell a dőlést váltáskor
+            style: { 
+                color: newTheme === 'dark' ? '#b0b0b0' : '#666',
+                fontSize: '11px'
+            } 
+        } 
+    },
 
-        xAxis: { 
 
-            labels: { style: { color: newTheme === 'dark' ? '#b0b0b0' : '#666' } } 
 
-        },
 
         yAxis: { 
 
@@ -948,17 +966,42 @@ document.getElementById('themeBtn').onclick = () => {
 
 
 
-    document.getElementById('zoomNowBtn').onclick = () => {
+document.getElementById('refreshBtn').onclick = () => updateArchiveData(true);
 
-        document.getElementById('datePicker').valueAsDate = new Date();
-
-        updateArchiveData(false).then(() => { const n = Date.now(); chart.xAxis[0].setExtremes(n - 5400000, n + 1800000); });
-
-    };
-
-    document.getElementById('homeBtn').onclick = () => updateArchiveData(false);
 
     
+
+
+// Aktuális nézet: Visszavált mára, letölti az adatot, és odazoomol
+document.getElementById('zoomNowBtn').onclick = async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const datePicker = document.getElementById('datePicker');
+
+    // 1. Ha nem a mai napon vagyunk, átváltjuk a naptárat és újratöltünk
+    if (datePicker.value !== todayStr) {
+        datePicker.value = todayStr;
+        await updateArchiveData(false); // Adatok letöltése mára
+    }
+
+    // 2. Zoom beállítása (1 óra múlt, 30 perc jövő)
+    const now = Date.now();
+    chart.xAxis[0].setExtremes(now - 3600000, now + 1800000);
+};
+
+
+
+// Napi nézet visszaállítása - letöltés nélkül, azonnal
+document.getElementById('homeBtn').onclick = () => {
+    const selDate = document.getElementById('datePicker').value;
+    const dStartMs = new Date(selDate + "T00:00:00").getTime();
+    const dEndMs = new Date(selDate + "T23:59:59").getTime();
+    chart.xAxis[0].setExtremes(dStartMs, dEndMs);
+};
+
+
+
+
 
     // Itt volt a refreshBtn.onclick, de mivel a gombot töröltük, erre már nincs szükség.
 
@@ -1092,8 +1135,6 @@ document.getElementById('themeBtn').onclick = () => {
 
     initChart(); 
 
-    updateLiveHeader(); 
-
     updateArchiveData(); 
 
     
@@ -1101,8 +1142,6 @@ document.getElementById('themeBtn').onclick = () => {
     // Percenkénti automatikus frissítés
 
     setInterval(() => { 
-
-        updateLiveHeader(); 
 
         updateArchiveData(true); 
 
