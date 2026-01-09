@@ -101,52 +101,23 @@ html {
 
 /* 2. A body is kapja meg a hátteret, és töltsön ki mindent */
 body {
-    height: auto; /* vh helyett auto, hogy görgethető legyen */
-    min-height: 100vh;
+    height: 100vh;
     margin: 0;
     padding: 8px;
-    overflow-y: auto; /* Tiltás helyett engedélyezzük a függőleges görgetést */
-    background-color: var(--bg);
+    overflow: hidden;
+    background-color: var(--bg); /* Ez színezi a 8px-es sávot */
     color: var(--text);
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Ez fontos, hogy a 8px befelé számítson! */
     transition: background-color 0.3s ease;
+}
 
         
 
-.toolbar { 
-    display: flex; 
-    flex-wrap: wrap; 
-    align-items: center; 
-    gap: 6px; 
-    background: var(--card); 
-    padding: 8px; 
-    border-radius: 10px; 
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
-    margin-bottom: 8px; 
-    flex-shrink: 0; 
-    border: 1px solid var(--border); 
-}
+        .toolbar { display: flex; align-items: center; gap: 6px; background: var(--card); padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 8px; flex-shrink: 0; border: 1px solid var(--border); }
 
-/* Az input PC-n maradjon fix méretű (140px), mobilon pedig rugalmas */
-.toolbar input { 
-    padding: 6px; 
-    border: 1px solid var(--border); 
-    border-radius: 6px; 
-    font-size: 14px; 
-    width: 140px; /* Alapértelmezett szélesség PC-re */
-    background: var(--card); 
-    color: var(--text); 
-}
-
-@media (max-width: 480px) {
-    .toolbar input { 
-        flex-grow: 1; /* Csak mobilon nyúljon ki, ha szükséges */
-        width: auto;
-    }
-}
-
+        .toolbar input { padding: 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; width: 135px; background: var(--card); color: var(--text); }
 
         .toolbar button { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); cursor: pointer; color: var(--text); }
 
@@ -178,15 +149,7 @@ body {
 
         .status-badge { padding: 6px 10px; border-radius: 6px; color: white; font-size: 10px; font-weight: bold; text-transform: uppercase; flex-grow: 1; text-align: center; min-width: 100px; display: inline-block; }
 
-#container {
-    flex-grow: 1;
-    width: 100%;
-    min-height: 350px; /* Mobilon kell egy minimum magasság, hogy látszódjon */
-    background: var(--card);
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    margin-bottom: 20px; /* Hogy ne tapadjon a képernyő aljára */
-}
+        #container { flex-grow: 1; width: 100%; background: var(--card); border-radius: 10px; border: 1px solid var(--border); }
 
         
 
@@ -794,15 +757,11 @@ if (realPoints.length > 0) {
 
 
 
-function initChart() {
+    function initChart() {
 
         chart = Highcharts.stockChart('container', {
 
-            chart: { 
-                zoomType: 'x', 
-                backgroundColor: 'transparent',
-                spacingBottom: 25 // Ez ad extra helyet alul a csúszkának és az óráknak
-            },
+            chart: { zoomType: 'x', backgroundColor: 'transparent' },
 
             rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
 
@@ -815,25 +774,24 @@ function initChart() {
 xAxis: {
     type: 'datetime',
     ordinal: false,
-    // MINIMÁLIS NAGYÍTÁS BEÁLLÍTÁSA: 15 perc (900.000 ms)
-    minRange: 30 * 60 * 1000, 
-    
-    labels: { 
-        format: '{value:%H:%M}',
-        autoRotation: false,
-        style: { 
-            color: document.body.getAttribute('data-theme') === 'dark' ? '#b0b0b0' : '#666',
-            fontSize: '10px' 
-        },
-        overflow: false, 
-        crop: false,
-        reserveSpace: true
-    },
-    tickPixelInterval: 100, 
+labels: { 
+    format: '{value:%H:%M}',
+    autoRotation: false, // Ez tiltja le a bedöntést
+    style: { 
+        color: document.body.getAttribute('data-theme') === 'dark' ? '#b0b0b0' : '#666',
+        fontSize: '11px' // Érdemes kicsit kisebbre venni, hogy vízszintesen is kiférjenek
+    }
+},
+    // Gyári automatika a sűrűségre:
     dateTimeLabelFormats: {
         minute: '%H:%M',
         hour: '%H:%M'
-    }
+    },
+    units: [
+        ['minute', [1, 5, 10, 15, 30]], // Engedélyezett perces osztások
+        ['hour', [1, 2, 3, 6]]          // Engedélyezett órás osztások
+    ],
+    tickPixelInterval: 50 // Ez határozza meg, milyen közel kerülhetnek egymáshoz (minél kisebb, annál sűrűbb)
 },
 
 
