@@ -7,89 +7,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff" id="theme-meta"> <title>Kaisa Sauna Monitor & Predict</title>
-    
 
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    
 
     <style>
 
-
-
 :root { 
-
-    --bg: #f0f0f0; 
-
-    --card: white; 
-
-    --text: #333; 
-
-    --text-dim: #666; 
-
-    --border: #ddd; 
-
-    /* Nappali színek */
-
-    --temp-color: #d32f2f;   /* Piros */
-
-    --grad-color: #800000;   /* Bordó */
-
+    --bg: #f0f0f0; --card: white; --text: #333; --text-dim: #666; --border: #ddd; 
+    --temp-color: #d32f2f; --grad-color: #800000;
 }
-
-
-
 [data-theme="dark"] { 
-
-    --bg: #121212; 
-
-    --card: #1e1e1e; 
-
-    --text: #ffffff; 
-
-    --text-dim: #cccccc; 
-
-    --border: #333; 
-
-    /* Éjszakai élénk színek */
-
-    --temp-color: #ff4d4d;   /* Világító piros */
-
-    --grad-color: #e65555;   /* Élénkebb, láthatóbb bordó */
-
+    --bg: #121212; --card: #1e1e1e; --text: #ffffff; --text-dim: #b0b0b0; --border: #333; 
+    --temp-color: #ff4d4d; --grad-color: #c04040;
 }
-
-
-
-[data-theme="dark"] { 
-
-    --bg: #121212; 
-
-    --card: #1e1e1e; 
-
-    --text: #ffffff; 
-
-    --text-dim: #b0b0b0; 
-
-    --border: #333; 
-
-    /* Éjszakai élénk színek */
-
-    --temp-color: #ff4d4d;   /* Élénk piros */
-
-    --grad-color: #c04040;   /* Élénkebb bordó/világosabb mélypiros */
-
-}
-
-
-
-}
-
-
-
-        [data-theme="dark"] { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --text-dim: #b0b0b0; --border: #333; }
+/* Itt ne legyen magányos } jel! */
+* { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
 
         * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; }
 
@@ -112,102 +45,123 @@ body {
     box-sizing: border-box; /* Ez fontos, hogy a 8px befelé számítson! */
     transition: background-color 0.3s ease;
 }
+       
 
-        
+.toolbar { 
+    display: flex; 
+    align-items: center; 
+    gap: 5px; /* Fix, kicsi távolság a gombok között */
+    background: var(--card); 
+    padding: 8px; 
+    border-radius: 10px; 
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    flex-wrap: nowrap; /* Tilos több sorba törni */
+    overflow-x: auto;  /* Ha véletlenül mégis túl kicsi lenne a kijelző, görgethető legyen, ne essen szét */
+}
 
-        .toolbar { display: flex; align-items: center; gap: 6px; background: var(--card); padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 8px; flex-shrink: 0; border: 1px solid var(--border); }
+.toolbar input { 
+    padding: 6px; 
+    border: 1px solid var(--border); 
+    border-radius: 6px; 
+    font-size: 14px; 
+    width: 120px; /* Kompromisszumos szélesség */
+    height: 38px;
+    background: var(--card); 
+    color: var(--text); 
+    flex-shrink: 0;
+}
 
-        .toolbar input { padding: 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; width: 135px; background: var(--card); color: var(--text); }
+.toolbar button { 
+    width: 38px; /* Tökéletes négyzet alak */
+    height: 38px;
+    padding: 0; 
+    border: 1px solid var(--border); 
+    border-radius: 6px; 
+    background: var(--card); 
+    cursor: pointer; 
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Megakadályozza, hogy mobilon "összenyomódjanak" a gombok */
+    transition: background 0.2s;
+}
 
-        .toolbar button { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); cursor: pointer; color: var(--text); }
-
+.toolbar button:hover {
+    background: var(--bg); /* Egy kis interakció PC-n */
+}
         .stats-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
-
         @media (min-width: 768px) { .stats-bar { flex-direction: row; } }
-
         .card { background: var(--card); padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border); }
-
         .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-
-.card-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text); }
-
+	.card-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text); }
         .values-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
-        .val-label { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; }
+.val-label { 
+    font-size: 10px; 
+    color: var(--text-dim); 
+    text-transform: uppercase; 
+    display: inline-block; /* Így precízen kezelhető a távolság */
+    margin-right: 4px;     /* Állítsd be 4px-re, ez az ideális */
+}
 
-        .val-data { font-size: 15px; font-weight: bold; }
+.val-data { 
+    font-size: 15px; 
+    font-weight: bold; 
+    margin-top: 15px; /* Ez tesz egy kis függőleges "szóközt" a felirat és a szám közé */
+}
 
 .card-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text); }
-
-        .values-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-
-        .val-label { font-size: 9px; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; }
-
-        /* Kiegészítés a kis idők színeihez */
+.values-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.val-label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; }
 
 .val-data div {color: var(--text-dim) !important; font-weight: normal !important;}
 
-        .status-badge { padding: 6px 10px; border-radius: 6px; color: white; font-size: 10px; font-weight: bold; text-transform: uppercase; flex-grow: 1; text-align: center; min-width: 100px; display: inline-block; }
+.status-badge { 
+    padding: 6px 10px; 
+    border-radius: 6px; 
+    color: white; 
+    font-size: 10px; 
+    font-weight: bold; 
+    text-transform: uppercase; 
+    width: 50%;
+    text-align: center; 
+    display: inline-block; 
+}
+
+
+#eta_val {
+        font-size: 13px; 
+        font-weight: bold; 
+        color: var(--text); 
+        white-space: nowrap;
+    }
 
         #container { flex-grow: 1; width: 100%; background: var(--card); border-radius: 10px; border: 1px solid var(--border); }
-
-        
-
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
-
         .modal-content { background: var(--card); margin: 5% auto; padding: 25px; border-radius: 15px; width: 90%; max-width: 550px; border: 1px solid var(--border); font-size: 13px; line-height: 1.4; max-height: 85vh; overflow-y: auto; }
-
         .close-btn { float: right; cursor: pointer; font-size: 20px; color: var(--text-dim); }
-
         .info-sec { margin-bottom: 20px; }
-
         .info-sec h4 { margin: 0 0 8px 0; color: #d32f2f; border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-
         .info-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
-
         .info-icon-box { width: 25px; text-align: center; flex-shrink: 0; color: var(--text); }
-
         .st-grid { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; margin-top: 5px; }
-
-        
-
-        /* Frissítés animáció és szín */
-
         .spinning { animation: fa-spin 1s infinite linear; color: #d32f2f !important; }
-
-        
-
         .blink { animation: blinker 1.2s linear infinite; }
 
         @keyframes blinker { 50% { opacity: 0.3; } }
 
-
-
-
-
-/* Dátumválasztó naptár ikonjának fehérítése sötét módban */
-
         [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
 
             filter: invert(0.9) brightness(1.5);
-
         }
-
-        /* Sötét módos beviteli mező keret */
-
         [data-theme="dark"] .toolbar input { border-color: #444; }
-
-
-
-
-
     </style>
 
 </head>
 
 <body data-theme="light">
-
-
 
 <div class="toolbar">
     <input type="date" id="datePicker">
@@ -220,451 +174,220 @@ body {
 </div>
 
 
-
-
-
-</div>
-
-
 <div class="stats-bar">
-
-        <div class="card">
-
-            <div class="card-header">
-
-                <i class="fas fa-thermometer-half" style="color: var(--temp-color);"></i>
-
-                <span class="card-title" style="color: var(--temp-color);">Hőmérséklet [°C]</span>
-
-            </div>
-
-            <div class="values-grid">
-
-                <div class="val-item">
-
-                    <span class="val-label">Aktuális</span>
-
-                    <span class="val-data" style="color: var(--temp-color);">
-
-                        <span id="t_akt">--</span>
-
-                        <div id="t_time" style="font-size:10px;"></div>
-
-                    </span>
-
-                </div>
-
-                <div class="val-item"><span class="val-label">Napi min </span><span class="val-data" id="t_min">--</span></div>
-
-                <div class="val-item"><span class="val-label">Napi max </span><span class="val-data" id="t_max">--</span></div>
-
-            </div>
-
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-thermometer-half" style="color: var(--temp-color);"></i>
+            <span class="card-title" style="color: var(--temp-color);">Hőmérséklet [°C]</span>
         </div>
-
-
-
-        <div class="card">
-
-            <div class="card-header">
-
-                <i class="fas fa-chart-line" style="color: var(--grad-color);"></i>
-
-                <span class="card-title" style="color: var(--grad-color);">Változás [°C/perc]</span>
-
+        <div class="values-grid">
+            <div class="val-item">
+                <span class="val-label">Akt</span>
+                <span class="val-data" style="color: var(--temp-color);"><span id="t_akt">--</span>
+                    <div id="t_time" style="font-size:10px; font-weight: normal; color: var(--text-dim);"></div>
+                </span>
             </div>
-
-            <div class="values-grid">
-
-                <div class="val-item">
-
-                    <span class="val-label">Aktuális</span>
-
-                    <span class="val-data" style="color: var(--grad-color);">
-
-                        <span id="g_akt">--</span>
-
-                        <div id="g_time" style="font-size:10px;"></div>
-
-                    </span>
-
-                </div>
-
-                <div class="val-item"><span class="val-label">Napi min </span><span class="val-data" id="g_min">--</span></div>
-
-                <div class="val-item"><span class="val-label">Napi max </span><span class="val-data" id="g_max">--</span></div>
-
-            </div>
-
+            <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="t_min">--</span></div>
+            <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="t_max">--</span></div>
         </div>
-
-
-
-        <div class="card">
-
-            <div class="card-header"><i class="fas fa-tasks" style="color: var(--text);"></i><span class="card-title">Állapot és ETA</span></div>
-
-            <div style="display: flex; align-items: center; gap: 8px;">
-
-                <span id="status" class="status-badge" style="background: #888;">...</span>
-
-                <div id="eta_box" style="display: none; text-align: right;">
-
-                    <div style="font-size: 8px; color: var(--text-dim);">ETA 60°C</div>
-
-                    <div id="eta_val" style="font-size: 13px; font-weight: bold; color: var(--temp-color);">--</div>
-
-                </div>
-
-            </div>
-
-        </div>
-
     </div>
 
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-chart-line" style="color: var(--grad-color);"></i>
+            <span class="card-title" style="color: var(--grad-color);">Változás [°C/p]</span>
+        </div>
+        <div class="values-grid">
+            <div class="val-item">
+                <span class="val-label">Akt</span>
+                <span class="val-data" style="color: var(--grad-color);"><span id="g_akt">--</span>
+                    <div id="g_time" style="font-size:10px; font-weight: normal; color: var(--text-dim);"></div>
+                </span>
+            </div>
+            <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="g_min">--</span></div>
+            <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="g_max">--</span></div>
+        </div>
+    </div>
 
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-tasks" style="color: var(--text);"></i>
+        <span class="card-title">Állapot és ETA</span>
+    </div>
+    <div style="display: flex; align-items: flex-start; height: 100%;">
+        
+        <div style="flex: 0 0 50%; padding-right: 5px; display: flex; align-items: center; height: 45px;">
+            <span id="status" class="status-badge" style="background: #888; width: 100%; display: block; padding: 8px 0; font-size: 10px;">...</span>
+        </div>
+        
+<div style="flex: 0 0 50%; padding-left: 10px;">
+    <div class="val-item" style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+        <span class="val-label" style="margin: 0;">ETA</span>
+        <span id="eta_val" class="val-data" style="font-size: 15px; margin: 0; color: var(--text); white-space: pre-line;">--:--</span>
+    </div>
+</div>
+        </div>
+    </div>
+</div>
 
-    <div id="container"></div>
-
-
-
-
-
-
+<div id="container" style="height: 400px; width: 100%;"></div>
 
     <div id="infoModal" class="modal">
-
-
-
         <div class="modal-content">
-
-
-
             <i class="fas fa-times close-btn" id="modalClose"></i>
-
-
-
             <h2 style="margin:0 0 20px 0; text-align:center;">Jelmagyarázat</h2>
-
-
-
-
-
-
-
             <div class="info-sec">
-
-
-
                 <h4><i class="fas fa-thermometer-half"></i> Hőmérséklet [°C]</h4>
-
-
-
                 <p>Az aktuális továbbá az adott napi legkisebb (min) és legnagyobb (max) mért hőmérséklet értékek. Az értékeket a szenzor 0,1 °C változás esetén, de leggyakrabban 20 másodpercenként rögzíti.<br>
-
-
-
-
-
             </div>
-
-
-
-
-
-
-
             <div class="info-sec">
-
-
-
                 <h4><i class="fas fa-chart-line"></i> Változás [°C/perc]</h4>
-
-
-
                 <p>Az aktuális továbbá az adott napi legkisebb (min) és legnagyobb (max) számított hőmérséklet-változás értékek (5 perces mozgóátlagból számítva).</p>
-
-
-
             </div>
-
-
-
-
-
-
 
             <div class="info-sec">
-
-
-
                 <h4><i class="fas fa-mouse-pointer"></i> Ikonok</h4>
-
-
-
                 <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-plus"></i></div><div><b>Aktuális nézet:</b> aktuális időszakra nagyítás (utolsó 1 óra)</div></div>
-
-
-
                 <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-minus"></i></div><div><b>Napi nézet:</b> a napi nézet visszaállítása (00-24h)</div></div>
-
-
                 <div class="info-row"><div class="info-icon-box"><i class="fas fa-sync-alt"></i></div><div><b>Frissítés:</b> adatfrissítés (automatikusan: perces)</div></div>
-
                 <div class="info-row"><div class="info-icon-box"><i class="fas fa-moon"></i></div><div><b>Téma:</b> nappali / éjszakai (sötét) nézet váltása</div></div>
-
-
-
-<div class="info-row"><div class="info-icon-box"><i class="fas fa-file-csv"></i></div><div><b>CSV export:</b> Napi adatok CSV exportja</div></div>
-
-
-
-
-
-
-            </div>
-
-
-
-
+		<div class="info-row"><div class="info-icon-box"><i class="fas fa-file-csv"></i></div><div><b>CSV export:</b> Napi adatok CSV exportja</div></div>
+           </div>
 
 <div class="info-sec">
-
     <h4><i class="fas fa-tasks"></i> Állapot</h4>
-
     <table style="width:100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; text-align: center;">
-
         <thead>
-
             <tr style="border-bottom: 2px solid var(--border); color: var(--text-dim);">
-
                 <th style="padding: 8px 4px;">ÁLLAPOT</th>
-
-                <th style="padding: 8px 4px;">HŐMÉRSÉKLET (<b><i>T</i></b>)</th>
-
-                <th style="padding: 8px 4px;">VÁLTOZÁS (<b><i>G</i></b>)</th>
-
+                <th style="padding: 8px 4px;">HŐMÉRSÉKLET (<i>T</i>)</th>
+                <th style="padding: 8px 4px;">VÁLTOZÁS (<i>G</i>) [°C/p]</th>
             </tr>
-
         </thead>
-
         <tbody>
-
             <tr style="border-bottom: 1px solid var(--border);">
-
                 <td style="padding: 8px 0;"><span class="status-badge" style="background:#000000; min-width: 90px; margin: 0 auto;">Készenléti</span></td>
-
                 <td style="padding: 8px 4px;"><b><i>T</i></b> < 20 °C</td>
-
                 <td style="padding: 8px 4px; color: #999;">—</td>
-
             </tr>
 
-            <tr style="border-bottom: 1px solid var(--border);">
+<tr style="border-bottom: 1px solid var(--border); background: rgba(128, 128, 128, 0.05);">
+    <td style="padding: 8px 0; position: relative;">
+        <span class="status-badge" style="background:#d32f2f; min-width: 90px; margin: 0 auto;">Felfűtési</span>
+        </td>
+    <td style="padding: 8px 4px;">20 °C ≤ <b><i>T</i></b> < 60 °C</td>
+    <td style="padding: 8px 4px;"><b><i>G</i></b> ≥ +0,75</td>
+</tr>
 
-                <td style="padding: 8px 0;"><span class="status-badge" style="background:#d32f2f; min-width: 90px; margin: 0 auto;">Felfűtési</span></td>
-
-                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
-
-                <td style="padding: 8px 4px;"><b><i>G</i></b> ≥ +0,75 °C/p</td>
-
-            </tr>
-
-            <tr style="border-bottom: 1px solid var(--border);">
-
-                <td style="padding: 8px 0;"><span class="status-badge" style="background:#ff8c00; min-width: 90px; margin: 0 auto;">Lassuló</span></td>
-
-                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
-
-                <td style="padding: 8px 4px;">+0,10 ≤ <b><i>G</i></b> < +0,75</td>
-
-            </tr>
-
-            <tr style="border-bottom: 1px solid var(--border);">
-
-                <td style="padding: 8px 0;"><span class="status-badge" style="background:#888888; min-width: 90px; margin: 0 auto;">Stagnáló</span></td>
-
-                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
-
-                <td style="padding: 8px 4px;">-0,10 ≤ <b><i>G</i></b> < +0,10</td>
-
-            </tr>
-
-            <tr style="border-bottom: 1px solid var(--border);">
-
-                <td style="padding: 8px 0;"><span class="status-badge" style="background:#1976d2; min-width: 90px; margin: 0 auto;">Lehűlési</span></td>
-
-                <td style="padding: 8px 4px;">20°C ≤ <b><i>T</i></b> < 60°C</td>
-
-                <td style="padding: 8px 4px;"><b><i>G</i></b> < -0,10 °C/p</td>
-
-            </tr>
-
-            <tr>
-
-                <td style="padding: 8px 0;"><span class="status-badge" style="background:#800000; min-width: 90px; margin: 0 auto;">Üzemi</span></td>
-
-                <td style="padding: 8px 4px;"><b><i>T</i></b> ≥ 60 °C</td>
-
-                <td style="padding: 8px 4px; color: #999;">—</td>
-
-            </tr>
-
-
-<tr style="border-top: 2px solid var(--border); background: rgba(93, 64, 55, 0.1);">
+<tr style="border-bottom: 1px solid var(--border); background: rgba(128, 128, 128, 0.05);">
     <td style="padding: 8px 0;">
-        <span class="status-badge" style="background:#5D4037; min-width: 90px; margin: 0 auto;">Archív</span>
+        <span class="status-badge" style="background:#ff8c00; min-width: 90px; margin: 0 auto;">Lassuló</span>
+    </td>
+    <td style="padding: 8px 4px;">20 °C ≤ <b><i>T</i></b> < 60 °C</td>
+    <td style="padding: 8px 4px;">+0,10 ≤ <b><i>G</i></b> < +0,75</td>
+</tr>
+
+
+
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 8px 0;"><span class="status-badge" style="background:#888888; min-width: 90px; margin: 0 auto;">Stagnáló</span></td>
+                <td style="padding: 8px 4px;">20 °C ≤ <b><i>T</i></b> < 60 °C</td>
+                <td style="padding: 8px 4px;">-0,10 ≤ <b><i>G</i></b> < +0,10</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 8px 0;"><span class="status-badge" style="background:#1976d2; min-width: 90px; margin: 0 auto;">Lehűlési</span></td>
+                <td style="padding: 8px 4px;">20 °C ≤ <b><i>T</i></b> < 60 °C</td>
+                <td style="padding: 8px 4px;"><b><i>G</i></b> < -0,10</td>
+            </tr>
+
+           <tr>
+                <td style="padding: 8px 0;"><span class="status-badge" style="background:#800000; min-width: 90px; margin: 0 auto;">Üzemi</span></td>
+                <td style="padding: 8px 4px;"><b><i>T</i></b> ≥ 60 °C</td>
+                <td style="padding: 8px 4px; color: #999;">—</td>
+            </tr>
+
+
+<tr style="border-top: 2px solid var(--border); background: rgba(160, 82, 45, 0.08);">
+    <td style="padding: 8px 0;">
+        <span class="status-badge" style="background:#A0522D; min-width: 90px; margin: 0 auto;">Archív</span>
     </td>
     <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">
         Archív napokon részletek a tooltip-ben (adatbubi).
     </td>
 </tr>
 
-
-
-
         </tbody>
-
     </table>
-
 </div>
-
-
-
-
-
-
-
             <div class="info-sec">
-
-
-
-                <h4><i class="fas fa-hourglass-half"></i> ETA 60 °C</h4>
-
-
-
-                <p><b>Felfűtési</b> és <b>Lassuló</b> állapot esetén a 60 °C-os hőmérséklet elérésének becsült időtartama és időpontja.<br>
-
-
-
-                <i class="fas fa-exclamation-triangle blink" style="color:#ff8c00"></i> <i>Lassuló állapot esetén az érték villog, figyelmeztetve, hogy fát kell tenni a tűzre.</i></p>
-
-
-
+                <h4><i class="fas fa-hourglass-half"></i> ETA</h4>
+                <p><b>Felfűtési</b> és <b>Lassuló</b> állapot esetén a 60 °C-os hőmérséklet elérésének becsült időpontja (hh:mm) és időtartama (T-min').<br>
+                <i class="fas fa-exclamation-triangle blink" style="color:#ff8c00"></i> <i>Lassuló állapotnál az állapotjelölő villogása figyelmeztet, hogy fát kell tenni a tűzre!</i></p>
             </div>
-
-
-
         </div>
-
-
-
     </div>
 
-
-
 <script>
-
     const API_KEY = '4A8ZJFC1F0997T6A';
-
     const CHAN_ID = '3213557';
-
     let chart;
-
-    const COLORS = { üzemi: "#800000", felfűtési: "#d32f2f", lassuló: "#ff8c00", stagnáló: "#888888", lehűlési: "#1976d2", készenléti: "#000000" };
-
-
+const COLORS = { 
+    üzemi: "#800000", 
+    felfűtési: "#d32f2f", 
+    lassuló: "#ff8c00", 
+    stagnáló: "#888888", 
+    lehűlési: "#1976d2", 
+    készenléti: "#000000",
+    archív: "#A0522D" // Sima, tiszta barna
+};
 
     function getStatusType(temp, grad) {
-
         if (temp >= 60) return "üzemi";
-
         if (temp < 20) return "készenléti";
-
         if (grad >= 0.75) return "felfűtési";
-
         if (grad >= 0.1) return "lassuló";
-
         if (grad >= -0.1) return "stagnáló";
-
         return "lehűlési";
-
     }
 
-
-
-
-
-
-
     async function updateArchiveData(preserveView = false) {
-
         const icon = document.getElementById('refreshIcon');
-
         icon.classList.add('spinning');
-
         let oldExtremes = preserveView ? chart.xAxis[0].getExtremes() : null;
-
         const selDate = document.getElementById('datePicker').value;
-
         const dStartMs = new Date(selDate + "T00:00:00").getTime();
-
         const dEndMs = new Date(selDate + "T23:59:59").getTime();
 
-
-
         try {
-
             const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 7200000).toISOString()}&end=${new Date(dEndMs + 7200000).toISOString()}`;
-
             const response = await fetch(url);
-
             const data = await response.json();
-
             let plotData = [], t_vals = [], g_vals = [];
 
-
-
-            if (data.feeds) {
-
+           if (data.feeds) {
                 data.feeds.forEach((f) => {
-
                     const time = new Date(f.created_at).getTime();
-
                     if (time < dStartMs || time > dEndMs) return;
-
                     const temp = parseFloat(f.field1);
-
                     if (isNaN(temp)) return;
-
                     let grad = 0;
-
                     let prev = data.feeds.find(p => {
-
                         let diff = time - new Date(p.created_at).getTime();
-
                         return diff >= 290000 && diff <= 350000;
-
                     });
-
                     if (prev) grad = (temp - parseFloat(prev.field1)) / ((time - new Date(prev.created_at).getTime()) / 60000);
-
                     plotData.push({ x: time, y: temp, grad: grad, stText: getStatusType(temp, grad) });
-
                     t_vals.push(temp);
-
                     g_vals.push(grad);
-
                 });
-
             }
-
             plotData.push({ x: dStartMs, y: null }, { x: dEndMs, y: null });
-
             plotData.sort((a,b) => a.x - b.x);
 
-// Felső sáv szinkronizálása (Archív nap esetén ARCHÍV felirat és kötőjelek)
-const realPoints = plotData.filter(p => p.y !== null);
+
+
+// Felső sáv szinkronizálása
+const realPoints = plotData.filter(p => p.y !== null).sort((a, b) => a.x - b.x);
 const isToday = new Date().toISOString().split('T')[0] === document.getElementById('datePicker').value;
 
 if (realPoints.length > 0) {
@@ -674,106 +397,121 @@ if (realPoints.length > 0) {
     const stAkt = document.getElementById('status');
     const tTime = document.getElementById('t_time');
     const gTime = document.getElementById('g_time');
-    const eb = document.getElementById('eta_box');
+    const etaValSpan = document.getElementById('eta_val');
 
     if (!isToday) {
         // --- ARCHÍV MÓD ---
         tAkt.innerText = "-.-";
         gAkt.innerText = "-.--";
         stAkt.innerText = "ARCHÍV";
-        stAkt.style.background = "#5D4037"; // Barna háttér
-        stAkt.style.textDecoration = "none";
+        stAkt.style.background = "#A0522D";
         tTime.style.display = "none";
         gTime.style.display = "none";
-        eb.style.display = "none";
+        etaValSpan.innerText = "--:--";
+        etaValSpan.style.color = "var(--text-dim)";
+        etaValSpan.classList.remove('blink');
     } else {
         // --- AKTUÁLIS MÓD (MAI NAP) ---
         tAkt.innerText = last.y.toFixed(1);
         gAkt.innerText = (last.grad > 0 ? "+" : "") + last.grad.toFixed(2);
         stAkt.innerText = last.stText.toUpperCase();
         stAkt.style.background = COLORS[last.stText];
-        stAkt.style.textDecoration = "none";
-        
         tTime.style.display = "block";
         gTime.style.display = "block";
         tTime.innerText = new Date(last.x).toLocaleTimeString('hu-HU');
         gTime.innerText = new Date(last.x).toLocaleTimeString('hu-HU');
 
-        // ETA számítás csak akkor, ha ma van
-        if ((last.stText === "felfűtési" || last.stText === "lassuló") && last.y < 60 && last.grad > 0.05) {
-            const mins = Math.round((60 - last.y) / last.grad);
-            eb.style.display = "block";
-            document.getElementById('eta_val').innerText = mins + "p";
-            document.getElementById('eta_val').classList.toggle('blink', last.stText === "lassuló");
-        } else { 
-            eb.style.display = "none"; 
-        }
+// ETA LOGIKA
+if ((last.stText === "felfűtési" || last.stText === "lassuló") && last.y < 60 && last.grad > 0.05) {
+    const mins = Math.round((60 - last.y) / last.grad);
+    const etaTime = new Date(last.x + mins * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+    
+    etaValSpan.innerText = `${etaTime}\n(T-${mins}')`;
+    etaValSpan.style.fontWeight = "bold"; // Legyen mindig vastag
+
+    if (last.stText === "lassuló") {
+        // LASSULÓ: Narancs villogó címke + Narancs betűk
+        stAkt.style.background = COLORS["lassuló"];
+        stAkt.classList.add('blink');
+        etaValSpan.style.color = COLORS["lassuló"]; // Narancs szín a változók listájából
+        etaValSpan.classList.remove('blink');
+    } else {
+        // FELFŰTÉSI: Piros címke + Piros betűk
+        stAkt.style.background = COLORS["felfűtési"];
+        stAkt.classList.remove('blink');
+        etaValSpan.style.color = COLORS["felfűtési"]; // Piros szín a változók listájából
+        etaValSpan.classList.remove('blink');
     }
+} else {
+    // Alapállapot (stagnáló, üzemi stb.)
+    etaValSpan.innerText = "--:--";
+    etaValSpan.style.color = "var(--text-dim)";
+    stAkt.classList.remove('blink');
+}
 }
 
-            chart.series[0].setData(plotData, true);
+    // Grafikon frissítése az adatokkal
+    chart.series[0].setData(plotData, true);
 
+    if (t_vals.length > 0) {
+        const rMin = Math.min(...t_vals), rMax = Math.max(...t_vals);
+        document.getElementById('t_min').innerText = rMin.toFixed(1);
+        document.getElementById('t_max').innerText = rMax.toFixed(1);
+        document.getElementById('g_min').innerText = (Math.min(...g_vals) > 0 ? "+" : "") + Math.min(...g_vals).toFixed(2);
+        document.getElementById('g_max').innerText = (Math.max(...g_vals) > 0 ? "+" : "") + Math.max(...g_vals).toFixed(2);
 
-
-            if (t_vals.length > 0) {
-
-                const rMin = Math.min(...t_vals), rMax = Math.max(...t_vals);
-
-                document.getElementById('t_min').innerText = rMin.toFixed(1);
-
-                document.getElementById('t_max').innerText = rMax.toFixed(1);
-
-                document.getElementById('g_min').innerText = (Math.min(...g_vals) > 0 ? "+" : "") + Math.min(...g_vals).toFixed(2);
-
-                document.getElementById('g_max').innerText = (Math.max(...g_vals) > 0 ? "+" : "") + Math.max(...g_vals).toFixed(2);
-
-                
-
-                let yMin = 0, yMax = 90;
-
-                if (rMin - 5 < yMin) yMin = Math.floor((rMin - 5) / 10) * 10;
-
-                if (rMax + 5 > yMax) yMax = Math.ceil((rMax + 5) / 10) * 10;
-
-                chart.yAxis[0].setExtremes(yMin, yMax);
-
-                chart.series[0].update({ threshold: yMin });
-
-            }
-
-            if (preserveView && oldExtremes) chart.xAxis[0].setExtremes(oldExtremes.min, oldExtremes.max);
-
-            else chart.xAxis[0].setExtremes(dStartMs, dEndMs);
-
-        } catch (e) { console.error(e); }
-
-        
-
-        // Rövid késleltetés, hogy látványos legyen a forgás, ha túl gyors az API
-
-        setTimeout(() => { icon.classList.remove('spinning'); }, 500);
-
+        let yMin = 0, yMax = 90;
+        if (rMin - 5 < yMin) yMin = Math.floor((rMin - 5) / 10) * 10;
+        if (rMax + 5 > yMax) yMax = Math.ceil((rMax + 5) / 10) * 10;
+        chart.yAxis[0].setExtremes(yMin, yMax);
+        chart.series[0].update({ threshold: yMin });
     }
+
+    if (preserveView && oldExtremes) {
+        chart.xAxis[0].setExtremes(oldExtremes.min, oldExtremes.max);
+    } else {
+        chart.xAxis[0].setExtremes(dStartMs, dEndMs);
+    }
+} // Itt zárul a realPoints.length > 0
+} catch (e) { console.error(e); }
+setTimeout(() => { icon.classList.remove('spinning'); }, 500);
+} // Itt zárul az updateArchiveData függvény
+
+
+
 
 
 
     function initChart() {
-
         chart = Highcharts.stockChart('container', {
-
             chart: { zoomType: 'x', backgroundColor: 'transparent' },
-
             rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
 
+navigator: {
+    enabled: true,
+    xAxis: {
+        tickPixelInterval: 60, // Mobilon ez segít, hogy ne legyenek túl sűrűn
+        labels: {
+            style: {
+                fontSize: '11px' // Kisebb betű a navigátorhoz
+            }
+        },
+        dateTimeLabelFormats: {
+            hour: '%Hh' // Például "14h" formátum az óráknak
+        },
+        units: [
+            ['hour', [1, 2, 4]] // Csak órás (1, 2 vagy 4 órás) ugrásokat engedélyezünk
+        ]
+    }
+},
+
             time: { useUTC: false },
-
             plotOptions: { area: { states: { hover: { lineWidthPlus: 0 }, inactive: { opacity: 1 } } } },
-
-
 
 xAxis: {
     type: 'datetime',
     ordinal: false,
+    minRange: 30 * 60 * 1000,
 labels: { 
     format: '{value:%H:%M}',
     autoRotation: false, // Ez tiltja le a bedöntést
@@ -791,131 +529,62 @@ labels: {
         ['minute', [1, 5, 10, 15, 30]], // Engedélyezett perces osztások
         ['hour', [1, 2, 3, 6]]          // Engedélyezett órás osztások
     ],
-    tickPixelInterval: 50 // Ez határozza meg, milyen közel kerülhetnek egymáshoz (minél kisebb, annál sűrűbb)
+    tickPixelInterval: 100 // Ez határozza meg, milyen közel kerülhetnek egymáshoz (minél kisebb, annál sűrűbb)
 },
 
-
-
-
 yAxis: { 
-
                 opposite: false, 
-
                 tickInterval: 10, 
-
                 labels: { 
-
                     style: { color: document.body.getAttribute('data-theme') === 'dark' ? '#ffffff' : '#666' } 
-
                 }, // <--- Itt zártuk le a labels-t
-
                 startOnTick: true, 
-
                 endOnTick: true, 
-
                 plotLines: [
-
                     { id: 'limit-20', value: 20, color: '#888', width: 2, dashStyle: 'Dash', zIndex: 3 }, 
-
                     { id: 'limit-60', value: 60, color: '#888', width: 2, dashStyle: 'Dash', zIndex: 3 }
-
                 ] 
-
             },
 
-
-
-
-
-
-
-
-
 tooltip: {
-
                 split: false, shared: true, useHTML: true,
-
                 formatter: function() {
-
                     const p = this.points[0].point; if (p.y === null) return false;
-
                     const color = COLORS[p.stText];
-
-                    
-
-                    // JAVÍTÁS: Helyi idő lekérése
-
                     const localTime = new Date(this.x).toLocaleTimeString('hu-HU', { hour12: false });
-
-                    
-
                     let etaStr = "";
-
-                    if ((p.stText === "felfűtési" || p.stText === "lassuló") && p.grad > 0.05 && p.y < 60) {
-
-                        const mins = Math.round((60 - p.y) / p.grad);
-
-                        const time = new Date(p.x + mins * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
-
-                        const blink = p.stText === "lassuló" ? "class='blink'" : "";
-
-                        etaStr = `<br/>ETA: <b style="color:#d32f2f" ${blink}>${mins}p</b> (${time})`;
-
-                    }
-
-                    // Itt a localTime változót használjuk az elején:
-
+// Új formátum a szövegbubiban (tooltip): hh:mm (T-mm')
+if ((p.stText === "felfűtési" || p.stText === "lassuló") && p.grad > 0.05 && p.y < 60) {
+    const mins = Math.round((60 - p.y) / p.grad);
+    const time = new Date(p.x + mins * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+    const blink = p.stText === "lassuló" ? "class='blink'" : "";
+    
+    // Itt állítjuk be az új sorrendet: Időpont (Hátralévő idő)
+    etaStr = `<br/>ETA: <b style="color:#d32f2f" ${blink}>${time}</b> (T-${mins}')`;
+}
                     return `<b>${localTime}</b><br/>Hőmérséklet: <b>${p.y.toFixed(1)} °C</b><br/>Változás: <b>${p.grad.toFixed(2)} °C/p</b><br/>Állapot: <span style="background:${color};color:white;padding:2px 5px;border-radius:3px;font-size:10px;">${p.stText.toUpperCase()}</span>${etaStr}`;
 
                 }
 
             },
 
-
-
-
-
-
-
-
-
 series: [{ 
-
                 name: 'Szauna', 
-
                 type: 'area', 
-
                 color: '#ff4444', 
-
                 lineWidth: 2.5,   
-
                 dataGrouping: { enabled: false }, 
-
                 fillColor: { 
-
                     linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, 
-
                     stops: [
-
                         [0, 'rgba(255, 68, 68, 0.4)'], 
-
                         [1, 'rgba(255, 68, 68, 0.05)'] 
-
                     ] 
-
                 },
-
                 marker: { enabled: false, states: { hover: { enabled: true } } }
-
             }]
-
-        }); // <-- Ez zárja le a stockChart-ot
-
-    } // <-- Ez zárja le az initChart függvényt
-
-
-
-
+});
+}
 
 document.getElementById('themeBtn').onclick = () => {
     const b = document.body;
@@ -955,42 +624,25 @@ document.getElementById('themeBtn').onclick = () => {
     });
 };
 
-
-
-
-
     document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').style.display = 'block';
-
     document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
-
     window.onclick = (e) => { if (e.target.className === 'modal') e.target.style.display = 'none'; };
-
-
 
 document.getElementById('refreshBtn').onclick = () => updateArchiveData(true);
 
-
-    
-
-
-// Aktuális nézet: Visszavált mára, letölti az adatot, és odazoomol
 document.getElementById('zoomNowBtn').onclick = async () => {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     const datePicker = document.getElementById('datePicker');
 
-    // 1. Ha nem a mai napon vagyunk, átváltjuk a naptárat és újratöltünk
     if (datePicker.value !== todayStr) {
         datePicker.value = todayStr;
         await updateArchiveData(false); // Adatok letöltése mára
     }
 
-    // 2. Zoom beállítása (1 óra múlt, 30 perc jövő)
     const now = Date.now();
     chart.xAxis[0].setExtremes(now - 3600000, now + 1800000);
 };
-
-
 
 // Napi nézet visszaállítása - letöltés nélkül, azonnal
 document.getElementById('homeBtn').onclick = () => {
@@ -1000,139 +652,55 @@ document.getElementById('homeBtn').onclick = () => {
     chart.xAxis[0].setExtremes(dStartMs, dEndMs);
 };
 
-
-
-
-
-    // Itt volt a refreshBtn.onclick, de mivel a gombot töröltük, erre már nincs szükség.
-
-    // Az automatikus frissítés lentebb (setInterval) továbbra is teszi a dolgát.
-
-
-
     document.getElementById('datePicker').onchange = () => updateArchiveData(false);
-
     document.getElementById('datePicker').valueAsDate = new Date();
-
-
-
     document.getElementById('csvBtn').onclick = () => {
-
     const selDate = document.getElementById('datePicker').value;
-
     const points = chart.series[0].data;
 
-    
-
-    // Statisztikai adatok kinyerése
-
     const tMin = document.getElementById('t_min').innerText;
-
     const tMax = document.getElementById('t_max').innerText;
-
     const gMin = document.getElementById('g_min').innerText;
-
     const gMax = document.getElementById('g_max').innerText;
 
-
-
-    // 1. Fejléc és Statisztikák EGYMÁS ALÁ rendezve
-
     let csvContent = `Kaisa Sauna - napi adatok exportja;${selDate}\n`;
-
     csvContent += `-----------------------------------\n`;
-
     csvContent += `Minimum hőmérséklet;${tMin} °C\n`;
-
     csvContent += `Maximum hőmérséklet;${tMax} °C\n`;
-
     csvContent += `Minimum változás;${gMin} °C/perc\n`;
-
     csvContent += `Maximum változás;${gMax} °C/perc\n`;
-
-    csvContent += `-----------------------------------\n\n`; // Üres sor az adatok előtt
-
-    
+    csvContent += `-----------------------------------\n\n`;
 
     // 2. Részletes adatok fejléce
-
     csvContent += "Dátum;Idő;Hőmérséklet [°C];Változás [°C/perc];Állapot;ETA [időpont];ETA [időtartam]\n";
-
-    
-
+   
     // 3. Mérési pontok feldolgozása (a már javított helyi idővel)
-
     points.forEach(p => {
-
         if (p.y !== null && p.x !== undefined) {
-
             const localTime = new Date(p.x);
-
             const timeStr = localTime.toLocaleTimeString('hu-HU', { hour12: false });
-
-            
-
             let etaTime = "—";
-
             let etaMins = "—";
-
-
-
             if ((p.stText === "felfűtési" || p.stText === "lassuló") && p.grad > 0.05 && p.y < 60) {
-
                 const mins = Math.round((60 - p.y) / p.grad);
-
                 etaMins = mins;
-
                 etaTime = new Date(p.x + mins * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
-
             }
-
-
-
             csvContent += `${selDate};${timeStr};${p.y.toFixed(1)};${p.grad.toFixed(2)};${p.stText.toUpperCase()};${etaTime};${etaMins}\n`;
-
         }
-
     });
 
-
-
     // Letöltés indítása (UTF-8 BOM-mal az ékezetekért)
-
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
-
     link.setAttribute("href", url);
-
     link.setAttribute("download", `kaisa_sauna_export_${selDate}.csv`);
-
     document.body.appendChild(link);
-
     link.click();
-
     document.body.removeChild(link);
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Indítás
 initChart(); 
