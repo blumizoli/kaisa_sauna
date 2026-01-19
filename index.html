@@ -252,15 +252,21 @@ body {
 
 
 #container { 
-    flex: 1;
-    min-height: 0;
+    height: 400px;     /* Mobilon fix alapmagasság, hogy ne csússzon el */
     width: 100%; 
     background: var(--card); 
     border-radius: 10px; 
     border: 1px solid var(--border);
-    padding-bottom: 10px; /* Ez csinál egy kis fix margót a navigátor alatt */
-    display: flex;
-    flex-direction: column;
+    margin-top: 5px;
+    flex-shrink: 0;    /* Mobilon ne engedjük összenyomni */
+}
+
+/* PC-n (768px felett) legyen rugalmas és töltsön ki mindent */
+@media (min-width: 768px) {
+    #container {
+        flex: 1;
+        height: auto;
+    }
 }
 
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
@@ -956,7 +962,7 @@ setTimeout(() => { icon.classList.remove('spinning'); }, 500);
 chart: { 
     zoomType: 'x', 
     backgroundColor: 'transparent',
-    spacingBottom: 5,   /* Megszünteti az alsó belső margót */
+    spacingBottom: 10,   /* Megszünteti az alsó belső margót */
     reflow: true        /* Engedélyezi az automatikus igazodást */
 },
 
@@ -1402,6 +1408,13 @@ initChart();
 
 updateArchiveData(); 
 
+// 2. EZT SZÚRD BE IDE (az Indítás után, a setInterval elé):
+setTimeout(() => {
+    if (chart) {
+        console.log("PC-s méret igazítása...");
+        chart.reflow();
+    }
+}, 500);
 
 
 // Percenkénti automatikus frissítés - CSAK HA MAI NAP VAN KIVÁLASZTVA
