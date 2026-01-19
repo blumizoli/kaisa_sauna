@@ -66,32 +66,20 @@ html {
 
 
 
-/* 2. A body is kapja meg a hátteret, és töltsön ki mindent */
-
 body {
-
+    /* dvh = Dynamic Viewport Height: ez pontosan a látható területet jelenti mobilon */
     height: 100vh;
-
+    height: 100dvh; 
     margin: 0;
-
-    padding: 8px;
-
-    overflow: hidden;
-
-    background-color: var(--bg); /* Ez színezi a 8px-es sávot */
-
+    padding: 6px; /* Kicsit kisebb padding, hogy több hely maradjon */
+    overflow: hidden; /* Szigorú tiltás a görgetésre */
+    background-color: var(--bg);
     color: var(--text);
-
     display: flex;
-
     flex-direction: column;
-
-    box-sizing: border-box; /* Ez fontos, hogy a 8px befelé számítson! */
-
+    box-sizing: border-box;
     transition: background-color 0.3s ease;
-
 }
-
        
 
 
@@ -157,9 +145,17 @@ body {
 
 }
 
-        .stats-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
+.stats-bar { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 4px; /* Kisebb távolság */
+    margin-bottom: 4px; 
+    flex-shrink: 0; 
+}
 
-        @media (min-width: 768px) { .stats-bar { flex-direction: row; } }
+@media (min-width: 768px) { 
+    .stats-bar { flex-direction: row; gap: 8px; margin-bottom: 8px; } 
+}
 
         .card { background: var(--card); padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border); }
 
@@ -252,13 +248,13 @@ body {
 
 
 #container { 
-    height: 400px;     /* Mobilon fix alapmagasság, hogy ne csússzon el */
+    flex: 1; /* Ez kényszeríti, hogy a maradék helyre zsugorodjon */
+    min-height: 0; /* Fontos a flexbox miatt! */
     width: 100%; 
     background: var(--card); 
     border-radius: 10px; 
     border: 1px solid var(--border);
-    margin-top: 5px;
-    flex-shrink: 0;    /* Mobilon ne engedjük összenyomni */
+    margin-top: 2px;
 }
 
 /* PC-n (768px felett) legyen rugalmas és töltsön ki mindent */
