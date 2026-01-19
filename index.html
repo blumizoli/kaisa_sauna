@@ -96,46 +96,57 @@ body {
 
 
 
+/* ALAP (MOBIL) NÉZET */
 .toolbar { 
     display: flex; 
     align-items: center; 
-    gap: 4px; /* Kicsit szűkebb hely a gombok közt */
+    gap: 4px; 
     background: var(--card); 
-    padding: 6px; /* Kicsit kisebb padding */
+    padding: 6px; 
     border-radius: 10px; 
     border: 1px solid var(--border);
     margin-bottom: 8px;
-    flex-wrap: nowrap; 
-    overflow: hidden; /* Megszüntetjük a görgetősávot, mert be fog férni */
+    width: 100%; /* Kitölti a mobil szélességét */
 }
 
 .toolbar input { 
     padding: 6px; 
     border: 1px solid var(--border); 
     border-radius: 6px; 
-    font-size: 13px; 
-    flex: 1; /* Mobilon rugalmas */
-    min-width: 0; 
-    max-width: 120px; /* PC-n nem engedi 120px-nél szélesebbre */
+    font-size: 14px; 
     height: 36px;
     background: var(--card); 
     color: var(--text); 
+    flex: 1;      /* Mobilon kitölti a maradék helyet */
+    min-width: 0; 
 }
 
 .toolbar button { 
-    width: 34px; /* 38-ról 34-re csökkentve, hogy biztosan elférjenek */
+    width: 36px; 
     height: 36px;
-    padding: 0; 
+    flex-shrink: 0; /* A gombok sosem mennek össze */
     border: 1px solid var(--border); 
     border-radius: 6px; 
     background: var(--card); 
-    cursor: pointer; 
     color: var(--text);
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0; /* Fontos: a gombok sosem mehetnek össze */
-    transition: background 0.2s;
+}
+
+/* PC NÉZET (768px felett) */
+@media (min-width: 768px) {
+    .toolbar { 
+        width: auto;         /* PC-n ne legyen kényszerített 100% */
+        display: inline-flex; /* Csak annyi helyet foglal, amennyi kell neki */
+        justify-content: flex-start; 
+        gap: 8px;            /* PC-n lehet kicsitellazább a kiosztás */
+    }
+    
+    .toolbar input { 
+        flex: none;          /* PC-n ne nyúljon el */
+        width: 120px;        /* Fix, kényelmes szélesség PC-re */
+    }
 }
 
 
