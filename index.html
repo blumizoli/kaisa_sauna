@@ -252,12 +252,15 @@ body {
 
 
 #container { 
-    flex: 1;           /* Kitölti a maradék helyet */
-    min-height: 0;     /* Engedi összemenni, ha kicsi a kijelző */
+    flex: 1;
+    min-height: 0;
     width: 100%; 
     background: var(--card); 
     border-radius: 10px; 
     border: 1px solid var(--border);
+    padding-bottom: 10px; /* Ez csinál egy kis fix margót a navigátor alatt */
+    display: flex;
+    flex-direction: column;
 }
 
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
@@ -952,7 +955,9 @@ setTimeout(() => { icon.classList.remove('spinning'); }, 500);
 
 chart: { 
     zoomType: 'x', 
-    backgroundColor: 'transparent'
+    backgroundColor: 'transparent',
+    spacingBottom: 5,   /* Megszünteti az alsó belső margót */
+    reflow: true        /* Engedélyezi az automatikus igazodást */
 },
 
             rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
@@ -962,6 +967,8 @@ chart: {
 navigator: {
 
     enabled: true,
+    margin: 10,         /* Csökkentett távolság a grafikon és a navigátor között */
+    height: 40,
 
     xAxis: {
 
