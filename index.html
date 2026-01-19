@@ -251,7 +251,14 @@ body {
 
 
 
-        #container { flex-grow: 1; width: 100%; background: var(--card); border-radius: 10px; border: 1px solid var(--border); }
+#container { 
+    flex: 1;           /* Kitölti a maradék helyet */
+    min-height: 0;     /* Engedi összemenni, ha kicsi a kijelző */
+    width: 100%; 
+    background: var(--card); 
+    border-radius: 10px; 
+    border: 1px solid var(--border);
+}
 
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
 
@@ -435,7 +442,7 @@ body {
 
 
 
-<div id="container" style="height: 400px; width: 100%;"></div>
+<div id="container"></div>
 
 
 
@@ -943,7 +950,10 @@ setTimeout(() => { icon.classList.remove('spinning'); }, 500);
 
         chart = Highcharts.stockChart('container', {
 
-            chart: { zoomType: 'x', backgroundColor: 'transparent' },
+chart: { 
+    zoomType: 'x', 
+    backgroundColor: 'transparent'
+},
 
             rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
 
