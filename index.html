@@ -127,11 +127,27 @@
 	.toolbar button:active { background: var(--bg) !important; }
 	.toolbar button:disabled {opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 	@media (min-width: 768px) { .toolbar { width: auto; display: inline-flex; justify-content: flex-start; gap: 8px; } .toolbar input { flex: none; width: 120px; } }
-	@media (hover: hover) { .toolbar button:hover {  background: var(--bg); } }
+	@media (hover: hover) { .btn:hover { background: var(--border); transform: translateY(-1px); } }
+	@media (hover: hover) { #datePicker:hover, .btn:hover { border-color: var(--header-red); } }
+	.btn:active { background: var(--border); transform: translateY(1px); filter: brightness(0.9); }
         .stats-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
 	.status-eta-group { display: flex; flex-direction: row; gap: 8px; flex: 1; }
         @media (min-width: 768px) { .stats-bar { flex-direction: row; gap: 8px; margin-bottom: 8px; } .status-eta-group { gap: 8px; flex: 2; } .card.wide { flex: 2; min-height: 60px; display: flex; justify-content: center; } .card.narrow { flex: 1; } }
-        .card { background: var(--card); padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border); }
+
+.card {
+    background: var(--card);
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    /* Új sorok: */
+    min-height: 60px; /* Egy minimális magasság, hogy ne ugráljon */
+    justify-content: center; /* Tartalom függőleges középre igazítása */
+}
+
         .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
         .card-title { font-size: 12px; font-weight: bold; color: var(--text); }
         .values-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; align-items: center; text-align: center; width: 100%;}
@@ -142,7 +158,7 @@
 	.card-header-mini { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 	.card-header-mini i { font-size: 12px; margin-bottom: 2px; }
 	.card-title-mini { font-size: 12px; font-weight: bold; }
-        .status-badge { padding: 6px 10px; border-radius: 6px; color: white; font-size: 10px; font-weight: bold; width: 50%; text-align: center; display: inline-block; }
+        .status-badge { padding: 4px 10px; border-radius: 6px; color: white; font-size: 10px; font-weight: bold; width: 50%; text-align: center; display: inline-block; }
         #eta_val { font-size: 13px; font-weight: bold; color: var(--text); white-space: nowrap; }
         #container { flex: 1; min-height: 0; width: 100%; background: var(--card); border-radius: 10px; border: 1px solid var(--border); margin-top: 2px; }
         @media (min-width: 768px) { #container { flex: 1; height: auto; } }
@@ -218,7 +234,7 @@
             </div>
         </div>
         <div class="val-item" style="justify-content: center;">
-            <span id="status" class="status-badge" style="background: #888; width: 100%; padding: 12px; font-size: 12px; line-height: 1.2; display: flex; align-items: center; justify-content: center; min-height: 28px;">...</span>
+            <span id="status" class="status-badge" style="background: #888; width: 100%; padding: 12px; font-size: 12px; line-height: 1.2; display: flex; align-items: center; justify-content: center; min-height: 10px;">...</span>
         </div>
     </div>
 </div>
@@ -339,6 +355,17 @@
             icon.classList.add('spinning');
             let oldExtremes = preserveView ? chart.xAxis[0].getExtremes() : null;
             const selDate = document.getElementById('datePicker').value;
+
+chart.setTitle({ 
+    useHTML: true, 
+    text: `<span class="val-data" style="font-size: 16px; font-weight: bold;">${selDate.replace(/-/g, ".")}</span>`, 
+    align: 'center',
+    y: 17,
+    style: { 
+        color: 'inherit' // Kényszerítjük, hogy ne a Highcharts, hanem a CSS osztály színe érvényesüljön
+    } 
+});
+
             const dStartMs = new Date(selDate + "T00:00:00").getTime();
             const dEndMs = new Date(selDate + "T23:59:59").getTime();
 
