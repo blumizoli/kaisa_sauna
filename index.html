@@ -58,26 +58,79 @@
             flex: 1;
             min-width: 0; 
         }
-        .toolbar button { 
-            width: 36px; 
-            height: 36px;
-            flex-shrink: 0; 
-            border: 1px solid var(--border); 
-            border-radius: 6px; 
-            background: var(--card); 
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        @media (min-width: 768px) {
-            .toolbar { width: auto; display: inline-flex; justify-content: flex-start; gap: 8px; }
-            .toolbar input { flex: none; width: 120px; }
-        }
+
+/* Egységes konténer asztali gépre és mobilra */
+.date-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden; /* Biztosítja, hogy az input ne lógjon ki */
+    cursor: pointer;
+}
+
+.date-container:hover {
+    background: var(--bg);
+}
+
+/* Az ikon középen */
+.calendar-icon {
+    display: block;
+    font-size: 18px;
+    color: var(--text);
+    pointer-events: none; /* Az ikon ne fogja meg a kattintást */
+    z-index: 1;
+}
+
+/* A láthatatlan, de teljes területet kitöltő input */
+#datePicker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+    padding: 0;
+    margin: 0;
+    border: none;
+    appearance: none; /* Eltávolítja a böngésző alapértelmezett megjelenését */
+    -webkit-appearance: none;
+}
+    
+    .toolbar input {
+        border: none; /* Mobil ikonként nem kell belső keret */
+    }
+
+
+
+.toolbar button, .date-container {
+    transition: all 0.2s ease; /* Finomabb színváltás */
+}
+
+.toolbar button:hover, .date-container:hover {
+    transform: translateY(-1px); /* Kicsit "kiemelkedik" PC-n */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+
+
+        .toolbar button { width: 36px; height: 36px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; }
         .toolbar button:hover { background: var(--bg); }
+	.toolbar button:focus { outline: none; background: var(--card); }
+	.toolbar button:active { background: var(--bg) !important; }
+	.toolbar button:disabled {opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+	@media (min-width: 768px) { .toolbar { width: auto; display: inline-flex; justify-content: flex-start; gap: 8px; } .toolbar input { flex: none; width: 120px; } }
+	@media (hover: hover) { .toolbar button:hover {  background: var(--bg); } }
         .stats-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
 	.status-eta-group { display: flex; flex-direction: row; gap: 8px; flex: 1; }
-        @media (min-width: 768px) { .stats-bar { flex-direction: row; gap: 8px; margin-bottom: 8px; } .status-eta-group { gap: 8px; flex: 2; } .card.wide { flex: 2; min-height: 60px; display: flex; justify-content: center;} .card.narrow { flex: 1; } }
+        @media (min-width: 768px) { .stats-bar { flex-direction: row; gap: 8px; margin-bottom: 8px; } .status-eta-group { gap: 8px; flex: 2; } .card.wide { flex: 2; min-height: 60px; display: flex; justify-content: center; } .card.narrow { flex: 1; } }
         .card { background: var(--card); padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border); }
         .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
         .card-title { font-size: 12px; font-weight: bold; color: var(--text); }
@@ -109,13 +162,19 @@
 </head>
 <body data-theme="light">
     <div class="toolbar">
-        <input type="date" id="datePicker">
-        <button id="zoomNowBtn" title="Aktuális nézet"><i class="fas fa-search-plus"></i></button>
-        <button id="homeBtn" title="Napi nézet"><i class="fas fa-search-minus"></i></button>
-        <button id="refreshBtn" title="Frissítés"><i id="refreshIcon" class="fas fa-sync-alt"></i></button>
-        <button id="themeBtn" title="Téma"><i id="themeIcon" class="fas fa-moon"></i></button>
-        <button id="csvBtn" title="CSV export"><i class="fas fa-file-csv"></i></button>
-        <button id="infoBtn" title="Jelmagyarázat"><i class="fas fa-info-circle"></i></button>
+
+<div class="date-container" title="Dátumválasztó">
+    <i class="fa-regular fa-calendar"></i>
+    <input type="date" id="datePicker">
+</div>
+
+        <button id="zoomNowBtn" title="Aktuális nézet"><i class="fa-solid fa-minimize"></i></button>
+        <button id="homeBtn" title="Napi nézet"><i class="fas fa-maximize"></i></button>
+        <button id="refreshBtn" title="Frissítés"><i id="refreshIcon" class="fas fa-rotate"></i></button>
+        <button id="themeBtn" title="Téma"><i id="themeIcon" class="fas fa-circle-half-stroke"></i></button>
+	<button id="dbBtn" title="Dashboard"><i class="fa-solid fa-chart-simple"></i></button>
+        <button id="csvBtn" title="CSV export"><i class="fa-solid fa-file-csv"></i></button>
+        <button id="infoBtn" title="Jelmagyarázat"><i class="fas fa-circle-info"></i></button>
     </div>
 
 <div class="stats-bar">
@@ -185,21 +244,23 @@
     <div id="infoModal" class="modal">
         <div class="modal-content">
             <i class="fas fa-times close-btn" id="modalClose"></i>
-            <h2 style="margin:0 0 20px 0; text-align:center;">Jelmagyarázat</h2>
+            <h2 style="margin:0 0 20px 0; text-align:center;"><i class="fas fa-circle-info"></i> Jelmagyarázat</h2>
             <div class="info-sec">
                 <h4><i class="fas fa-mouse-pointer"></i> Ikonok</h4>
-                <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-plus"></i></div><div><b>Aktuális nézet:</b> aktuális időszakra nagyítás</div></div>
-                <div class="info-row"><div class="info-icon-box"><i class="fas fa-search-minus"></i></div><div><b>Napi nézet:</b> a napi nézet visszaállítása</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-regular fa-calendar"></i></div><div><b>Dátumválasztó:</b> korábbi dátum kiválasztása</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-minimize"></i></div><div><b>Aktuális nézet:</b> aktuális időszakra nagyítás</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-maximize"></i></div><div><b>Napi nézet:</b> a napi nézet visszaállítása</div></div>
                 <div class="info-row"><div class="info-icon-box"><i class="fas fa-sync-alt"></i></div><div><b>Frissítés:</b> adatok frissítése (auto: perces)</div></div>
-                <div class="info-row"><div class="info-icon-box"><i class="fas fa-moon"></i></div><div><b>Téma:</b> nappali / éjszakai nézet váltása</div></div>
-                <div class="info-row"><div class="info-icon-box"><i class="fas fa-file-csv"></i></div><div><b>CSV export:</b> napi adatok exportja</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fas fa-circle-half-stroke"></i></div><div><b>Téma:</b> nappali / éjszakai nézet váltása</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-chart-simple"></i></div><div><b>Dashboard:</b> statisztika (fejlesztés alatt)</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-file-csv"></i></div><div><b>CSV export:</b> napi adatok exportja</div></div>
             </div>
             <div class="info-sec">
-                <h4><i class="fas fa-thermometer-half"></i> Hőmérséklet [°C]</h4>
+                <h4><i class="fas fa-thermometer-half"></i>T - Hőmérséklet [°C]</h4>
                 <p>Az aktuális (akt) továbbá az adott napi legkisebb (min) és legnagyobb (max) mért hőmérséklet értékek. Az értékeket a szenzor 0,1 °C változás esetén, de leggyakrabban 20 másodpercenként rögzíti.</p>
             </div>
             <div class="info-sec">
-                <h4><i class="fas fa-chart-line"></i> Változás [°C/perc]</h4>
+                <h4><i class="fas fa-chart-line"></i>G - Változás [°C/perc]</h4>
                 <p>Az aktuális (akt) továbbá az adott napi legkisebb (min) és legnagyobb (max) számított hőmérséklet-változás értékek (5 perces mozgóátlagból számítva).</p>
             </div>
             <div class="info-sec">
@@ -309,6 +370,8 @@
 
                 const realPoints = plotData.filter(p => p.y !== null).sort((a, b) => a.x - b.x);
                 const isToday = new Date().toISOString().split('T')[0] === document.getElementById('datePicker').value;
+		
+		document.getElementById('refreshBtn').disabled = !isToday;
 
                 if (realPoints.length > 0) {
                     const last = realPoints[realPoints.length - 1];
@@ -391,6 +454,7 @@
                 plotOptions: { area: { states: { hover: { lineWidthPlus: 0 }, inactive: { opacity: 1 } } } },
                 xAxis: {
                     type: 'datetime', ordinal: false, minRange: 30 * 60 * 1000,
+		    events: { afterSetExtremes: function() { updateHomeBtnState(); } },
                     labels: { format: '{value:%H:%M}', autoRotation: false, style: { color: '#666', fontSize: '11px' } },
                     dateTimeLabelFormats: { minute: '%H:%M', hour: '%H:%M' },
                     units: [['minute', [1, 5, 10, 15, 30]], ['hour', [1, 2, 3, 6]]], tickPixelInterval: 100
@@ -429,6 +493,7 @@
                     marker: { enabled: false, states: { hover: { enabled: true } } }
                 }]
             });
+updateHomeBtnState();
         }
 
 	document.getElementById('themeBtn').onclick = () => {
@@ -437,7 +502,6 @@
 	    const newTheme = isDark ? 'light' : 'dark';
 	    b.setAttribute('data-theme', newTheme);
     
-	    document.getElementById('themeIcon').className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 	    const metaThemeColor = document.getElementById('theme-meta');
 	    if (metaThemeColor) metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#121212' : '#ffffff');
 
@@ -457,6 +521,22 @@
 	    });
 	};
 
+function updateHomeBtnState() {
+    const homeBtn = document.getElementById('homeBtn');
+    if (!chart || !homeBtn) return;
+
+    const extremes = chart.xAxis[0].getExtremes();
+    const selDate = document.getElementById('datePicker').value;
+    const dayStart = new Date(selDate + "T00:00:00").getTime();
+    const dayEnd = new Date(selDate + "T23:59:59").getTime();
+
+    // Ha a nézet szélei (kb.) megegyeznek a nap elejével és végével, letiltjuk
+    // Egy kis ráhagyást (1000ms) hagyunk a kerekítések miatt
+    const isFullDay = Math.abs(extremes.min - dayStart) < 1000 && Math.abs(extremes.max - dayEnd) < 1000;
+
+    homeBtn.disabled = isFullDay;
+}
+
         document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').style.display = 'block';
         document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
         window.onclick = (e) => { if (e.target.className === 'modal') e.target.style.display = 'none'; };
@@ -468,13 +548,16 @@
             if (datePicker.value !== todayStr) { datePicker.value = todayStr; await updateArchiveData(false); }
             const now = Date.now();
             chart.xAxis[0].setExtremes(now - 3600000, now + 1800000);
+	    updateHomeBtnState();
         };
         document.getElementById('homeBtn').onclick = () => {
             const selDate = document.getElementById('datePicker').value;
             chart.xAxis[0].setExtremes(new Date(selDate + "T00:00:00").getTime(), new Date(selDate + "T23:59:59").getTime());
         };
+
         document.getElementById('datePicker').onchange = () => updateArchiveData(false);
         document.getElementById('datePicker').valueAsDate = new Date();
+	document.getElementById('datePicker').max = new Date().toISOString().split("T")[0];
         document.getElementById('csvBtn').onclick = () => {
             const selDate = document.getElementById('datePicker').value;
             const points = chart.series[0].data;
