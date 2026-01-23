@@ -1,89 +1,121 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaisa Szauna Dashboard</title>
+    <title>Kaisa Sauna Monitor & Predict</title>
+    <link rel="icon" type="image/png" href="heat.png">
+    
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0; /* Világos háttér */
-            display: flex;
-            flex-direction: column;
-            align-items: center; /* Horizontálisan középre igazítás */
-            justify-content: center; /* Vertikálisan középre igazítás */
-            min-height: 100vh; /* Teljes képernyő magasság */
-            box-sizing: border-box; /* Padding beleessen a magasságba */
+        :root { 
+            --bg: #f0f0f0; --card: white; --text: #333; --border: #ddd; 
+            --header-red: #d32f2f;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #121212; --card: #1e1e1e; --text: #ffffff; --border: #333; }
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: flex-start; /* Felülről kezdődik a tartalom */
+            height: 100dvh;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden; /* Megakadályozza a görgetést, ha minden kifér */
+        }
+
+        .header-section {
+            text-align: center;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        h2 { 
+            color: var(--header-red); 
+            margin: 0 0 10px 0; 
+            font-size: 24px;
+        }
+
+        p {
+            margin: 0 0 15px 0;
+            color: var(--text);
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .button-container {
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .back-btn:hover {
+            background: var(--header-red);
+            color: white;
+            border-color: var(--header-red);
         }
 
         .image-container {
-            margin-bottom: 30px;
-            text-align: center; /* Kép középre igazítása */
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-grow: 1; /* Kitölti a maradék helyet */
         }
 
-        .image-container img {
-            max-width: 100%; /* Kép ne lógjon ki a képernyőből */
+        .uc-image {
+            max-width: 90%;
+            max-height: 60vh; /* A kép magassága maximum a képernyő 60%-a lehet */
             height: auto;
-            border-radius: 8px; /* Lekerekített sarkok a képnek */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Enyhe árnyék */
+            object-fit: contain;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        .back-button {
-            padding: 12px 25px;
-            background-color: #d32f2f; /* Piros szín, mint a monitoron */
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            text-decoration: none; /* Ha linkként használnánk */
+        /* Ha nagyon kicsi a kijelző (pl. mobil fektetve), engedjük a görgetést */
+        @media (max-height: 500px) {
+            body { overflow-y: auto; height: auto; }
+            .uc-image { max-height: none; }
         }
-
-        .back-button:hover {
-            background-color: #b01a1a; /* Sötétebb piros hoverre */
-        }
-
-        /* Sötét mód támogatása (ha a főoldalon is van) */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #222;
-                color: #eee;
-            }
-            h1 {
-                color: #eee;
-            }
-            .back-button {
-                background-color: #e57373;
-            }
-            .back-button:hover {
-                background-color: #ef9a9a;
-            }
-        }
-
     </style>
 </head>
 <body>
-    <h1>Szauna Dashboard</h1>
 
-    <div class="image-container">
-        <img src="uc.png" alt="Dashboard feltöltés alatt">
-        <p>A dashboard fejlesztés alatt van. Kérjük, látogasson vissza később!</p>
+    <div class="header-section">
+        <h2>Dashboard</h2>
+        <p>A statisztikai modul fejlesztés alatt áll. Kérjük, látogasson vissza később!</p>
+        
+        <div class="button-container">
+            <button class="back-btn" onclick="window.location.href='index.html'">
+                <span style="font-size: 18px;">←</span> Vissza a Monitorra
+            </button>
+        </div>
     </div>
 
-    <button class="back-button" id="backBtn">Vissza a Monitorra</button>
+    <div class="image-container">
+        <img src="uc.png" alt="Under Construction" class="uc-image">
+    </div>
 
-    <script>
-        document.getElementById('backBtn').onclick = () => {
-            window.location.href = 'index.html'; // Ide írd a főoldalad fájlnevét (pl. v1.html, ha az a neve)
-        };
-    </script>
 </body>
 </html>
