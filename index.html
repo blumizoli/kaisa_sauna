@@ -42,7 +42,7 @@
 .toolbar button, #dateBtn { 
     flex: 1 1 0;
     width: 100%;
-    height: 50px; display: flex; align-items: center; justify-content: center; 
+    height: 40px; display: flex; align-items: center; justify-content: center; 
     background: var(--card); border: 1px solid var(--border); border-radius: 8px; 
     color: var(--text); cursor: pointer; transition: all 0.2s ease; font-size: 16px;
     position: relative; padding: 0;
@@ -270,17 +270,6 @@
                 <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-chart-simple"></i></div><div><b>Dashboard:</b> statisztika (fejlesztés alatt)</div></div>
                 <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-file-csv"></i></div><div><b>CSV export:</b> napi adatok exportja</div></div>
             </div>
-
-            <div class="info-sec">
-                <h4><i class="fa-regular fa-calendar"></i>Dátum</h4>
-                <p>Az aktuális dátum.</p>
-            </div>
-
-            <div class="info-sec">
-                <h4><i class="fa-regular fa-clock"></i>Utolsó adat</h4>
-                <p>Az utolsó adatpont időbélyege.</p>
-            </div>
-			
             <div class="info-sec">
                 <h4><i class="fas fa-thermometer-half"></i>T - Hőmérséklet [°C]</h4>
                 <p>Az aktuális (akt) továbbá az adott napi legkisebb (min) és legnagyobb (max) mért hőmérséklet értékek. Az értékeket a szenzor 0,1 °C változás esetén, de leggyakrabban 20 másodpercenként rögzíti.</p>
@@ -339,7 +328,7 @@
             </div>
             <div class="info-sec">
                 <h4><i class="fas fa-hourglass-half"></i> ETA</h4>
-                <p><b>Felfűtési</b> és <b>Lassuló</b> állapot esetén a 60 °C-os hőmérséklet elérésének becsült időpontja és időtartama.<br><br>
+                <p><b>Felfűtési</b> és <b>Lassuló</b> állapot esetén a 60 °C-os hőmérséklet elérésének becsült időpontja (hh:mm) és időtartama (T-min).<br><br>
                 <i class="fas fa-exclamation-triangle blink" style="color:#ff8c00"></i> <i>Lassuló állapotnál az állapotjelölő villogása figyelmeztet!</i></p>
             </div>
         </div>
@@ -546,7 +535,15 @@ navigator: {
 updateHomeBtnState();
         }
 
+// --- Easter Egg Változók ---
+	let themeClickCount = 0;
+	let themeLastClick = 0;
+	let sParticles = [];
+	let sAudioCtx = null;
+
+	// --- Téma gomb kiegészítve Easter Eggel ---
 	document.getElementById('themeBtn').onclick = () => {
+	    // 1. Eredeti téma váltó logika
 	    const b = document.body;
 	    const isDark = b.getAttribute('data-theme') === 'dark';
 	    const newTheme = isDark ? 'light' : 'dark';
@@ -569,87 +566,188 @@ updateHomeBtnState();
 	            ]
 	        }
 	    });
+
+	    // 2. Easter Egg figyelő (4 kattintás, 2.5 mp-en belül)
+	    const now = Date.now();
+	    if (now - themeLastClick > 2500) themeClickCount = 0;
+	    themeClickCount++;
+	    themeLastClick = now;
+
+	    if (themeClickCount === 4) {
+	        startSteamEasterEgg();
+	        themeClickCount = 0;
+	    }
 	};
 
-function updateHomeBtnState() {
-    const homeBtn = document.getElementById('homeBtn');
-    if (!chart || !homeBtn) return;
+function startSteamEasterEgg() {
+    const sCanvas = document.getElementById('steamCanvas');
+    const sCtx = sCanvas.getContext('2d');
+    sCanvas.width = window.innerWidth;
+    sCanvas.height = window.innerHeight;
 
-    const extremes = chart.xAxis[0].getExtremes();
-    const selDate = document.getElementById('datePicker').value;
-    const dayStart = new Date(selDate + "T00:00:00").getTime();
-    const dayEnd = new Date(selDate + "T23:59:59").getTime();
+    if (!sAudioCtx) sAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (sAudioCtx.state === 'suspended') sAudioCtx.resume();
+    
+    const duration = 5.0; // A hang is legyen picit hosszabb a látványhoz
+    const buffer = sAudioCtx.createBuffer(1, sAudioCtx.sampleRate * duration, sAudioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
 
-    // Ha a nézet szélei (kb.) megegyeznek a nap elejével és végével, letiltjuk
-    // Egy kis ráhagyást (1000ms) hagyunk a kerekítések miatt
-    const isFullDay = Math.abs(extremes.min - dayStart) < 1000 && Math.abs(extremes.max - dayEnd) < 1000;
+    const source = sAudioCtx.createBufferSource();
+    source.buffer = buffer;
+    const filter = sAudioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3000, sAudioCtx.currentTime);
+    const gain = sAudioCtx.createGain();
+    source.connect(filter); filter.connect(gain); gain.connect(sAudioCtx.destination);
+    gain.gain.setValueAtTime(0, sAudioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.25, sAudioCtx.currentTime + 0.1); // Kicsit hangosabb "robbanás"
+    gain.gain.exponentialRampToValueAtTime(0.001, sAudioCtx.currentTime + duration);
+    source.start();
 
-    homeBtn.disabled = isFullDay;
+    sParticles = [];
+
+    // AZONNALI indítás - sok és nagy felhők, hogy rögtön eltakarjon mindent
+    for (let i = 0; i < 60; i++) {
+        sParticles.push({
+            x: Math.random() * sCanvas.width,
+            y: sCanvas.height + 50,
+            size: Math.random() * 100 + 80, // Nagyobb méret a takaráshoz
+            speedY: Math.random() * 5 + 4, 
+            speedX: (Math.random() - 0.5) * 10,
+            opacity: 0.9, // Sötétebb/sűrűbb gőz
+            growth: 2.5
+        });
+    }
+
+    // Utánpótlás generálása gyorsabb ütemben
+    for (let i = 0; i < 350; i++) {
+        setTimeout(() => {
+            sParticles.push({
+                x: Math.random() * sCanvas.width,
+                y: sCanvas.height + 120,
+                size: Math.random() * 100 + 80,
+                speedY: Math.random() * 5 + 4,
+                speedX: (Math.random() - 0.5) * 10,
+                opacity: 0.9,
+                growth: 2.5
+            });
+        }, i * 5); // Gyorsabb "kilövés"
+    }
+
+    function render() {
+        if (sParticles.length === 0) {
+            sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
+            return;
+        }
+        
+        sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
+        for (let i = 0; i < sParticles.length; i++) {
+            let p = sParticles[i];
+            p.y -= p.speedY; 
+            p.x += p.speedX; 
+            p.size += p.growth; 
+            
+            // IDŐZÍTÉS: 0.004-es csökkenéssel kb. 5-7 másodperc alatt tűnik el teljesen
+            p.opacity -= 0.0045; 
+            
+            let grad = sCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+            grad.addColorStop(0, `rgba(240, 240, 240, ${p.opacity})`);
+            grad.addColorStop(0.4, `rgba(220, 220, 220, ${p.opacity * 0.6})`);
+            grad.addColorStop(1, `rgba(220, 220, 220, 0)`);
+            
+            sCtx.fillStyle = grad;
+            sCtx.beginPath(); 
+            sCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); 
+            sCtx.fill();
+            
+            if (p.opacity <= 0 || p.y < -500) { 
+                sParticles.splice(i, 1); 
+                i--; 
+            }
+        }
+        requestAnimationFrame(render);
+    }
+    render();
 }
 
-        document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').style.display = 'block';
+	// --- Eredeti Lezáró Függvények ---
+	function updateHomeBtnState() {
+	    const homeBtn = document.getElementById('homeBtn');
+	    if (!chart || !homeBtn) return;
+	    const extremes = chart.xAxis[0].getExtremes();
+	    const selDate = document.getElementById('datePicker').value;
+	    const dayStart = new Date(selDate + "T00:00:00").getTime();
+	    const dayEnd = new Date(selDate + "T23:59:59").getTime();
+	    const isFullDay = Math.abs(extremes.min - dayStart) < 1000 && Math.abs(extremes.max - dayEnd) < 1000;
+	    homeBtn.disabled = isFullDay;
+	}
+
+	document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').style.display = 'block';
 	document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
-        document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
-        window.onclick = (e) => { if (e.target.className === 'modal') e.target.style.display = 'none'; };
-        document.getElementById('refreshBtn').onclick = () => updateArchiveData(true);
-        document.getElementById('zoomNowBtn').onclick = async () => {
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
-            const datePicker = document.getElementById('datePicker');
-            if (datePicker.value !== todayStr) { datePicker.value = todayStr; await updateArchiveData(false); }
-            const now = Date.now();
-            chart.xAxis[0].setExtremes(now - 3600000, now + 1800000);
+	document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
+	window.onclick = (e) => { if (e.target.className === 'modal') e.target.style.display = 'none'; };
+	document.getElementById('refreshBtn').onclick = () => updateArchiveData(true);
+	
+	document.getElementById('zoomNowBtn').onclick = async () => {
+	    const today = new Date();
+	    const todayStr = today.toISOString().split('T')[0];
+	    const datePicker = document.getElementById('datePicker');
+	    if (datePicker.value !== todayStr) { datePicker.value = todayStr; await updateArchiveData(false); }
+	    const now = Date.now();
+	    chart.xAxis[0].setExtremes(now - 3600000, now + 1800000);
 	    updateHomeBtnState();
-        };
-        document.getElementById('homeBtn').onclick = () => {
-            const selDate = document.getElementById('datePicker').value;
-            chart.xAxis[0].setExtremes(new Date(selDate + "T00:00:00").getTime(), new Date(selDate + "T23:59:59").getTime());
-        };
+	};
 
-        document.getElementById('datePicker').onchange = () => updateArchiveData(false);
+	document.getElementById('homeBtn').onclick = () => {
+	    const selDate = document.getElementById('datePicker').value;
+	    chart.xAxis[0].setExtremes(new Date(selDate + "T00:00:00").getTime(), new Date(selDate + "T23:59:59").getTime());
+	};
 
-const dateBtn = document.getElementById('dateBtn');
-const datePicker = document.getElementById('datePicker');
+	document.getElementById('datePicker').onchange = () => updateArchiveData(false);
 
-dateBtn.addEventListener('click', () => {
-    datePicker.focus();
-    if (datePicker.showPicker) {
-        datePicker.showPicker();
-    }
-});
+	document.getElementById('dateBtn').addEventListener('click', () => {
+	    const dp = document.getElementById('datePicker');
+	    dp.focus();
+	    if (dp.showPicker) dp.showPicker();
+	});
 
-        document.getElementById('datePicker').valueAsDate = new Date();
+	document.getElementById('csvBtn').onclick = () => {
+	    const selDate = document.getElementById('datePicker').value;
+	    const points = chart.series[0].data;
+	    let csvContent = `Kaisa Sauna - napi adatok exportja;${selDate}\n-----------------------------------\n`;
+	    csvContent += `Min hőm:;${document.getElementById('t_min').innerText} °C\nMax hőm:;${document.getElementById('t_max').innerText} °C\n`;
+	    csvContent += "Dátum;Idő;Hőmérséklet [°C];Változás [°C/perc];Állapot;ETA [időpont];ETA [időtartam]\n";
+	    points.forEach(p => {
+	        if (p.y !== null && p.x !== undefined) {
+	            const timeStr = new Date(p.x).toLocaleTimeString('hu-HU', { hour12: false });
+	            let eT = "—", eM = "—";
+	            if ((p.stText === "FELFŰTÉSI" || p.stText === "LASSULÓ") && p.grad > 0.05 && p.y < 60) {
+	                eM = Math.round((60 - p.y) / p.grad);
+	                eT = new Date(p.x + eM * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+	            }
+	            csvContent += `${selDate};${timeStr};${p.y.toFixed(1)};${p.grad.toFixed(2)};${p.stText};${eT};${eM}\n`;
+	        }
+	    });
+	    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+	    const link = document.createElement("a");
+	    link.href = URL.createObjectURL(blob);
+	    link.download = `kaisa_sauna_export_${selDate}.csv`;
+	    link.click();
+	};
+
+	// --- Inicializálás ---
+	document.getElementById('datePicker').valueAsDate = new Date();
 	document.getElementById('datePicker').max = new Date().toISOString().split("T")[0];
-        document.getElementById('csvBtn').onclick = () => {
-            const selDate = document.getElementById('datePicker').value;
-            const points = chart.series[0].data;
-            let csvContent = `Kaisa Sauna - napi adatok exportja;${selDate}\n-----------------------------------\n`;
-            csvContent += `Min hőm:;${document.getElementById('t_min').innerText} °C\nMax hőm:;${document.getElementById('t_max').innerText} °C\n`;
-            csvContent += "Dátum;Idő;Hőmérséklet [°C];Változás [°C/perc];Állapot;ETA [időpont];ETA [időtartam]\n";
-            points.forEach(p => {
-                if (p.y !== null && p.x !== undefined) {
-                    const timeStr = new Date(p.x).toLocaleTimeString('hu-HU', { hour12: false });
-                    let eT = "—", eM = "—";
-                    if ((p.stText === "FELFŰTÉSI" || p.stText === "LASSULÓ") && p.grad > 0.05 && p.y < 60) {
-                        eM = Math.round((60 - p.y) / p.grad);
-                        eT = new Date(p.x + eM * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
-                    }
-                    csvContent += `${selDate};${timeStr};${p.y.toFixed(1)};${p.grad.toFixed(2)};${p.stText};${eT};${eM}\n`;
-                }
-            });
-            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `kaisa_sauna_export_${selDate}.csv`;
-            link.click();
-        };
+	initChart(); 
+	updateArchiveData(); 
+	setTimeout(() => { if (chart) chart.reflow(); }, 500);
+	setInterval(() => { 
+	    if (document.getElementById('datePicker').value === new Date().toISOString().split('T')[0]) updateArchiveData(true);
+	}, 60000);
+</script>
 
-        initChart(); 
-        updateArchiveData(); 
-        setTimeout(() => { if (chart) chart.reflow(); }, 500);
-        setInterval(() => { 
-            if (document.getElementById('datePicker').value === new Date().toISOString().split('T')[0]) updateArchiveData(true);
-        }, 60000);
-    </script>
+<canvas id="steamCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
+
 </body>
 </html>
