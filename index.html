@@ -30,29 +30,42 @@
         color: var(--text); display: flex; flex-direction: column; 
     }
 
-    /* --- Toolbar & Gombok --- */
-    .toolbar { 
-        height: 50px; display: flex; align-items: center; justify-content: space-between;
-        gap: var(--gap); background: transparent; 
-        margin-bottom: var(--gap); /* Most már pontosan annyi, mint a kártyák közt */
-        width: 100%;
+/* --- Toolbar & Gombok --- */
+.toolbar { 
+    height: 50px; display: flex; align-items: center; justify-content: space-between;
+    gap: var(--gap); background: transparent; 
+    margin-bottom: var(--gap);
+    width: 100%;
+}
+
+/* Alapstílus minden gombnak és a dátumválasztónak */
+.toolbar button, #dateBtn { 
+    flex: 1 1 0;
+    width: 100%;
+    height: 40px; display: flex; align-items: center; justify-content: center; 
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px; 
+    color: var(--text); cursor: pointer; transition: all 0.2s ease; font-size: 16px;
+    position: relative; padding: 0;
+}
+
+[data-theme="dark"] .toolbar button, [data-theme="dark"] #dateBtn { background: #252525; }
+
+/* HOVER JAVÍTÁS: Csak akkor változzon a szín, ha nem érintőképernyőt használunk */
+@media (hover: hover) {
+    .toolbar button:hover, #dateBtn:hover { 
+        background: var(--bg); 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
     }
+}
 
-    /* Kényszerített egyforma szélesség minden elemet beleértve */
-    .toolbar button, #dateBtn { 
-        flex: 1 1 0; /* Ez kényszeríti az egyenlő eloszlást */
-        width: 100%;
-        height: 40px; display: flex; align-items: center; justify-content: center; 
-        background: var(--card); border: 1px solid var(--border); border-radius: 8px; 
-        color: var(--text); cursor: pointer; transition: all 0.2s ease; font-size: 16px;
-        position: relative; padding: 0;
-    }
+/* ACTIVE JAVÍTÁS: Mobilon és asztalin is csak a nyomás pillanatában látszik */
+.toolbar button:active, #dateBtn:active { 
+    transform: scale(0.95); /* Kicsit összemegy, így érezhető a klikk */
+    filter: brightness(0.8);
+    background: var(--border);
+}
 
-    [data-theme="dark"] .toolbar button, [data-theme="dark"] #dateBtn { background: #252525; }
-
-    .toolbar button:hover, #dateBtn:hover { background: var(--bg); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
-    .toolbar button:active { transform: translateY(1px); filter: brightness(0.9); }
+.toolbar button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 
     /* --- Speciális Dátumválasztó (Input kezelés) --- */
     #datePicker { 
