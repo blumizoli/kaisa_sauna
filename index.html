@@ -9,177 +9,135 @@
 	<link rel="icon" type="image/png" href="heat.png">
     <script src="https://code.highcharts.com/stock/highstock.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root { 
-            --bg: #f0f0f0; --card: white; --text: #333; --text-dim: #666; --border: #ddd; 
-            --temp-color: #d32f2f; --grad-color: #800000; --header-red: #d32f2f;
-        }
-        [data-theme="dark"] { 
-            --bg: #121212; --card: #1e1e1e; --text: #ffffff; --text-dim: #b0b0b0; --border: #333; 
-            --temp-color: #ff4d4d; --grad-color: #c04040; --header-red: #ff4d4d;
-        }
-        * { font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box; -webkit-tap-highlight-color: transparent}
-        html {
-            background-color: var(--bg);
-            transition: background-color 0.3s ease;
-        }
-        body {
-            height: 100vh;
-            height: 100dvh; 
-            margin: 0;
-            padding: 6px;
-            overflow: hidden;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-            transition: background-color 0.3s ease;
-        }
-        .toolbar { 
-            display: flex; 
-            align-items: center; 
-            gap: 4px; 
-            background: var(--card); 
-            padding: 6px; 
-            border-radius: 10px; 
-            border: 1px solid var(--border);
-            margin-bottom: 8px;
-            width: 100%;
-        }
-        .toolbar input { 
-            padding: 6px; 
-            border: 1px solid var(--border); 
-            border-radius: 6px; 
-            font-size: 14px; 
-            height: 36px;
-            background: var(--card); 
-            color: var(--text); 
-            flex: 1;
-            min-width: 0; 
-        }
+   
 
-/* Egységes konténer asztali gépre és mobilra */
-.date-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden; /* Biztosítja, hogy az input ne lógjon ki */
-    cursor: pointer;
-}
-
-.date-container:hover {
-    background: var(--bg);
-}
-
-/* Az ikon középen */
-.calendar-icon {
-    display: block;
-    font-size: 18px;
-    color: var(--text);
-    pointer-events: none; /* Az ikon ne fogja meg a kattintást */
-    z-index: 1;
-}
-
-/* A láthatatlan, de teljes területet kitöltő input */
-#datePicker {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 2;
-    padding: 0;
-    margin: 0;
-    border: none;
-    appearance: none; /* Eltávolítja a böngésző alapértelmezett megjelenését */
-    -webkit-appearance: none;
-}
+<style>
+    /* --- Alapbeállítások & Változók --- */
+    :root { 
+        --bg: #f0f0f0; --card: white; --text: #333; --text-dim: #666; --border: #ddd; 
+        --temp-color: #d32f2f; --grad-color: #800000; --header-red: #d32f2f;
+        --gap: 8px; /* Egységes távolság változó */
+    }
+    [data-theme="dark"] { 
+        --bg: #121212; --card: #1e1e1e; --text: #ffffff; --text-dim: #b0b0b0; --border: #333; 
+        --temp-color: #ff4d4d; --grad-color: #c04040; --header-red: #ff4d4d;
+    }
+    * { font-family: 'Roboto', 'Segoe UI', sans-serif; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     
-    .toolbar input {
-        border: none; /* Mobil ikonként nem kell belső keret */
+    html, body { background-color: var(--bg); transition: background-color 0.3s ease; }
+    body { 
+        height: 100dvh; margin: 0; padding: 6px; overflow: hidden; 
+        color: var(--text); display: flex; flex-direction: column; 
     }
 
+    /* --- Toolbar & Gombok --- */
+    .toolbar { 
+        height: 50px; display: flex; align-items: center; justify-content: space-between;
+        gap: var(--gap); background: transparent; 
+        margin-bottom: var(--gap); /* Most már pontosan annyi, mint a kártyák közt */
+        width: 100%;
+    }
+
+    /* Kényszerített egyforma szélesség minden elemet beleértve */
+    .toolbar button, #dateBtn { 
+        flex: 1 1 0; /* Ez kényszeríti az egyenlő eloszlást */
+        width: 100%;
+        height: 40px; display: flex; align-items: center; justify-content: center; 
+        background: var(--card); border: 1px solid var(--border); border-radius: 8px; 
+        color: var(--text); cursor: pointer; transition: all 0.2s ease; font-size: 16px;
+        position: relative; padding: 0;
+    }
+
+    [data-theme="dark"] .toolbar button, [data-theme="dark"] #dateBtn { background: #252525; }
+
+    .toolbar button:hover, #dateBtn:hover { background: var(--bg); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+    .toolbar button:active { transform: translateY(1px); filter: brightness(0.9); }
+
+    /* --- Speciális Dátumválasztó (Input kezelés) --- */
+    #datePicker { 
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+        opacity: 0; cursor: pointer; z-index: 2; appearance: none; -webkit-appearance: none;
+    }
+
+    /* --- Stats Bar & Kártyák --- */
+    .stats-bar { display: flex; flex-direction: column; gap: var(--gap); margin-bottom: var(--gap); flex-shrink: 0; }
+    .status-eta-group { display: flex; flex-direction: row; gap: var(--gap); flex: 1; }
+
+    .card {
+        background: var(--card); padding: 0 8px; border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; display: flex;
+        flex-direction: column; border: 1px solid var(--border);
+        height: 50px; min-height: 50px; justify-content: center; overflow: hidden;
+    }
+
+    .values-grid { display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; text-align: center; width: 100%; }
+    .val-item { display: flex; flex-direction: column; align-items: center; }
+    .val-label { font-size: 11px; color: var(--text-dim); }
+    .val-data { font-size: 13px; font-weight: bold; }
+    
+    .card-header-mini { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .card-header-mini i { font-size: 12px; margin-bottom: 2px; }
+    .card-title-mini { font-size: 12px; font-weight: bold; }
+
+    .status-badge { 
+        padding: 6px 4px; border-radius: 6px; color: white; font-size: 10px; 
+        font-weight: bold; width: 100%; text-align: center; display: flex; 
+        align-items: center; justify-content: center; min-height: 28px;
+    }
+
+    /* --- Chart & Modals --- */
+    #container { 
+        flex: 1; min-height: 0; width: 100%; background: var(--card); 
+        border-radius: 10px; border: 1px solid var(--border);
+    }
+
+    .modal { 
+        display: none; position: fixed; z-index: 1000; left: 0; top: 0; 
+        width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); 
+    }
+    .modal-content { 
+        background: var(--card); margin: 5% auto; padding: 25px; border-radius: 15px; 
+        width: 90%; max-width: 550px; border: 1px solid var(--border); 
+        font-size: 13px; line-height: 1.4; max-height: 85vh; overflow-y: auto; 
+    }
+    .close-btn { float: right; cursor: pointer; font-size: 20px; color: var(--text-dim); }
+    .info-sec { margin-bottom: 20px; }
+    .info-sec h4 { 
+        margin: 0 0 8px 0; color: var(--header-red); border-bottom: 1px solid var(--border); 
+        padding-bottom: 4px; display: flex; align-items: center; gap: 8px; 
+    }
+    .info-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+    .info-icon-box { width: 25px; text-align: center; flex-shrink: 0; }
+
+    /* --- Animációk --- */
+    .spinning { animation: fa-spin 1s infinite linear; color: var(--header-red) !important; }
+    .blink { animation: blinker 1.2s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0.3; } }
+
+    /* --- Reszponzivitás --- */
+    @media (max-width: 767px) {
+        .toolbar { gap: 8px; }
+        .toolbar button, #dateBtn { height: 44px; }
+    }
+
+    @media (min-width: 768px) {
+        .toolbar { justify-content: flex-start; }
+        .toolbar button, #dateBtn { flex: none; width: 44px; }
+        .stats-bar { flex-direction: row; }
+        .status-eta-group { flex: 2; }
+    }
+
+    [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.9) brightness(1.5); }
+</style>
 
 
-.toolbar button, .date-container {
-    transition: all 0.2s ease; /* Finomabb színváltás */
-}
 
-.toolbar button:hover, .date-container:hover {
-    transform: translateY(-1px); /* Kicsit "kiemelkedik" PC-n */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-
-
-        .toolbar button { width: 36px; height: 36px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; }
-        .toolbar button:hover { background: var(--bg); }
-	.toolbar button:focus { outline: none; background: var(--card); }
-	.toolbar button:active { background: var(--bg) !important; }
-	.toolbar button:disabled {opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
-	@media (min-width: 768px) { .toolbar { width: auto; display: inline-flex; justify-content: flex-start; gap: 8px; } .toolbar input { flex: none; width: 120px; } }
-	@media (hover: hover) { .btn:hover { background: var(--border); transform: translateY(-1px); } }
-	@media (hover: hover) { #datePicker:hover, .btn:hover { border-color: var(--header-red); } }
-	.btn:active { background: var(--border); transform: translateY(1px); filter: brightness(0.9); }
-        .stats-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; flex-shrink: 0; }
-	.status-eta-group { display: flex; flex-direction: row; gap: 8px; flex: 1; }
-        @media (min-width: 768px) { .stats-bar { flex-direction: row; gap: 8px; margin-bottom: 8px; } .status-eta-group { gap: 8px; flex: 2; } .card.wide { flex: 2; min-height: 60px; display: flex; justify-content: center; } .card.narrow { flex: 1; } }
-
-.card {
-    background: var(--card);
-    padding: 12px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--border);
-    /* Új sorok: */
-    min-height: 60px; /* Egy minimális magasság, hogy ne ugráljon */
-    justify-content: center; /* Tartalom függőleges középre igazítása */
-}
-
-        .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .card-title { font-size: 12px; font-weight: bold; color: var(--text); }
-        .values-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; align-items: center; text-align: center; width: 100%;}
-        .val-item { display: flex; flex-direction: column; align-items: center; }
-	.val-label { font-size: 12px; color: var(--text-dim); margin-bottom: 2px; }
-	.val-data { font-size: 13px; font-weight: bold; margin-top: 0 !important; }
-        .val-data div { color: var(--text-dim) !important; font-weight: normal !important; }
-	.card-header-mini { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-	.card-header-mini i { font-size: 12px; margin-bottom: 2px; }
-	.card-title-mini { font-size: 12px; font-weight: bold; }
-        .status-badge { padding: 4px 10px; border-radius: 6px; color: white; font-size: 10px; font-weight: bold; width: 50%; text-align: center; display: inline-block; }
-        #eta_val { font-size: 13px; font-weight: bold; color: var(--text); white-space: nowrap; }
-        #container { flex: 1; min-height: 0; width: 100%; background: var(--card); border-radius: 10px; border: 1px solid var(--border); margin-top: 2px; }
-        @media (min-width: 768px) { #container { flex: 1; height: auto; } }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
-        .modal-content { background: var(--card); margin: 5% auto; padding: 25px; border-radius: 15px; width: 90%; max-width: 550px; border: 1px solid var(--border); font-size: 13px; line-height: 1.4; max-height: 85vh; overflow-y: auto; }
-        .close-btn { float: right; cursor: pointer; font-size: 20px; color: var(--text-dim); }
-        .info-sec { margin-bottom: 20px; }
-        .info-sec h4 { margin: 0 0 8px 0; color: #d32f2f; border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-        .info-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
-        .info-icon-box { width: 25px; text-align: center; flex-shrink: 0; color: var(--text); }
-        .spinning { animation: fa-spin 1s infinite linear; color: #d32f2f !important; }
-        .blink { animation: blinker 1.2s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0.3; } }
-        [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.9) brightness(1.5); }
-        [data-theme="dark"] .toolbar input { border-color: #444; }
-    </style>
 </head>
 <body data-theme="light">
     <div class="toolbar">
 
-<div class="date-container" title="Dátumválasztó">
+<div class="date-container" id="dateBtn" title="Dátumválasztó">
     <i class="fa-regular fa-calendar"></i>
     <input type="date" id="datePicker">
 </div>
@@ -194,15 +152,44 @@
     </div>
 
 <div class="stats-bar">
+    <div class="status-eta-group">
+        <div class="card narrow">
+            <div class="values-grid" style="grid-template-columns: 1fr 1fr; height: 100%; align-items: center;">
+                <div class="val-item">
+                    <div class="card-header-mini">
+                        <i class="fa-regular fa-calendar" style="color: var(--header-red);"></i>
+                        <span class="card-title-mini" style="color: var(--header-red);">Dátum</span>
+                    </div>
+                </div>
+                <div class="val-item" style="justify-content: center;">
+                    <span id="display-date" class="val-data" style="font-size: 13px;">----.--.--</span>
+                </div>
+            </div>
+        </div>
+
+<div class="card narrow">
+    <div class="values-grid" style="grid-template-columns: 1fr 1fr; height: 100%; align-items: center;">
+        <div class="val-item">
+            <div class="card-header-mini">
+                <i class="fa-regular fa-clock" style="color: var(--header-red);"></i>
+                <span class="card-title-mini" style="color: var(--header-red);">Utolsó adat</span>
+            </div>
+        </div>
+        <div class="val-item" style="justify-content: center;">
+            <span id="display-update" class="val-data" style="font-size: 13px;">--:--:--</span>
+        </div>
+    </div>
+</div>
+    </div>
+
     <div class="card wide">
-        <div class="values-grid">
+        <div class="values-grid" style="grid-template-columns: repeat(4, 1fr);">
             <div class="val-item">
                 <div class="card-header-mini">
                     <i class="fas fa-thermometer-half" style="color: var(--header-red);"></i>
                     <span class="card-title-mini" style="color: var(--header-red);">T [°C]</span>
                 </div>
             </div>
-            <div class="val-item"><span class="val-label">Idő</span><span class="val-data" id="t_time">--:--</span></div>
             <div class="val-item"><span class="val-label">Akt</span><span class="val-data" id="t_akt">--</span></div>
             <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="t_min">--</span></div>
             <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="t_max">--</span></div>
@@ -210,34 +197,33 @@
     </div>
 
     <div class="card wide">
-        <div class="values-grid">
+        <div class="values-grid" style="grid-template-columns: repeat(4, 1fr);">
             <div class="val-item">
                 <div class="card-header-mini">
                     <i class="fas fa-chart-line" style="color: var(--header-red);"></i>
                     <span class="card-title-mini" style="color: var(--header-red);">G [°C/p]</span>
                 </div>
             </div>
-            <div class="val-item"><span class="val-label">Idő</span><span class="val-data" id="g_time">--:--</span></div>
             <div class="val-item"><span class="val-label">Akt</span><span class="val-data" id="g_akt">--</span></div>
             <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="g_min">--</span></div>
             <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="g_max">--</span></div>
         </div>
     </div>
 
-<div class="status-eta-group">
-<div class="card narrow">
-    <div class="values-grid" style="grid-template-columns: 1fr 1fr; height: 100%; align-items: center;">
-        <div class="val-item">
-            <div class="card-header-mini">
-                <i class="fas fa-tasks" style="color: var(--header-red);"></i>
-                <span class="card-title-mini" style="color: var(--header-red);">Állapot</span>
+    <div class="status-eta-group">
+        <div class="card narrow">
+            <div class="values-grid" style="grid-template-columns: 1fr 1fr; height: 100%; align-items: center;">
+                <div class="val-item">
+                    <div class="card-header-mini">
+                        <i class="fas fa-tasks" style="color: var(--header-red);"></i>
+                        <span class="card-title-mini" style="color: var(--header-red);">Állapot</span>
+                    </div>
+                </div>
+                <div class="val-item" style="justify-content: center;">
+                    <span id="status" class="status-badge" style="background: #888; width: 100%; padding: 8px 4px; font-size: 12px; line-height: 1.1; display: flex; align-items: center; justify-content: center; min-height: 10px;">...</span>
+                </div>
             </div>
         </div>
-        <div class="val-item" style="justify-content: center;">
-            <span id="status" class="status-badge" style="background: #888; width: 100%; padding: 12px; font-size: 12px; line-height: 1.2; display: flex; align-items: center; justify-content: center; min-height: 10px;">...</span>
-        </div>
-    </div>
-</div>
 
         <div class="card narrow">
             <div class="values-grid" style="grid-template-columns: 1fr 1fr; height: 100%; align-items: center;">
@@ -350,133 +336,146 @@
             return "LEHŰLÉSI";
         }
 
-        async function updateArchiveData(preserveView = false) {
-            const icon = document.getElementById('refreshIcon');
-            icon.classList.add('spinning');
-            let oldExtremes = preserveView ? chart.xAxis[0].getExtremes() : null;
-            const selDate = document.getElementById('datePicker').value;
+async function updateArchiveData(preserveView = false) {
+    const icon = document.getElementById('refreshIcon');
+    const miniIcon = document.getElementById('refresh-mini-icon');
+    icon.classList.add('spinning');
+    if (miniIcon) miniIcon.classList.add('spinning');
 
-chart.setTitle({ 
-    useHTML: true, 
-    text: `<span class="val-data" style="font-size: 16px; font-weight: bold;">${selDate.replace(/-/g, ".")}</span>`, 
-    align: 'center',
-    y: 17,
-    style: { 
-        color: 'inherit' // Kényszerítjük, hogy ne a Highcharts, hanem a CSS osztály színe érvényesüljön
-    } 
-});
+    // FONTOS: Megtartjuk a nézetet, ha preserveView igaz
+    let oldExtremes = preserveView ? chart.xAxis[0].getExtremes() : null;
+    
+    const selDate = document.getElementById('datePicker').value;
+    const updateDisp = document.getElementById('display-update');
+    const dateDisp = document.getElementById('display-date');
+    
+const dDate = new Date(selDate);
+const daysHu = ['vasárnap', 'hétfő', 'kedd', 'szerda', 'csütörtök', 'péntek', 'szombat'];
+const dayName = daysHu[dDate.getDay()];
+dateDisp.innerHTML = `${selDate.replace(/-/g, ".")}<br><span style="font-weight: normal; font-size: 11px; color: var(--text-dim); text-transform: capitalize;">${dayName}</span>`;
 
-            const dStartMs = new Date(selDate + "T00:00:00").getTime();
-            const dEndMs = new Date(selDate + "T23:59:59").getTime();
+    const dStartMs = new Date(selDate + "T00:00:00").getTime();
+    const dEndMs = new Date(selDate + "T23:59:59").getTime();
 
-            try {
-                const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 7200000).toISOString()}&end=${new Date(dEndMs + 7200000).toISOString()}`;
-                const response = await fetch(url);
-                const data = await response.json();
-                let plotData = [], t_vals = [], g_vals = [];
+    try {
+        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 7200000).toISOString()}&end=${new Date(dEndMs + 7200000).toISOString()}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        let plotData = [], t_vals = [], g_vals = [];
 
-                if (data.feeds) {
-                    data.feeds.forEach((f) => {
-                        const time = new Date(f.created_at).getTime();
-                        if (time < dStartMs || time > dEndMs) return;
-                        const temp = parseFloat(f.field1);
-                        if (isNaN(temp)) return;
-                        let grad = 0;
-                        let prev = data.feeds.find(p => {
-                            let diff = time - new Date(p.created_at).getTime();
-                            return diff >= 290000 && diff <= 350000;
-                        });
-                        if (prev) grad = (temp - parseFloat(prev.field1)) / ((time - new Date(prev.created_at).getTime()) / 60000);
-                        plotData.push({ x: time, y: temp, grad: grad, stText: getStatusType(temp, grad) });
-                        t_vals.push(temp);
-                        g_vals.push(grad);
-                    });
-                }
-                plotData.push({ x: dStartMs, y: null }, { x: dEndMs, y: null });
-                plotData.sort((a,b) => a.x - b.x);
-
-                const realPoints = plotData.filter(p => p.y !== null).sort((a, b) => a.x - b.x);
-                const isToday = new Date().toISOString().split('T')[0] === document.getElementById('datePicker').value;
-		
-		document.getElementById('refreshBtn').disabled = !isToday;
-
-                if (realPoints.length > 0) {
-                    const last = realPoints[realPoints.length - 1];
-                    const tAkt = document.getElementById('t_akt');
-                    const gAkt = document.getElementById('g_akt');
-                    const stAkt = document.getElementById('status');
-                    const tTime = document.getElementById('t_time');
-                    const gTime = document.getElementById('g_time');
-                    const etaValSpan = document.getElementById('eta_val');
-
-                    if (!isToday) {
-                        tAkt.innerHTML = "&nbsp;";
-			gAkt.innerHTML = "&nbsp;";
-			tTime.innerHTML = "&nbsp;";
-			gTime.innerHTML = "&nbsp;";
-			tTime.style.display = "block";
-   			gTime.style.display = "block";
-                        stAkt.innerText = "ARCHÍV";
-			stAkt.style.background = "#A0522D";
-                        etaValSpan.innerHTML = "&nbsp;"; etaValSpan.style.color = "var(--text-dim)";
-                        stAkt.classList.remove('blink');
-                    } else {
-                        tAkt.innerText = last.y.toFixed(1);
-                        gAkt.innerText = (last.grad > 0 ? "+" : "") + last.grad.toFixed(2);
-                        stAkt.innerText = last.stText;
-                        stAkt.style.background = COLORS[last.stText];
-                        tTime.style.display = "block"; gTime.style.display = "block";
-                        tTime.innerText = new Date(last.x).toLocaleTimeString('hu-HU');
-                        gTime.innerText = new Date(last.x).toLocaleTimeString('hu-HU');
-
-                        if ((last.stText === "FELFŰTÉSI" || last.stText === "LASSULÓ") && last.y < 60 && last.grad > 0.05) {
-                            const mins = Math.round((60 - last.y) / last.grad);
-                            const etaTime = new Date(last.x + mins * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
-                            etaValSpan.innerText = `${etaTime}\n(T-${mins})`;
-                            etaValSpan.style.fontWeight = "bold";
-			    etaValSpan.style.color = "";
-                            if (last.stText === "LASSULÓ") {
-                                stAkt.classList.add('blink');
-                            } else {
-                                stAkt.classList.remove('blink');
-                            }
-                        } else {
-                            etaValSpan.innerHTML = "&nbsp;";
-                            etaValSpan.style.color = "var(--text-dim)";
-                            stAkt.classList.remove('blink');
-                        }
-                    }
-                    chart.series[0].setData(plotData, true);
-                    if (t_vals.length > 0) {
-                        const rMin = Math.min(...t_vals), rMax = Math.max(...t_vals);
-                        document.getElementById('t_min').innerText = rMin.toFixed(1);
-                        document.getElementById('t_max').innerText = rMax.toFixed(1);
-                        document.getElementById('g_min').innerText = (Math.min(...g_vals) > 0 ? "+" : "") + Math.min(...g_vals).toFixed(2);
-                        document.getElementById('g_max').innerText = (Math.max(...g_vals) > 0 ? "+" : "") + Math.max(...g_vals).toFixed(2);
-                        let yMin = 0, yMax = 90;
-                        if (rMin - 5 < yMin) yMin = Math.floor((rMin - 5) / 10) * 10;
-                        if (rMax + 5 > yMax) yMax = Math.ceil((rMax + 5) / 10) * 10;
-                        chart.yAxis[0].setExtremes(yMin, yMax);
-                        chart.series[0].update({ threshold: yMin });
-                    }
-                    if (preserveView && oldExtremes) {
-                        chart.xAxis[0].setExtremes(oldExtremes.min, oldExtremes.max);
-                    } else {
-                        chart.xAxis[0].setExtremes(dStartMs, dEndMs);
-                    }
-                }
-            } catch (e) { console.error(e); }
-            setTimeout(() => { icon.classList.remove('spinning'); }, 500);
+        if (data.feeds) {
+            data.feeds.forEach((f) => {
+                const time = new Date(f.created_at).getTime();
+                if (time < dStartMs || time > dEndMs) return;
+                const temp = parseFloat(f.field1);
+                if (isNaN(temp)) return;
+                let grad = 0;
+                let prev = data.feeds.find(p => {
+                    let diff = time - new Date(p.created_at).getTime();
+                    return diff >= 290000 && diff <= 350000;
+                });
+                if (prev) grad = (temp - parseFloat(prev.field1)) / ((time - new Date(prev.created_at).getTime()) / 60000);
+                plotData.push({ x: time, y: temp, grad: grad, stText: getStatusType(temp, grad) });
+                t_vals.push(temp);
+                g_vals.push(grad);
+            });
         }
+        plotData.push({ x: dStartMs, y: null }, { x: dEndMs, y: null });
+        plotData.sort((a,b) => a.x - b.x);
+
+        const realPoints = plotData.filter(p => p.y !== null).sort((a, b) => a.x - b.x);
+        const isToday = new Date().toISOString().split('T')[0] === document.getElementById('datePicker').value;
+        
+        document.getElementById('refreshBtn').disabled = !isToday;
+
+        if (realPoints.length > 0) {
+            const last = realPoints[realPoints.length - 1];
+            const tAkt = document.getElementById('t_akt');
+            const gAkt = document.getElementById('g_akt');
+            const stAkt = document.getElementById('status');
+            const etaValSpan = document.getElementById('eta_val');
+
+            if (!isToday) {
+                // ARCHÍV NÉZET
+                tAkt.innerHTML = "&nbsp;"; gAkt.innerHTML = "&nbsp;";
+                updateDisp.innerText = ""; // Archív napon ne legyen releváns
+                stAkt.innerText = "ARCHÍV";
+                stAkt.style.background = "#A0522D";
+                etaValSpan.innerHTML = "&nbsp;";
+                stAkt.classList.remove('blink');
+            } else {
+                // AKTUÁLIS NÉZET
+                tAkt.innerText = last.y.toFixed(1);
+                gAkt.innerText = (last.grad > 0 ? "+" : "") + last.grad.toFixed(2);
+                stAkt.innerText = last.stText;
+                stAkt.style.background = COLORS[last.stText];
+                
+                // Frissítve kártya HH:mm:ss formátummal
+                updateDisp.innerText = new Date(last.x).toLocaleTimeString('hu-HU', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
+                if ((last.stText === "FELFŰTÉSI" || last.stText === "LASSULÓ") && last.y < 60 && last.grad > 0.05) {
+                    const mins = Math.round((60 - last.y) / last.grad);
+                    const etaTime = new Date(last.x + mins * 60000).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+                    etaValSpan.innerText = `${etaTime}\n(T-${mins})`;
+                    etaValSpan.style.fontWeight = "bold";
+                    etaValSpan.style.color = "";
+                    if (last.stText === "LASSULÓ") stAkt.classList.add('blink');
+                    else stAkt.classList.remove('blink');
+                } else {
+                    etaValSpan.innerHTML = "&nbsp;";
+                    stAkt.classList.remove('blink');
+                }
+            }
+            chart.series[0].setData(plotData, true);
+            if (t_vals.length > 0) {
+                const rMin = Math.min(...t_vals), rMax = Math.max(...t_vals);
+                document.getElementById('t_min').innerText = rMin.toFixed(1);
+                document.getElementById('t_max').innerText = rMax.toFixed(1);
+                document.getElementById('g_min').innerText = (Math.min(...g_vals) > 0 ? "+" : "") + Math.min(...g_vals).toFixed(2);
+                document.getElementById('g_max').innerText = (Math.max(...g_vals) > 0 ? "+" : "") + Math.max(...g_vals).toFixed(2);
+                let yMin = 0, yMax = 90;
+                if (rMin - 5 < yMin) yMin = Math.floor((rMin - 5) / 10) * 10;
+                if (rMax + 5 > yMax) yMax = Math.ceil((rMax + 5) / 10) * 10;
+                chart.yAxis[0].setExtremes(yMin, yMax);
+                chart.series[0].update({ threshold: yMin });
+            }
+            
+            // Nézet visszaállítása
+            if (preserveView && oldExtremes) {
+                chart.xAxis[0].setExtremes(oldExtremes.min, oldExtremes.max);
+            } else {
+                chart.xAxis[0].setExtremes(dStartMs, dEndMs);
+            }
+        }
+    } catch (e) { console.error(e); }
+    setTimeout(() => { 
+        icon.classList.remove('spinning'); 
+        if (miniIcon) miniIcon.classList.remove('spinning');
+    }, 500);
+}
 
         function initChart() {
             chart = Highcharts.stockChart('container', {
                 chart: { zoomType: 'x', backgroundColor: 'transparent', spacingBottom: 10, reflow: true },
                 rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
-                navigator: {
-                    enabled: true, margin: 10, height: 40,
-                    xAxis: { tickPixelInterval: 60, labels: { style: { fontSize: '11px' } }, dateTimeLabelFormats: { hour: '%Hh' }, units: [['hour', [1, 2, 4]]] }
-                },
+navigator: {
+    enabled: true, 
+    margin: 10, 
+    height: 40,
+    xAxis: {
+        tickPixelInterval: 60, 
+        labels: { style: { fontSize: '11px' } },
+        // Kényszerítjük a kért %Hh formátumot minden zoom szintre
+        dateTimeLabelFormats: { 
+            minute: '%Hh',
+            hour: '%Hh',
+            day: '%Hh',
+            week: '%Hh',
+            month: '%Hh'
+        }, 
+        units: [['hour', [1, 2, 4]]] 
+    }
+},
                 time: { useUTC: false },
                 plotOptions: { area: { states: { hover: { lineWidthPlus: 0 }, inactive: { opacity: 1 } } } },
                 xAxis: {
@@ -565,6 +564,7 @@ function updateHomeBtnState() {
 }
 
         document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').style.display = 'block';
+	document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
         document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
         window.onclick = (e) => { if (e.target.className === 'modal') e.target.style.display = 'none'; };
         document.getElementById('refreshBtn').onclick = () => updateArchiveData(true);
@@ -583,6 +583,17 @@ function updateHomeBtnState() {
         };
 
         document.getElementById('datePicker').onchange = () => updateArchiveData(false);
+
+const dateBtn = document.getElementById('dateBtn');
+const datePicker = document.getElementById('datePicker');
+
+dateBtn.addEventListener('click', () => {
+    datePicker.focus();
+    if (datePicker.showPicker) {
+        datePicker.showPicker();
+    }
+});
+
         document.getElementById('datePicker').valueAsDate = new Date();
 	document.getElementById('datePicker').max = new Date().toISOString().split("T")[0];
         document.getElementById('csvBtn').onclick = () => {
