@@ -567,13 +567,13 @@ updateHomeBtnState();
 	        }
 	    });
 
-	    // 2. Easter Egg figyelő (2 kattintás, 1 mp-en belül)
+	    // 2. Easter Egg figyelő (4 kattintás, 3 mp-en belül)
 	    const now = Date.now();
-	    if (now - themeLastClick > 500) themeClickCount = 0;
+	    if (now - themeLastClick > 750) themeClickCount = 0;
 	    themeClickCount++;
 	    themeLastClick = now;
 
-	    if (themeClickCount === 2) {
+	    if (themeClickCount === 4) {
 	        startSteamEasterEgg();
 	        themeClickCount = 0;
 	    }
