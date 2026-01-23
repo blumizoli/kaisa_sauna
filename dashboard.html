@@ -1,1 +1,89 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaisa Szauna Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0; /* Világos háttér */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Horizontálisan középre igazítás */
+            justify-content: center; /* Vertikálisan középre igazítás */
+            min-height: 100vh; /* Teljes képernyő magasság */
+            box-sizing: border-box; /* Padding beleessen a magasságba */
+        }
 
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .image-container {
+            margin-bottom: 30px;
+            text-align: center; /* Kép középre igazítása */
+        }
+
+        .image-container img {
+            max-width: 100%; /* Kép ne lógjon ki a képernyőből */
+            height: auto;
+            border-radius: 8px; /* Lekerekített sarkok a képnek */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Enyhe árnyék */
+        }
+
+        .back-button {
+            padding: 12px 25px;
+            background-color: #d32f2f; /* Piros szín, mint a monitoron */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            text-decoration: none; /* Ha linkként használnánk */
+        }
+
+        .back-button:hover {
+            background-color: #b01a1a; /* Sötétebb piros hoverre */
+        }
+
+        /* Sötét mód támogatása (ha a főoldalon is van) */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #222;
+                color: #eee;
+            }
+            h1 {
+                color: #eee;
+            }
+            .back-button {
+                background-color: #e57373;
+            }
+            .back-button:hover {
+                background-color: #ef9a9a;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Szauna Dashboard</h1>
+
+    <div class="image-container">
+        <img src="uc.png" alt="Dashboard feltöltés alatt">
+        <p>A dashboard fejlesztés alatt van. Kérjük, látogasson vissza később!</p>
+    </div>
+
+    <button class="back-button" id="backBtn">Vissza a Monitorra</button>
+
+    <script>
+        document.getElementById('backBtn').onclick = () => {
+            window.location.href = 'index.html'; // Ide írd a főoldalad fájlnevét (pl. v1.html, ha az a neve)
+        };
+    </script>
+</body>
+</html>
