@@ -200,7 +200,7 @@
             <div class="val-item">
                 <div class="card-header-mini">
                     <i class="fas fa-thermometer-half" style="color: var(--header-red);"></i>
-                    <span class="card-title-mini" style="color: var(--header-red);">T [°C]</span>
+                    <span class="card-title-mini" id="t-trigger" style="color: var(--header-red);">T [°C]</span>
                 </div>
             </div>
             <div class="val-item"><span class="val-label">Akt</span><span class="val-data" id="t_akt">--</span></div>
@@ -214,7 +214,7 @@
             <div class="val-item">
                 <div class="card-header-mini">
                     <i class="fas fa-chart-line" style="color: var(--header-red);"></i>
-                    <span class="card-title-mini" style="color: var(--header-red);">G [°C/p]</span>
+                    <span class="card-title-mini" id="g-trigger" style="color: var(--header-red);">G [°C/p]</span>
                 </div>
             </div>
             <div class="val-item"><span class="val-label">Akt</span><span class="val-data" id="g_akt">--</span></div>
@@ -690,76 +690,6 @@ function startSteamEasterEgg() {
 	    homeBtn.disabled = isFullDay;
 	}
 
-let isShakeEnabled = false;
-
-document.getElementById('infoBtn').onclick = () => {
-    document.getElementById('infoModal').style.display = 'block';
-};
-
-let isSteamRunning = false; // Új változó a fékhez
-
-function handleShake(event) {
-    if (isSteamRunning) return; // Ha már fut, nem csinálunk semmit
-
-    const acc = event.accelerationIncludingGravity;
-    if (!acc) return;
-    
-    const threshold = 15; 
-    if (Math.abs(acc.x) > threshold || Math.abs(acc.y) > threshold || Math.abs(acc.z) > threshold) {
-        isSteamRunning = true; // Behúzzuk a kéziféket
-        startSteamEasterEgg();
-        
-        // 2 másodperc után engedjük csak újra a rázást
-        setTimeout(() => {
-            isSteamRunning = false;
-        }, 2000); 
-    }
-}
-
-const saunaSong = new Audio('song.mp3');
-saunaSong.volume = 0.6; // Hangerő beállítása (0.0 - 1.0)
-
-// 1. A régi shakeInitialized változót deklaráld a függvény előtt, ha még nincs ott
-let shakeInitialized = false; 
-
-// 2. AZ ÚJ KOMBINÁLT ESEMÉNYKEZELŐ:
-document.querySelector('.card.wide .val-item .card-header-mini').parentElement.onclick = function() {
-    // Azonnali gőz indítása kattintásra
-    startSteamEasterEgg();
-
-    // Szenzor engedélyezése a rázáshoz (ha még nem történt meg)
-    if (!shakeInitialized) {
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission()
-                .then(state => {
-                    if (state === 'granted') {
-                        window.addEventListener('devicemotion', handleShake);
-                        shakeInitialized = true;
-                        console.log("Rázás aktiválva!");
-                    }
-                })
-                .catch(console.error);
-        } else {
-            // Nem iOS vagy régebbi Android eszközök
-            window.addEventListener('devicemotion', handleShake);
-            shakeInitialized = true;
-        }
-    }
-};
-
-// --- G [°C/p] KÁRTYA: DAL INDÍTÁSA / LEÁLLÍTÁSA ---
-document.querySelector('.card.wide:nth-of-type(2) .card-header-mini').parentElement.onclick = function() {
-    if (!saunaSong.paused) {
-        // Ha szól a dal, állítsa le és tekerje az elejére
-        saunaSong.pause();
-        saunaSong.currentTime = 0;
-    } else {
-        // Ha nem szól, indítsa el az elejétől
-        saunaSong.currentTime = 0;
-        saunaSong.play();
-    }
-};
-
 
 	document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
 	document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
@@ -781,13 +711,6 @@ document.querySelector('.card.wide:nth-of-type(2) .card-header-mini').parentElem
 	    chart.xAxis[0].setExtremes(new Date(selDate + "T00:00:00").getTime(), new Date(selDate + "T23:59:59").getTime());
 	};
 
-	document.getElementById('datePicker').onchange = () => updateArchiveData(false);
-
-	document.getElementById('dateBtn').addEventListener('click', () => {
-	    const dp = document.getElementById('datePicker');
-	    dp.focus();
-	    if (dp.showPicker) dp.showPicker();
-	});
 
 	document.getElementById('csvBtn').onclick = () => {
 	    const selDate = document.getElementById('datePicker').value;
@@ -812,6 +735,61 @@ document.querySelector('.card.wide:nth-of-type(2) .card-header-mini').parentElem
 	    link.download = `kaisa_sauna_export_${selDate}.csv`;
 	    link.click();
 	};
+
+
+
+// --- Zene és Gőz vezérlés ---
+var shakeInitialized = false;
+var isSteamRunning = false;
+// A saunaSong-ot itt csak akkor hozzuk létre, ha még nem létezik
+if (typeof saunaSong === 'undefined') {
+    var saunaSong = new Audio('song.mp3');
+    saunaSong.volume = 0.6;
+}
+
+// T ikon vagy felirat: Gőzölés + Rázás aktiválás
+document.getElementById('t-trigger').onclick = function(e) {
+    e.stopPropagation();
+    startSteamEasterEgg();
+    if (!shakeInitialized) {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission().then(function(state) {
+                if (state === 'granted') {
+                    window.addEventListener('devicemotion', handleShake);
+                    shakeInitialized = true;
+                }
+            });
+        } else {
+            window.addEventListener('devicemotion', handleShake);
+            shakeInitialized = true;
+        }
+    }
+};
+
+// G ikon vagy felirat: Zene Start/Stop
+document.getElementById('g-trigger').onclick = function(e) {
+    e.stopPropagation();
+    if (!saunaSong.paused) {
+        saunaSong.pause();
+        saunaSong.currentTime = 0;
+    } else {
+        saunaSong.currentTime = 0;
+        saunaSong.play();
+    }
+};
+
+// Rázás detektálása
+function handleShake(event) {
+    if (isSteamRunning) return;
+    var acc = event.accelerationIncludingGravity;
+    if (!acc) return;
+    if (Math.abs(acc.x) > 15 || Math.abs(acc.y) > 15 || Math.abs(acc.z) > 15) {
+        isSteamRunning = true;
+        startSteamEasterEgg();
+        setTimeout(function() { isSteamRunning = false; }, 2000);
+    }
+}
+
 
 	// --- Inicializálás ---
 	document.getElementById('datePicker').valueAsDate = new Date();
