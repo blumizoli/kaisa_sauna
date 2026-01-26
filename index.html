@@ -700,8 +700,13 @@ function handleShake(event) {
 // 1. A régi shakeInitialized változót deklaráld a függvény előtt, ha még nincs ott
 let shakeInitialized = false; 
 
-// 2. AZ ÚJ KOMBINÁLT ESEMÉNYKEZELŐ:
-document.querySelector('.card.wide .val-item .card-header-mini').parentElement.onclick = function() {
+// 2. AZ ÚJ KOMBINÁLT ESEMÉNYKEZELŐ (T kártya):
+const tCard = document.querySelectorAll('.card.wide')[0]; //
+
+// Kurzort csak a T kártyához adjuk hozzá
+tCard.style.cursor = 'pointer'; //
+
+tCard.onclick = function() {
     // Azonnali gőz indítása kattintásra
     startSteamEasterEgg();
 
@@ -781,7 +786,25 @@ document.querySelector('.card.wide .val-item .card-header-mini').parentElement.o
 	document.getElementById('datePicker').valueAsDate = new Date();
 	document.getElementById('datePicker').max = new Date().toISOString().split("T")[0];
 	initChart(); 
-	updateArchiveData(); 
+	updateArchiveData();
+
+// A második .card.wide elem kiválasztása (ez a G kártya)
+const gCard = document.querySelectorAll('.card.wide')[1];
+const song = document.getElementById('saunaSong');
+
+gCard.style.cursor = 'pointer'; // Hogy látszódjon: kattintható
+
+gCard.onclick = function() {
+    if (song.paused) {
+        song.play();
+        // Opcionális: vizuális visszajelzés (pl. halvány villanás)
+        gCard.style.opacity = "0.8";
+    } else {
+        song.pause();
+        gCard.style.opacity = "1";
+    }
+};
+
 	setTimeout(() => { if (chart) chart.reflow(); }, 500);
 	setInterval(() => { 
 	    if (document.getElementById('datePicker').value === new Date().toISOString().split('T')[0]) updateArchiveData(true);
@@ -789,6 +812,7 @@ document.querySelector('.card.wide .val-item .card-header-mini').parentElement.o
 </script>
 
 <canvas id="steamCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
+<audio id="saunaSong" src="song.mp3" preload="auto"></audio>
 
 </body>
 </html>
