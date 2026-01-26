@@ -636,11 +636,11 @@ function startSteamEasterEgg() {
             p.size += p.growth; 
             
             // IDŐZÍTÉS: 0.004-es csökkenéssel kb. 5-7 másodperc alatt tűnik el teljesen
-            p.opacity -= 0.0045; 
+            p.opacity -= 0.0035; 
             
             let grad = sCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-            grad.addColorStop(0, `rgba(240, 240, 240, ${p.opacity})`);
-            grad.addColorStop(0.4, `rgba(240, 240, 240, ${p.opacity * 0.6})`);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${p.opacity})`);
+            grad.addColorStop(0.4, `rgba(220, 220, 220, ${p.opacity * 0.6})`);
             grad.addColorStop(1, `rgba(220, 220, 220, 0)`);
             
             sCtx.fillStyle = grad;
@@ -695,15 +695,23 @@ document.getElementById('infoBtn').onclick = () => {
     }
 };
 
-// Rázás érzékelése
+let isSteamRunning = false; // Új változó a fékhez
+
 function handleShake(event) {
+    if (isSteamRunning) return; // Ha már fut, nem csinálunk semmit
+
     const acc = event.accelerationIncludingGravity;
     if (!acc) return;
     
-    // Érzékenység: ha bármelyik irányba 15 m/s2 fölé megy a gyorsulás
     const threshold = 15; 
     if (Math.abs(acc.x) > threshold || Math.abs(acc.y) > threshold || Math.abs(acc.z) > threshold) {
+        isSteamRunning = true; // Behúzzuk a kéziféket
         startSteamEasterEgg();
+        
+        // 2 másodperc után engedjük csak újra a rázást
+        setTimeout(() => {
+            isSteamRunning = false;
+        }, 2000); 
     }
 }
 
