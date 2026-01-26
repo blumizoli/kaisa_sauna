@@ -673,26 +673,7 @@ function startSteamEasterEgg() {
 let isShakeEnabled = false;
 
 document.getElementById('infoBtn').onclick = () => {
-    // Modal megnyitása
     document.getElementById('infoModal').style.display = 'block';
-
-    // Mozgásszenzor engedélykérése (ha még nem fut)
-    if (!isShakeEnabled) {
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission()
-                .then(state => {
-                    if (state === 'granted') {
-                        window.addEventListener('devicemotion', handleShake);
-                        isShakeEnabled = true;
-                    }
-                })
-                .catch(console.error);
-        } else {
-            // Android vagy régebbi böngészők
-            window.addEventListener('devicemotion', handleShake);
-            isShakeEnabled = true;
-        }
-    }
 };
 
 let isSteamRunning = false; // Új változó a fékhez
@@ -716,7 +697,33 @@ function handleShake(event) {
 }
 
 
-	document.querySelector('.card.wide .val-item .card-header-mini').parentElement.onclick = () => { startSteamEasterEgg(); };
+// 1. A régi shakeInitialized változót deklaráld a függvény előtt, ha még nincs ott
+let shakeInitialized = false; 
+
+// 2. AZ ÚJ KOMBINÁLT ESEMÉNYKEZELŐ:
+document.querySelector('.card.wide .val-item .card-header-mini').parentElement.onclick = function() {
+    // Azonnali gőz indítása kattintásra
+    startSteamEasterEgg();
+
+    // Szenzor engedélyezése a rázáshoz (ha még nem történt meg)
+    if (!shakeInitialized) {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission()
+                .then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('devicemotion', handleShake);
+                        shakeInitialized = true;
+                        console.log("Rázás aktiválva!");
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // Nem iOS vagy régebbi Android eszközök
+            window.addEventListener('devicemotion', handleShake);
+            shakeInitialized = true;
+        }
+    }
+};
 
 	document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
 	document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
