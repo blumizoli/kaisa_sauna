@@ -247,7 +247,7 @@
                     </div>
                 </div>
                 <div class="val-item" style="justify-content: center;">
-                    <span id="eta_val" class="val-data" style="font-size: 14px; line-height: 1.1; white-space: pre-line; text-align: center; margin-top: 0;">--:--</span>
+                    <span id="eta_val" class="val-data" style="font-size: 13px; line-height: 1.1; white-space: pre-line; text-align: center; margin-top: 0;">--:--</span>
                 </div>
             </div>
         </div>
@@ -541,13 +541,11 @@ updateHomeBtnState();
 	let sParticles = [];
 	let sAudioCtx = null;
 
-	// --- Téma gomb kiegészítve Easter Eggel ---
-	document.getElementById('themeBtn').onclick = () => {
-	    // 1. Eredeti téma váltó logika
-	    const b = document.body;
-	    const isDark = b.getAttribute('data-theme') === 'dark';
-	    const newTheme = isDark ? 'light' : 'dark';
-	    b.setAttribute('data-theme', newTheme);
+document.getElementById('themeBtn').onclick = () => {
+    const b = document.body;
+    const isDark = b.getAttribute('data-theme') === 'dark';
+    const newTheme = isDark ? 'light' : 'dark';
+    b.setAttribute('data-theme', newTheme);
     
 	    const metaThemeColor = document.getElementById('theme-meta');
 	    if (metaThemeColor) metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#121212' : '#ffffff');
@@ -566,17 +564,6 @@ updateHomeBtnState();
 	            ]
 	        }
 	    });
-
-	    // 2. Easter Egg figyelő 
-	    const now = Date.now();
-	    if (now - themeLastClick > 750) themeClickCount = 0;
-	    themeClickCount++;
-	    themeLastClick = now;
-
-	    if (themeClickCount === 2) {
-	        startSteamEasterEgg();
-	        themeClickCount = 0;
-	    }
 	};
 
 function startSteamEasterEgg() {
@@ -608,7 +595,7 @@ function startSteamEasterEgg() {
     sParticles = [];
 
     // AZONNALI indítás - sok és nagy felhők, hogy rögtön eltakarjon mindent
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 20; i++) {
         sParticles.push({
             x: Math.random() * sCanvas.width,
             y: sCanvas.height + 50,
@@ -621,7 +608,7 @@ function startSteamEasterEgg() {
     }
 
     // Utánpótlás generálása gyorsabb ütemben
-    for (let i = 0; i < 350; i++) {
+    for (let i = 0; i < 80; i++) {
         setTimeout(() => {
             sParticles.push({
                 x: Math.random() * sCanvas.width,
@@ -653,7 +640,7 @@ function startSteamEasterEgg() {
             
             let grad = sCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
             grad.addColorStop(0, `rgba(240, 240, 240, ${p.opacity})`);
-            grad.addColorStop(0.4, `rgba(220, 220, 220, ${p.opacity * 0.6})`);
+            grad.addColorStop(0.4, `rgba(240, 240, 240, ${p.opacity * 0.6})`);
             grad.addColorStop(1, `rgba(220, 220, 220, 0)`);
             
             sCtx.fillStyle = grad;
@@ -683,7 +670,46 @@ function startSteamEasterEgg() {
 	    homeBtn.disabled = isFullDay;
 	}
 
-	document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').style.display = 'block';
+let isShakeEnabled = false;
+
+document.getElementById('infoBtn').onclick = () => {
+    // Modal megnyitása
+    document.getElementById('infoModal').style.display = 'block';
+
+    // Mozgásszenzor engedélykérése (ha még nem fut)
+    if (!isShakeEnabled) {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission()
+                .then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('devicemotion', handleShake);
+                        isShakeEnabled = true;
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // Android vagy régebbi böngészők
+            window.addEventListener('devicemotion', handleShake);
+            isShakeEnabled = true;
+        }
+    }
+};
+
+// Rázás érzékelése
+function handleShake(event) {
+    const acc = event.accelerationIncludingGravity;
+    if (!acc) return;
+    
+    // Érzékenység: ha bármelyik irányba 15 m/s2 fölé megy a gyorsulás
+    const threshold = 15; 
+    if (Math.abs(acc.x) > threshold || Math.abs(acc.y) > threshold || Math.abs(acc.z) > threshold) {
+        startSteamEasterEgg();
+    }
+}
+
+
+	document.querySelector('.card.wide .val-item .card-header-mini').parentElement.onclick = () => { startSteamEasterEgg(); };
+
 	document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
 	document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
 	window.onclick = (e) => { if (e.target.className === 'modal') e.target.style.display = 'none'; };
