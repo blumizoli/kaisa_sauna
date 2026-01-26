@@ -270,6 +270,17 @@
                 <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-chart-simple"></i></div><div><b>Dashboard:</b> statisztika (fejlesztés alatt)</div></div>
                 <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-file-csv"></i></div><div><b>CSV export:</b> napi adatok exportja</div></div>
             </div>
+
+            <div class="info-sec">
+                <h4><i class="fa-regular fa-calendar"></i>Dátum</h4>
+                <p>Az aktuális dátum.</p>
+            </div>
+
+            <div class="info-sec">
+                <h4><i class="fa-regular fa-clock"></i>Utolsó adat</h4>
+                <p>Az utolsó adatpont időbélyege.</p>
+            </div>
+			
             <div class="info-sec">
                 <h4><i class="fas fa-thermometer-half"></i>T - Hőmérséklet [°C]</h4>
                 <p>Az aktuális (akt) továbbá az adott napi legkisebb (min) és legnagyobb (max) mért hőmérséklet értékek. Az értékeket a szenzor 0,1 °C változás esetén, de leggyakrabban 20 másodpercenként rögzíti.</p>
@@ -331,6 +342,15 @@
                 <p><b>Felfűtési</b> és <b>Lassuló</b> állapot esetén a 60 °C-os hőmérséklet elérésének becsült időpontja (hh:mm) és időtartama (T-min).<br><br>
                 <i class="fas fa-exclamation-triangle blink" style="color:#ff8c00"></i> <i>Lassuló állapotnál az állapotjelölő villogása figyelmeztet!</i></p>
             </div>
+
+<div class="info-sec">
+    <h4><i class="fas fa-spoon"></i> Löyly</h4>
+    <p>
+        <b>T kártya:</b> Kattints a T ikonra a gőz effekt indításához. Utána a telefon rázásával is "löttyinthetsz"!<br><br>
+        <b>G kártya:</b> Kattints a G ikonra a "Löylyä lissää" dal elindításához vagy leállításához.
+    </p>
+</div>
+			
         </div>
     </div>
 
@@ -696,6 +716,8 @@ function handleShake(event) {
     }
 }
 
+const saunaSong = new Audio('song.mp3');
+saunaSong.volume = 0.6; // Hangerő beállítása (0.0 - 1.0)
 
 // 1. A régi shakeInitialized változót deklaráld a függvény előtt, ha még nincs ott
 let shakeInitialized = false; 
@@ -724,6 +746,20 @@ document.querySelector('.card.wide .val-item .card-header-mini').parentElement.o
         }
     }
 };
+
+// --- G [°C/p] KÁRTYA: DAL INDÍTÁSA / LEÁLLÍTÁSA ---
+document.querySelector('.card.wide:nth-of-type(2) .card-header-mini').parentElement.onclick = function() {
+    if (!saunaSong.paused) {
+        // Ha szól a dal, állítsa le és tekerje az elejére
+        saunaSong.pause();
+        saunaSong.currentTime = 0;
+    } else {
+        // Ha nem szól, indítsa el az elejétől
+        saunaSong.currentTime = 0;
+        saunaSong.play();
+    }
+};
+
 
 	document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
 	document.getElementById('modalClose').onclick = () => document.getElementById('infoModal').style.display = 'none';
