@@ -275,7 +275,7 @@
 
 <div class="info-sec">
                 <h4><i class="fas fa-thermometer-half"></i>T - Hőmérséklet [°C]</h4>
-                <p>A hőmérséklet aktuális értéke (akt), valamint az adott napi szélsőértékei (min/max). A szenzor 0,1 °C-os változás esetén, de legsűrűbben 20 másodpercenként rögzíti az adatokat.</p>
+                <p>A hőmérséklet aktuális értéke (akt), valamint az adott napi szélsőértékei (min/max). A szenzor 20 másodpercenként rögzíti az adatokat.</p>
                 <p><i>A kártyát megérintve gőzt fakaszthatsz, sőt, az első gőzölés után mobilod megrázásával is „löttyinthetsz” a kövekre.</i></p>
             </div>
             
@@ -378,27 +378,47 @@ dateDisp.innerHTML = `${selDate.replace(/-/g, ".")}<br><span style="font-weight:
     const dEndMs = new Date(selDate + "T23:59:59").getTime();
 
     try {
-        const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 7200000).toISOString()}&end=${new Date(dEndMs + 7200000).toISOString()}`;
+	const url = `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${new Date(dStartMs - 10800000).toISOString()}&end=${new Date(dEndMs + 10800000).toISOString()}&_nocache=${Date.now()}`;
         const response = await fetch(url);
         const data = await response.json();
         let plotData = [], t_vals = [], g_vals = [];
 
         if (data.feeds) {
-            data.feeds.forEach((f) => {
-                const time = new Date(f.created_at).getTime();
-                if (time < dStartMs || time > dEndMs) return;
-                const temp = parseFloat(f.field1);
-                if (isNaN(temp)) return;
-                let grad = 0;
-                let prev = data.feeds.find(p => {
-                    let diff = time - new Date(p.created_at).getTime();
-                    return diff >= 290000 && diff <= 350000;
-                });
-                if (prev) grad = (temp - parseFloat(prev.field1)) / ((time - new Date(prev.created_at).getTime()) / 60000);
-                plotData.push({ x: time, y: temp, grad: grad, stText: getStatusType(temp, grad) });
-                t_vals.push(temp);
-                g_vals.push(grad);
-            });
+data.feeds.forEach((f, index) => {
+    const time = new Date(f.created_at).getTime();
+    
+    // Csak azt dobjuk el, ami valóban kívül esik a megjeleníteni kívánt 24 órán
+    // (A dStartMs és dEndMs már a helyi napunk határai)
+    if (time < dStartMs || time > dEndMs) return;
+
+    const temp = parseFloat(f.field1);
+    if (isNaN(temp)) return;
+
+    let grad = 0;
+
+    // Mozgóátlagos gradiens számítás (pl. 3 pontos ablakokkal)
+    // Kell hozzá legalább 15+3 adatpont
+    if (index >= 18) {
+        // 1. Aktuális környezet átlaga (utolsó 3 pont: index, index-1, index-2)
+        const currentWindow = data.feeds.slice(index - 2, index + 1);
+        const currentAvg = currentWindow.reduce((sum, p) => sum + parseFloat(p.field1), 0) / 3;
+
+        // 2. 5 perccel ezelőtti környezet átlaga (index-15, index-16, index-17)
+        const pastWindow = data.feeds.slice(index - 17, index - 14);
+        const pastAvg = pastWindow.reduce((sum, p) => sum + parseFloat(p.field1), 0) / 3;
+
+        const prevTime = new Date(data.feeds[index - 15].created_at).getTime();
+        const diffMin = (time - prevTime) / 60000;
+
+        if (diffMin > 0 && diffMin < 10) {
+            grad = (currentAvg - pastAvg) / diffMin;
+        }
+    }
+
+plotData.push({ x: time, y: temp, grad: grad, stText: getStatusType(temp, grad) });
+    t_vals.push(temp);
+    g_vals.push(grad);
+});
         }
         plotData.push({ x: dStartMs, y: null }, { x: dEndMs, y: null });
         plotData.sort((a,b) => a.x - b.x);
@@ -534,9 +554,9 @@ navigator: {
 		    }
 		},
                 series: [{ 
-                    name: 'Szauna', type: 'area', color: '#ff4444', lineWidth: 2.5, dataGrouping: { enabled: false }, 
+                    name: 'Szauna', type: 'area', color: '#ff4444', lineWidth: 2.5, dataGrouping: { enabled: false }, gapSize: 300000, gapUnit: 'value',
                     fillColor: { linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, stops: [[0, 'rgba(255, 68, 68, 0.4)'], [1, 'rgba(255, 68, 68, 0.05)']] },
-                    marker: { enabled: false, states: { hover: { enabled: true } } }
+                    marker: { enabled: null, radius: 3 }
                 }]
             });
 updateHomeBtnState();
