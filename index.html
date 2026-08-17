@@ -537,7 +537,7 @@ navigator: {
 		tooltip: {
 		    split: false, shared: false, useHTML: true,
 		    formatter: function() {
-		        const p = this.points[0].point; if (p.y === null) return false;
+		        const p = this.point;; if (p.y === null) return false;
 		        const color = COLORS[p.stText];
 		        const localTime = new Date(this.x).toLocaleTimeString('hu-HU', { hour12: false });
 			const blinkClass = p.stText === "LASSULÓ" ? "class='blink'" : "";
