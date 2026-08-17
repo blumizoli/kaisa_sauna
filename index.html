@@ -535,7 +535,7 @@ navigator: {
                     ] 
                 },
 		tooltip: {
-		    split: false, shared: true, useHTML: true,
+		    split: false, shared: false, useHTML: true,
 		    formatter: function() {
 		        const p = this.points[0].point; if (p.y === null) return false;
 		        const color = COLORS[p.stText];
