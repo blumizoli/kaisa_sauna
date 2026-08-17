@@ -534,12 +534,17 @@ navigator: {
                         { id: 'limit-60', value: 60, color: '#d32f2f', width: 2, dashStyle: 'Dash', zIndex: 3 }
                     ] 
                 },
-		tooltip: {
-		    split: false, shared: false, useHTML: true,
-		    formatter: function() {
-		        const p = this.point;; if (p.y === null) return false;
-		        const color = COLORS[p.stText];
-		        const localTime = new Date(this.x).toLocaleTimeString('hu-HU', { hour12: false });
+tooltip: {
+    split: false,
+    shared: false,
+    useHTML: true,
+    formatter: function() {
+        const p = this;
+        if (p.y === null) return false;
+
+        const color = COLORS[p.stText];
+        const localTime = new Date(this.x).toLocaleTimeString('hu-HU', { hour12: false });
+		
 			const blinkClass = p.stText === "LASSULÓ" ? "class='blink'" : "";
 		        let etaStr = "";
         
