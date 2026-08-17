@@ -534,17 +534,15 @@ navigator: {
                         { id: 'limit-60', value: 60, color: '#d32f2f', width: 2, dashStyle: 'Dash', zIndex: 3 }
                     ] 
                 },
-tooltip: {
-    split: false,
-    shared: false,
-    useHTML: true,
-    formatter: function() {
-        const p = this;
-        if (p.y === null) return false;
-
-        const color = COLORS[p.stText];
-        const localTime = new Date(this.x).toLocaleTimeString('hu-HU', { hour12: false });
-		
+		tooltip: {
+		    split: false, shared: true, useHTML: true,
+			style: {
+      		whiteSpace: 'nowrap'
+		    },
+		    formatter: function() {
+		        const p = this.points[0].point; if (p.y === null) return false;
+		        const color = COLORS[p.stText];
+		        const localTime = new Date(this.x).toLocaleTimeString('hu-HU', { hour12: false });
 			const blinkClass = p.stText === "LASSULÓ" ? "class='blink'" : "";
 		        let etaStr = "";
         
@@ -555,7 +553,7 @@ tooltip: {
 		            etaStr = `<br/>ETA: <b style="color: var(--text)">${time} (T-${mins})</b>`;
 		        }
         
-		        return `<b>${localTime}</b><br/>Hőmérséklet: <b>${p.y.toFixed(1)} °C</b><br/>Változás: <b>${p.grad.toFixed(2)} °C/p</b><br/>Állapot: <span ${blinkClass} style="background:${color};color:white;padding:2px 5px;border-radius:3px;font-size:10px;">${p.stText}</span>${etaStr}`;
+		        return `<div style="white-space: nowrap;"><b>${localTime}</b><br/>Hőmérséklet: <b>${p.y.toFixed(1)} °C</b><br/>Változás: <b>${p.grad.toFixed(2)} °C/p</b><br/>Állapot: <span ${blinkClass} style="background:${color};color:white;padding:2px 5px;border-radius:3px;font-size:10px;">${p.stText}</span>${etaStr}</div>`;
 		    }
 		},
                 series: [{ 
