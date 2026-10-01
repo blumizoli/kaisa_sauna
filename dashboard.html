@@ -59,9 +59,13 @@
     .card.fill .chart { flex: 1; min-height: 260px; }
 
     /* --- Szűrők --- */
-    .filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
-    @media (min-width: 768px) { .filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 16px; } }   /* bal: szezonok, jobb: személyek */
-    .filters .hl-line { grid-column: 1 / -1; }
+    .filter-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
+    @media (min-width: 768px) { .filter-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }   /* bal: szezonok, jobb: személyek */
+    .f-card { display: flex; flex-direction: column; }
+    /* a szezon-gombok függőlegesen középen a felirat és a kártya alja között */
+    .f-card .chips { flex: 1; align-items: center; align-content: center; }
+    .f-card .hl-line { margin-top: 8px; }
+    .person-wrap { position: relative; }
     .f-lbl { font-size: 11px; color: var(--header-red); font-weight: 700; margin-bottom: 4px; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .chips button { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 16px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -96,7 +100,9 @@
     .kpi .split b { font-size: 11px; color: var(--text); }
 
     /* --- Kapcsolók, jelmagyarázat --- */
-    .toggles { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 11px; color: var(--text-dim); }
+    .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .chart-head h3 { margin: 0; }
+    .toggles { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
     .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
     .seg button { background: var(--card); color: var(--text); border: none; border-left: 1px solid var(--border); padding: 6px 10px; font-size: 12px; cursor: pointer; }
     .seg button:first-child { border-left: none; }
@@ -174,43 +180,45 @@
     </div>
 
     <div id="content" class="hidden">
-        <!-- Szűrők -->
-        <div class="card filters">
-            <div>
+        <!-- Szűrők: két külön kártya -->
+        <div class="filter-row">
+            <div class="card f-card">
                 <div class="f-lbl">Szezon</div>
                 <div class="chips" id="seasonChips"></div>
             </div>
-            <div class="person">
+            <div class="card f-card person">
                 <div class="f-lbl">Személyek</div>
-                <button id="personBtn"><span id="personLbl">Nincs kiemelés</span><i class="fas fa-chevron-down"></i></button>
-                <div id="personPanel" class="hidden"></div>
+                <div class="person-wrap">
+                    <button id="personBtn"><span id="personLbl">Nincs kiemelés</span><i class="fas fa-chevron-down"></i></button>
+                    <div id="personPanel" class="hidden"></div>
+                </div>
+                <div class="hl-line hidden" id="hlLine"></div>
             </div>
-            <div class="hl-line hidden" id="hlLine"></div>
         </div>
 
         <!-- Mutatószámok -->
         <div class="kpis" id="kpis"></div>
 
-        <!-- Oszlopdiagram-kapcsolók -->
-        <div class="card toggles">
-            <span>Oszlopdiagramok:</span>
-            <div class="seg" id="segMeasure"><button data-v="b" class="on">Begyújtás</button><button data-v="s">Szaunázás</button><button data-v="both">Mindkettő</button></div>
-            <div class="seg" id="segType"><button data-v="host">Házigazda</button><button data-v="guest">Vendég</button><button data-v="both" class="on">Mindkettő</button></div>
-        </div>
-
+        <!-- Oszlopdiagramok: a kapcsolók a szezon-diagram fejlécében, a havi és heti diagramra is vonatkoznak -->
         <div class="card">
-            <h3><i class="fa-solid fa-layer-group"></i> Szezononként<span class="mode-chip b">begyújtás</span></h3>
-            <div class="sub">Piros: begyújtás (csak házigazdával / vendéggel), kékesszürke: szaunázás (házigazdák / vendégek); a sötét árnyalat a házigazda. Egy szezon szeptembertől augusztusig tart; a kiválasztott szezonok kiemelve.</div>
+            <div class="chart-head">
+                <h3><i class="fa-solid fa-layer-group"></i> Szezononként</h3>
+                <div class="toggles">
+                    <div class="seg" id="segMeasure"><button data-v="b">Begyújtás</button><button data-v="s">Szaunázás</button><button data-v="both" class="on">Mindkettő</button></div>
+                    <div class="seg" id="segType"><button data-v="host">Házigazda</button><button data-v="guest">Vendég</button><button data-v="both" class="on">Mindkettő</button></div>
+                </div>
+            </div>
+            <div class="sub">Piros: begyújtás (csak házigazdával / vendéggel), kékesszürke: szaunázás (házigazdák / vendégek); a sötét árnyalat a házigazda. A kapcsolók a havi és a heti diagramra is vonatkoznak. Egy szezon szeptembertől augusztusig tart; a kiválasztott szezonok kiemelve.</div>
             <div id="chSeasons" class="chart"></div>
         </div>
 
         <div class="grid2">
             <div class="card">
-                <h3><i class="fa-regular fa-calendar"></i> Havi eloszlás<span class="mode-chip b">begyújtás</span></h3>
+                <h3><i class="fa-regular fa-calendar"></i> Havi eloszlás<span class="mode-chip both">begyújtás + szaunázás</span></h3>
                 <div id="chMonths" class="chart"></div>
             </div>
             <div class="card">
-                <h3><i class="fa-solid fa-calendar-week"></i> A hét napjai<span class="mode-chip b">begyújtás</span></h3>
+                <h3><i class="fa-solid fa-calendar-week"></i> A hét napjai<span class="mode-chip both">begyújtás + szaunázás</span></h3>
                 <div id="chWeekdays" class="chart"></div>
             </div>
         </div>
@@ -537,7 +545,7 @@ const COL = { b: { host: '#b71c1c', guest: '#e57373' }, s: { host: '#455a64', gu
 const MEAS_NAME = { b: 'Begyújtás', s: 'Szaunázás' };
 
 // Oszlopdiagram-kapcsolók: mit (begyújtás / szaunázás / mindkettő) és kit (házigazda / vendég / mindkettő)
-let viewMeasure = 'b', viewType = 'both';
+let viewMeasure = 'both', viewType = 'both';
 
 // Kategóriánkénti összesítés. Begyújtás: csak házigazdával / vendéggel; szaunázás: házigazda- / vendégsorok.
 // Kiemelésnél minden rész két darabra oszlik: a kiválasztott kódot érintő (X) és a többi.
