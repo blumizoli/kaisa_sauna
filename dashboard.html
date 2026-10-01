@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff" id="theme-meta">
+    <title>Kaisa Sauna – Dashboard</title>
+    <link rel="icon" type="image/png" href="heat.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/highstock.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --bg: #f0f0f0; --card: #fff; --text: #333; --text-dim: #666; --border: #ddd;
+        --header-red: #d32f2f; --gap: 8px; --hl-bg: rgba(211, 47, 47, 0.08);
+        --hm-empty: #e8e8e8; --hm-nodata: #c9c9c9; --hm-1: #f6c1c1; --hm-2: #ec8b8b; --hm-3: #d94444; --hm-4: #8f1515;
+    }
+    [data-theme="dark"] {
+        --bg: #121212; --card: #1e1e1e; --text: #fff; --text-dim: #b0b0b0; --border: #333;
+        --header-red: #ff4d4d; --hl-bg: rgba(255, 77, 77, 0.12);
+        --hm-empty: #2a2a2a; --hm-nodata: #4a4a4a; --hm-1: #5a2323; --hm-2: #8f2a2a; --hm-3: #c93a3a; --hm-4: #ff6b6b;
+    }
+    * { font-family: 'Roboto', 'Segoe UI', sans-serif; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { background: var(--bg); transition: background-color 0.3s ease; }
+    body { margin: 0; padding: 6px; color: var(--text); }
+    main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--gap); }
+    #content { display: flex; flex-direction: column; gap: var(--gap); }
+
+    /* --- Toolbar (mint a monitoron) --- */
+    .toolbar { height: 50px; display: flex; align-items: center; gap: var(--gap); }
+    .toolbar button {
+        flex: 1 1 0; height: 40px; display: flex; align-items: center; justify-content: center;
+        background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        color: var(--text); cursor: pointer; font-size: 16px; padding: 0; transition: all 0.2s ease;
+    }
+    [data-theme="dark"] .toolbar button { background: #252525; }
+    .toolbar button:active { transform: scale(0.95); filter: brightness(0.8); }
+    .toolbar .title { flex: 3 1 0; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .toolbar .title i { color: var(--header-red); }
+    input[type=file] { display: none; }
+    @media (max-width: 767px) { .toolbar button { height: 50px; } }
+    @media (min-width: 768px) {
+        .toolbar button { flex: none; width: 44px; }
+        .toolbar .title { flex: 1; justify-content: flex-start; padding-left: 6px; }
+    }
+
+    /* --- Kártyák, közös rács --- */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 12px; min-width: 0; }
+    .card h3 { margin: 0 0 8px; font-size: 13px; color: var(--header-red); display: flex; align-items: center; gap: 8px; }
+    .card .sub { font-size: 11px; color: var(--text-dim); margin: -4px 0 8px; line-height: 1.4; }
+    .dim { color: var(--text-dim); }
+    .hidden { display: none !important; }
+    .code { font-family: Consolas, 'Courier New', monospace; font-weight: 700; }
+    /* Minden kétoszlopos blokk ugyanazzal a ráccsal és töréspontnal → azonos szélességek */
+    .grid2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
+    @media (min-width: 1100px) { .grid2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+    .chart { height: 260px; }
+    .card.fill { display: flex; flex-direction: column; }
+    .card.fill .chart { flex: 1; min-height: 260px; }
+
+    /* --- Szűrők --- */
+    .filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    @media (min-width: 768px) { .filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 16px; } }   /* bal: szezonok, jobb: személyek */
+    .filters .hl-line { grid-column: 1 / -1; }
+    .f-lbl { font-size: 11px; color: var(--header-red); font-weight: 700; margin-bottom: 4px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips button { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 16px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    [data-theme="dark"] .chips button { background: #252525; }
+    .chips button.on { background: var(--header-red); border-color: var(--header-red); color: #fff; }
+    .person { position: relative; }
+    #personBtn { width: 100%; height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font-size: 14px; font-weight: 700; padding: 0 10px; cursor: pointer; text-align: left; }
+    [data-theme="dark"] #personBtn { background: #252525; }
+    #personPanel { position: absolute; left: 0; right: 0; top: 42px; z-index: 20; background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.2); max-height: 380px; overflow-y: auto; }
+    .pp-head { position: sticky; top: 0; background: var(--card); padding: 8px 10px; font-size: 11px; color: var(--text-dim); border-bottom: 1px solid var(--border); line-height: 1.5; z-index: 1; }
+    .pp-head b { color: var(--text); }
+    .pp-row { display: grid; grid-template-columns: 30px 52px 1fr auto auto; gap: 6px; align-items: center; padding: 7px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+    .pp-row:hover { background: var(--hl-bg); }
+    .pp-row.sel { background: var(--hl-bg); box-shadow: inset 3px 0 0 var(--header-red); }
+    .pp-row.off { opacity: 0.4; }
+    .pp-row .rk { color: var(--text-dim); text-align: right; }
+    .pp-row .st { font-size: 10px; color: var(--text-dim); }
+    .pp-row .n { text-align: right; font-weight: 700; min-width: 34px; }
+    .pp-row .ns { text-align: right; color: var(--header-red); font-weight: 700; min-width: 34px; }
+    .pp-sec { padding: 5px 10px; font-size: 10px; font-weight: 700; color: var(--header-red); background: var(--bg); text-transform: uppercase; letter-spacing: 0.4px; }
+    .hl-line { font-size: 12px; color: var(--text-dim); padding: 6px 8px; border-radius: 8px; background: var(--hl-bg); line-height: 1.5; }
+    .hl-line b { color: var(--text); }
+
+    /* --- Mutatószámok --- */
+    .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap); }
+    @media (min-width: 600px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 1100px) { .kpis { grid-template-columns: repeat(6, 1fr); } }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+    .kpi .lbl { font-size: 11px; color: var(--header-red); font-weight: 700; }
+    .kpi b { font-size: 24px; line-height: 1.15; }
+    .kpi .split { font-size: 11px; color: var(--text-dim); line-height: 1.35; }
+    .kpi .split b { font-size: 11px; color: var(--text); }
+
+    /* --- Kapcsolók, jelmagyarázat --- */
+    .toggles { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 11px; color: var(--text-dim); }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .seg button { background: var(--card); color: var(--text); border: none; border-left: 1px solid var(--border); padding: 6px 10px; font-size: 12px; cursor: pointer; }
+    .seg button:first-child { border-left: none; }
+    .seg button.on { background: var(--header-red); color: #fff; font-weight: 700; }
+    .seg.small button { padding: 4px 8px; font-size: 11px; }
+    .mode-chip { margin-left: auto; font-size: 10px; font-weight: 700; color: #fff; padding: 2px 7px; border-radius: 10px; background: #b71c1c; }
+    .mode-chip.s { background: #455a64; }
+    .mode-chip.both { background: linear-gradient(90deg, #b71c1c 50%, #455a64 50%); }
+    .lg { display: grid; justify-content: center; gap: 2px 14px; margin-top: 4px; }
+    .lg button { display: flex; align-items: center; gap: 6px; background: none; border: none; padding: 2px 0; color: var(--text); font-size: 11px; cursor: pointer; text-align: left; }
+    .lg button i { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .lg button.off { opacity: 0.35; }
+
+    /* --- Naptár --- */
+    .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+    .cal-head h3 { margin: 0; }
+    .hm-wrap { overflow-x: auto; }
+    .hm-year { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 6px; }
+    .hm-year .y { position: sticky; left: 0; z-index: 1; width: 40px; font-size: 11px; font-weight: 700; color: var(--text-dim); flex-shrink: 0; background: var(--card); }
+    .hm-year svg { display: block; flex-shrink: 0; }
+    .hm-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-dim); margin-top: 6px; flex-wrap: wrap; }
+    .hm-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    /* A lista a naptár magasságáig ér (egymás mellett), a többi görgethető */
+    @media (min-width: 1100px) {
+        .tbl-card { height: 0; min-height: max(100%, 340px); display: flex; flex-direction: column; }
+        .tbl-card .tbl-wrap { flex: 1; max-height: none; min-height: 0; }
+    }
+
+    /* --- Táblázat --- */
+    .tbl-wrap { overflow: auto; max-height: 345px; }   /* kb. 10 sor */
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+    th, td { padding: 6px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; }
+    th { color: var(--text-dim); font-weight: 700; }
+    td a { color: var(--header-red); text-decoration: none; font-weight: 700; }
+    tbody tr.row { cursor: pointer; }
+    tbody tr.row td.chev { color: var(--text-dim); width: 18px; }
+    tbody tr.row.open td.chev i { transform: rotate(180deg); }
+    tr.det td { text-align: left; white-space: normal; font-size: 12px; color: var(--text-dim); padding: 6px 10px 10px; }
+    tr.det .code { display: inline-block; padding: 1px 5px; margin: 2px 2px 0 0; border-radius: 4px; background: var(--bg); color: var(--text); }
+    tr.det .code.me { background: var(--header-red); color: #fff; }
+    tr.det .code.host { box-shadow: inset 0 0 0 1px var(--text-dim); }
+    tr.hl td { background: var(--hl-bg); }
+    tr.hl td:first-child { box-shadow: inset 3px 0 0 var(--header-red); }
+
+    #loadCard { text-align: center; font-size: 13px; line-height: 1.5; }
+    #loadCard label { display: inline-block; margin-top: 8px; background: var(--header-red); color: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    /* --- Easter egg ablak --- */
+    #egg { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 12px;
+           background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+    #egg .egg-box { width: min(960px, 100%); background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+           box-shadow: 0 10px 40px rgba(0,0,0,0.45); overflow: hidden; animation: eggIn 0.35s ease-out; }
+    @keyframes eggIn { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .egg-top { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 6px 12px; font-size: 12px; font-weight: 700; color: var(--header-red); }
+    .egg-top button { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; padding: 4px 6px; }
+    .egg-video { position: relative; aspect-ratio: 16 / 9; background: #000; }
+    .egg-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .hc-tip { display: inline-block; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.18); padding: 6px 8px; font-size: 12px; line-height: 1.35; white-space: nowrap; }
+</style>
+</head>
+<body data-theme="light">
+
+<main>
+    <div class="toolbar">
+        <button id="backBtn" title="Vissza a monitorhoz"><i class="fas fa-arrow-left"></i></button>
+        <div class="title"><i class="fa-solid fa-chart-simple"></i> Szauna statisztika</div>
+        <button id="themeBtn" title="Téma"><i class="fas fa-circle-half-stroke"></i></button>
+    </div>
+
+    <!-- Csak akkor jelenik meg, ha az adatfájl nem tölthető be automatikusan (pl. gépről megnyitva) -->
+    <div id="loadCard" class="card hidden">
+        <b>Nem sikerült automatikusan betölteni az adatokat.</b><br>
+        <span class="dim">Szerveren a <b>data/alkalmak.csv</b> fájlt keresi. Gépről megnyitva a böngésző ezt nem engedi, ilyenkor válaszd ki kézzel.</span><br>
+        <label for="fileInput">alkalmak.csv kiválasztása<input type="file" id="fileInput" accept=".csv"></label>
+    </div>
+
+    <div id="content" class="hidden">
+        <!-- Szűrők -->
+        <div class="card filters">
+            <div>
+                <div class="f-lbl">Szezon</div>
+                <div class="chips" id="seasonChips"></div>
+            </div>
+            <div class="person">
+                <div class="f-lbl">Személyek</div>
+                <button id="personBtn"><span id="personLbl">Nincs kiemelés</span><i class="fas fa-chevron-down"></i></button>
+                <div id="personPanel" class="hidden"></div>
+            </div>
+            <div class="hl-line hidden" id="hlLine"></div>
+        </div>
+
+        <!-- Mutatószámok -->
+        <div class="kpis" id="kpis"></div>
+
+        <!-- Oszlopdiagram-kapcsolók -->
+        <div class="card toggles">
+            <span>Oszlopdiagramok:</span>
+            <div class="seg" id="segMeasure"><button data-v="b" class="on">Begyújtás</button><button data-v="s">Szaunázás</button><button data-v="both">Mindkettő</button></div>
+            <div class="seg" id="segType"><button data-v="host">Házigazda</button><button data-v="guest">Vendég</button><button data-v="both" class="on">Mindkettő</button></div>
+        </div>
+
+        <div class="card">
+            <h3><i class="fa-solid fa-layer-group"></i> Szezononként<span class="mode-chip b">begyújtás</span></h3>
+            <div class="sub">Piros: begyújtás (csak házigazdával / vendéggel), kékesszürke: szaunázás (házigazdák / vendégek); a sötét árnyalat a házigazda. Egy szezon szeptembertől augusztusig tart; a kiválasztott szezonok kiemelve.</div>
+            <div id="chSeasons" class="chart"></div>
+        </div>
+
+        <div class="grid2">
+            <div class="card">
+                <h3><i class="fa-regular fa-calendar"></i> Havi eloszlás<span class="mode-chip b">begyújtás</span></h3>
+                <div id="chMonths" class="chart"></div>
+            </div>
+            <div class="card">
+                <h3><i class="fa-solid fa-calendar-week"></i> A hét napjai<span class="mode-chip b">begyújtás</span></h3>
+                <div id="chWeekdays" class="chart"></div>
+            </div>
+        </div>
+
+        <div class="grid2">
+            <div class="card">
+                <div class="cal-head">
+                    <h3><i class="fa-solid fa-table-cells"></i> Naptár</h3>
+                    <div class="seg small" id="segHm"><button data-v="count" class="on">Létszám</button><button data-v="max">Max hőfok</button><button data-v="hot">Üzemidő</button></div>
+                </div>
+                <div class="sub">Szezononként egy sor, oszloponként egy hét (hétfőtől vasárnapig). A pöttyel jelölt napokon van szenzoradat, ezekre kattintva megnyílik a nap görbéje.</div>
+                <div class="hm-wrap" id="heatmap"></div>
+                <div class="hm-legend" id="hmLegend"></div>
+            </div>
+            <div class="card tbl-card">
+                <h3><i class="fa-solid fa-list"></i> Begyújtások</h3>
+                <div class="sub">Felfűtés: 20 °C-tól 60 °C-ig. Üzemidő: 60 °C fölött töltött idő. A hőmérő bekötése előtti napoknál nincs szenzoradat (—). Egy sorra koppintva látszanak a résztvevők; a piros dátum megnyitja a nap görbéjét.</div>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead><tr><th>Dátum</th><th>Fő</th><th>Begyújtás</th><th>Felfűtés</th><th>Max</th><th>Üzemidő</th><th></th></tr></thead>
+                        <tbody id="sensorBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid2">
+            <div class="card fill">
+                <h3><i class="fa-solid fa-users"></i> Létszám</h3>
+                <div class="sub">Hány fővel ment a szauna (házigazdákkal együtt).</div>
+                <div id="chHeadcount" class="chart"></div>
+            </div>
+            <div class="card fill">
+                <h3><i class="fa-solid fa-user-group"></i> Vendégkör</h3>
+                <div class="sub">A kiválasztott szezonok vendégei, az összes szezonra vett részvételük szerint. Az egyes vendégek a Személyek listában.</div>
+                <div id="chGuests" class="chart"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+// =====================================================================
+//  KONFIGURÁCIÓ
+// =====================================================================
+const DATA_URL     = 'data/alkalmak.csv';
+const SENSOR_URL   = 'data/szenzor.csv';  // a GitHub Action által számolt összesítők; ami itt van, azt nem kérjük le
+const HOST_CODES   = ['OMU', 'XHV'];  // a házigazdák kódja (az Excel F2, F3 sora)
+const SENSOR_START = '2025-12-01';    // tartalék: a hőmérő bekötése (a ThingSpeak-csatorna létrehozási dátuma felülírja)
+const PROXY_URL = '';                 // ugyanaz, mint a monitoron
+const API_KEY   = '4A8ZJFC1F0997T6A';
+const CHAN_ID   = '3213557';
+const THEME_KEY = 'kaisa-theme';      // közös a monitorral
+
+const MONTHS_HU = ['jan', 'feb', 'már', 'ápr', 'máj', 'jún', 'júl', 'aug', 'szep', 'okt', 'nov', 'dec'];
+const MONTHS_FULL = ['január', 'február', 'március', 'április', 'május', 'június', 'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
+const DAYS_HU   = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
+
+let allSessions = [];            // minden begyújtás
+let sessions = [];               // a szezonszűrő után
+const selSeasons = new Set();    // kiválasztott szezonok (üres = mind)
+let selCode = '';                // kiemelt személy
+const charts = [];
+
+// Szenzor-összesítők: dátum → { max, start, heat, hot, reached } | null (nincs adat) | 'err'.
+// A lezárt napokat a böngésző megjegyzi (localStorage), így egy napot csak egyszer kell lekérni.
+const CACHE_KEY = 'kaisa-sensor-v1';
+const sensorCache = new Map();
+try { Object.entries(JSON.parse(localStorage.getItem(CACHE_KEY) || '{}')).forEach(([d, v]) => sensorCache.set(d, v)); } catch (e) {}
+function saveSensorCache() {
+    const cutoff = (() => { const d = new Date(); d.setDate(d.getDate() - 2); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; })();
+    const obj = {};
+    for (const [d, v] of sensorCache) if (v !== 'err' && d < cutoff) obj[d] = v;   // a mai/tegnapi még változhat
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+let sensorStart = SENSOR_START;
+const sensorOf = d => { const v = sensorCache.get(d); return v && v !== 'err' ? v : null; };
+const hasSensor = d => d >= sensorStart && !!sensorOf(d);
+
+// =====================================================================
+//  SEGÉDFÜGGVÉNYEK
+// =====================================================================
+const pad2 = n => String(n).padStart(2, '0');
+const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const dayDiff = (a, b) => Math.round((parseDate(b) - parseDate(a)) / 86400000);
+const fmtNum = (v, d = 1) => v.toFixed(d).replace('.', ',').replace(/,0$/, '');
+const fmtDate = s => s.replace(/-/g, '.');
+const seasonStart = s => { const d = parseDate(s); return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1; };
+const seasonOf = s => { const y = seasonStart(s); return `${y}/${pad2((y + 1) % 100)}`; };
+const weekdayIdx = s => (parseDate(s).getDay() + 6) % 7;   // hétfő = 0
+const isHost = c => HOST_CODES.includes(c);
+const has = (s, code) => code && s.people.includes(code);
+const inSel = s => !selSeasons.size || selSeasons.has(seasonOf(s.date));
+const fmtHM = ms => new Date(ms).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+const fmtMin = m => m < 60 ? `${Math.round(m)} p` : `${Math.floor(m / 60)} ó ${pad2(Math.round(m % 60))} p`;
+
+// CSV: soronként egy résztvevő ("datum,resztvevo"); az azonos dátumú sorok egy begyújtást adnak.
+function parseCsv(text) {
+    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const head = lines.shift().toLowerCase().split(sep).map(h => h.trim());
+    const iD = head.indexOf('datum'), iP = head.indexOf('resztvevo');
+    if (iD < 0 || iP < 0) throw new Error('A fájl fejléce nem „datum,resztvevo”.');
+    const byDate = new Map();
+    for (const l of lines) {
+        const c = l.split(sep).map(x => x.trim());
+        const d = c[iD], p = (c[iP] || '').toUpperCase();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !p) continue;
+        if (!byDate.has(d)) byDate.set(d, new Set());
+        byDate.get(d).add(p);
+    }
+    return [...byDate.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([date, set]) => {
+        const people = [...set];
+        return { date, people, count: people.length, guests: people.filter(p => !isHost(p)) };
+    });
+}
+
+// Személyek az összes szezon alapján: alkalomszám, utolsó részvétel, státusz és abszolút rangsor.
+// Rangsor: 1. részvételek száma, 2. aki később volt utoljára, 3. ABC.
+let people = new Map();
+function buildPeople() {
+    people = new Map();
+    for (const s of allSessions) for (const p of s.people) {
+        const o = people.get(p) || { code: p, n: 0, last: '' };
+        o.n++; o.last = s.date;
+        people.set(p, o);
+    }
+    const guests = [...people.values()].filter(o => !isHost(o.code))
+        .sort((a, b) => b.n - a.n || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0) || (a.code < b.code ? -1 : 1));
+    guests.forEach((o, i) => { o.rank = i + 1; });
+    for (const o of people.values()) {
+        o.status = isHost(o.code) ? 'házigazda' : o.n >= 5 ? 'törzsvendég' : o.n >= 2 ? 'visszatérő' : 'egyszeri';
+    }
+}
+
+// =====================================================================
+//  TÉMA (közös a monitorral)
+// =====================================================================
+function currentTheme() {
+    try { const s = localStorage.getItem(THEME_KEY); if (s === 'dark' || s === 'light') return s; } catch (e) {}
+    return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function themeColors() {
+    const dark = document.body.getAttribute('data-theme') === 'dark';
+    return { label: dark ? '#b0b0b0' : '#666', grid: dark ? '#333' : '#e6e6e6', text: dark ? '#fff' : '#333' };
+}
+function applyTheme(t) {
+    document.body.setAttribute('data-theme', t);
+    document.getElementById('theme-meta').setAttribute('content', t === 'dark' ? '#121212' : '#ffffff');
+    if (allSessions.length) renderCharts();
+}
+
+// =====================================================================
+//  SZŰRŐK: szezonok (több is választható) és személyek
+// =====================================================================
+function renderSeasonChips() {
+    const seasons = [...new Set(allSessions.map(s => seasonOf(s.date)))];
+    document.getElementById('seasonChips').innerHTML =
+        `<button data-v="" class="${selSeasons.size ? '' : 'on'}">Mind</button>` +
+        seasons.map(se => `<button data-v="${se}" class="${selSeasons.has(se) ? 'on' : ''}">${se}</button>`).join('');
+}
+document.getElementById('seasonChips').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const v = b.dataset.v;
+    if (!v) selSeasons.clear();
+    else if (selSeasons.has(v)) selSeasons.delete(v);
+    else selSeasons.add(v);
+    // ha minden szezon ki van jelölve, az ugyanaz, mint a "Mind"
+    if (selSeasons.size === new Set(allSessions.map(s => seasonOf(s.date))).size) selSeasons.clear();
+    applyFilters();
+});
+
+function selSeasonText() {
+    return selSeasons.size ? [...selSeasons].sort().join(', ') : 'minden szezon';
+}
+
+function renderPersonPanel() {
+    const filtered = selSeasons.size > 0;
+    const inSelCount = new Map();
+    sessions.forEach(s => s.people.forEach(p => inSelCount.set(p, (inSelCount.get(p) || 0) + 1)));
+    const all = [...people.values()];
+    const hosts = all.filter(o => isHost(o.code));
+    const guests = all.filter(o => !isHost(o.code)).sort((a, b) => a.rank - b.rank);
+    const cnt = st => guests.filter(o => o.status === st).length;
+    const row = o => {
+        const ns = inSelCount.get(o.code) || 0;
+        return `<div class="pp-row${o.code === selCode ? ' sel' : ''}${filtered && !ns ? ' off' : ''}" data-code="${o.code}">` +
+            `<span class="rk">${o.rank ? o.rank + '.' : ''}</span><span class="code">${o.code}</span>` +
+            `<span class="st">${o.status}</span>` +
+            `<span class="n" title="összes részvétel">${o.n}</span>` +
+            (filtered ? `<span class="ns" title="a kiválasztott szezonokban">${ns}</span>` : '<span></span>') + '</div>';
+    };
+    document.getElementById('personPanel').innerHTML =
+        `<div class="pp-head"><b>${guests.length}</b> vendég: <b>${cnt('törzsvendég')}</b> törzsvendég (5+) · <b>${cnt('visszatérő')}</b> visszatérő (2–4) · <b>${cnt('egyszeri')}</b> egyszeri<br>` +
+        `Rangsor: részvételek száma, egyezésnél aki később volt. Jobb oldalt az összes részvétel` +
+        (filtered ? `, pirossal a kiválasztott szezonokban (${selSeasonText()}).` : '.') + `</div>` +
+        `<div class="pp-row${selCode ? '' : ' sel'}" data-code=""><span></span><span class="dim">—</span><span>Nincs kiemelés</span><span></span><span></span></div>` +
+        `<div class="pp-sec">Házigazdák</div>` + hosts.map(row).join('') +
+        `<div class="pp-sec">Vendégek</div>` + guests.map(row).join('');
+    const o = people.get(selCode);
+    document.getElementById('personLbl').innerHTML = o ? `<span class="code">${o.code}</span> · ${o.status}${o.rank ? ' · ' + o.rank + '.' : ''}` : 'Nincs kiemelés';
+}
+document.getElementById('personBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    document.getElementById('personPanel').classList.toggle('hidden');
+});
+document.getElementById('personPanel').addEventListener('click', e => {
+    const r = e.target.closest('.pp-row');
+    if (!r) return;
+    selCode = r.dataset.code;
+    document.getElementById('personPanel').classList.add('hidden');
+    applyFilters();
+});
+document.addEventListener('click', e => {
+    if (!e.target.closest('.person')) document.getElementById('personPanel').classList.add('hidden');
+});
+
+function applyFilters() {
+    sessions = allSessions.filter(inSel);
+    renderSeasonChips();
+    renderPersonPanel();
+    renderAll();
+    checkEgg();
+}
+
+// --- Easter egg: az első házigazda és a legelső szezon együtt → ahol minden kezdődött ---
+const EGG_CODE = HOST_CODES[0], EGG_VIDEO = 'qY__OOcv--M';
+let eggShown = false;
+function checkEgg() {
+    const first = allSessions.length ? seasonOf(allSessions[0].date) : '';
+    const hit = selCode === EGG_CODE && selSeasons.size === 1 && selSeasons.has(first);
+    if (hit && !eggShown) {
+        eggShown = true;
+        const box = document.createElement('div');
+        box.id = 'egg';
+        box.innerHTML = `<div class="egg-box"><div class="egg-top"><span>🔥 Ahol minden kezdődött · ${first}</span><button aria-label="Bezárás"><i class="fas fa-times"></i></button></div>` +
+            `<div class="egg-video"><iframe src="https://www.youtube-nocookie.com/embed/${EGG_VIDEO}?autoplay=1&rel=0" title="Easter egg" ` +
+            `allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div></div>`;
+        box.querySelector('button').onclick = () => box.remove();
+        box.onclick = e => { if (e.target === box) box.remove(); };   // mellé kattintva bezárul
+        const esc = e => { if (e.key === 'Escape') { box.remove(); document.removeEventListener('keydown', esc); } };
+        document.addEventListener('keydown', esc);
+        document.body.appendChild(box);
+    } else if (!hit) {
+        eggShown = false;
+        const b = document.getElementById('egg');
+        if (b) b.remove();
+    }
+}
+
+function renderHighlightLine() {
+    const el = document.getElementById('hlLine');
+    if (!selCode) { el.classList.add('hidden'); return; }
+    const mine = sessions.filter(s => has(s, selCode));
+    el.classList.remove('hidden');
+    if (!mine.length) {
+        el.innerHTML = `<span class="code">${selCode}</span> a kiválasztott szezonokban nem szaunázott.`;
+        return;
+    }
+    const pct = Math.round(100 * mine.length / sessions.length);
+    el.innerHTML = `<span class="code">${selCode}</span> (${people.get(selCode).status}): ` +
+        `<b>${mine.length}</b> szaunázás · a begyújtások <b>${pct}%</b>-a · ` +
+        `első: <b>${fmtDate(mine[0].date)}</b> · utolsó: <b>${fmtDate(mine.at(-1).date)}</b>`;
+}
+
+// =====================================================================
+//  MUTATÓSZÁMOK
+// =====================================================================
+function renderKpis() {
+    const S = sessions;
+    const onlyHost = S.filter(s => !s.guests.length).length;
+    const total = S.reduce((a, s) => a + s.count, 0);
+    const guestRows = S.reduce((a, s) => a + s.guests.length, 0);
+    // Gyakoriság: szezononként az első és utolsó begyújtás közötti napok összege / begyújtások
+    let span = 0;
+    for (const se of new Set(S.map(s => seasonOf(s.date)))) {
+        const a = S.filter(s => seasonOf(s.date) === se);
+        span += dayDiff(a[0].date, a.at(-1).date);
+    }
+    // Szenzoros mutatók: csak azokból a begyújtásokból, ahol van adat
+    const sens = S.map(s => sensorOf(s.date)).filter(Boolean);
+    const withHot = sens.filter(a => a.hot > 0);
+    const avgHot = withHot.length ? withHot.reduce((a, x) => a + x.hot, 0) / withHot.length : null;
+    const avgMax = sens.length ? sens.reduce((a, x) => a + x.max, 0) / sens.length : null;
+    const kpi = (lbl, val, split) => `<div class="kpi"><span class="lbl">${lbl}</span><b>${val}</b><span class="split">${split}</span></div>`;
+    document.getElementById('kpis').innerHTML =
+        kpi('Begyújtások', S.length, `<b>${onlyHost}</b> csak házigazda · <b>${S.length - onlyHost}</b> vendéggel`) +
+        kpi('Szaunázások', total, `<b>${total - guestRows}</b> házigazda · <b>${guestRows}</b> vendég`) +
+        kpi('Átlagos létszám', fmtNum(total / S.length) + ' fő', 'begyújtásonként') +
+        kpi('Átlagos gyakoriság', span > 0 ? fmtNum(span / S.length) + ' nap' : '—', 'ennyi naponta egy begyújtás') +
+        kpi('Átlagos üzemidő', avgHot !== null ? fmtMin(avgHot) : '—', withHot.length ? `<b>${withHot.length}</b> begyújtás szenzoradata alapján` : 'nincs szenzoradat') +
+        kpi('Átlagos max hőfok', avgMax !== null ? fmtNum(avgMax) + ' °C' : '—', sens.length ? `<b>${sens.length}</b> begyújtás szenzoradata alapján` : 'nincs szenzoradat');
+}
+
+// =====================================================================
+//  GRAFIKONOK
+// =====================================================================
+function baseOptions() {
+    const c = themeColors();
+    return {
+        chart: { backgroundColor: 'transparent', spacing: [6, 4, 4, 4], style: { fontFamily: 'Roboto, Segoe UI, sans-serif' } },
+        title: { text: null }, credits: { enabled: false }, exporting: { enabled: false },
+        legend: { itemStyle: { color: c.text, fontSize: '11px', fontWeight: 'normal' }, itemHoverStyle: { color: c.text }, symbolRadius: 2 },
+        xAxis: { labels: { style: { color: c.label, fontSize: '11px' } }, lineColor: c.grid, tickColor: c.grid },
+        yAxis: { title: { text: null, style: { color: c.label, fontSize: '11px', fontWeight: 'normal' } }, allowDecimals: false, gridLineColor: c.grid, labels: { style: { color: c.label, fontSize: '11px' } } },
+        tooltip: { useHTML: true, backgroundColor: 'transparent', borderWidth: 0, shadow: false, padding: 0, shared: true },
+        plotOptions: {
+            column: { borderWidth: 0, borderRadius: 2, groupPadding: 0.14, pointPadding: 0.06 },
+            bar: { borderWidth: 0, borderRadius: 3, groupPadding: 0.1, pointPadding: 0.08 },
+            series: { animation: { duration: 300 } }
+        }
+    };
+}
+function makeChart(id, opts) {
+    charts.push(Highcharts.chart(id, Highcharts.merge(baseOptions(), opts)));
+}
+// Áttetszővé tett szín (kiemelésnél a "többi" rész, szezonszűrésnél a többi szezon)
+const alpha = (color, a) => a >= 1 ? color : Highcharts.color(color).setOpacity(a).get();
+const DIM = 0.3;
+
+// Színek: begyújtás = piros (tűz), szaunázás = kékesszürke (gőz); sötét = házigazda, világos = vendég
+const COL = { b: { host: '#b71c1c', guest: '#e57373' }, s: { host: '#455a64', guest: '#a3b5c0' } };
+const MEAS_NAME = { b: 'Begyújtás', s: 'Szaunázás' };
+
+// Oszlopdiagram-kapcsolók: mit (begyújtás / szaunázás / mindkettő) és kit (házigazda / vendég / mindkettő)
+let viewMeasure = 'b', viewType = 'both';
+
+// Kategóriánkénti összesítés. Begyújtás: csak házigazdával / vendéggel; szaunázás: házigazda- / vendégsorok.
+// Kiemelésnél minden rész két darabra oszlik: a kiválasztott kódot érintő (X) és a többi.
+function aggregate(n, keyOf, list) {
+    const z = () => ({ bHost: 0, bHostX: 0, bGuest: 0, bGuestX: 0, sHost: 0, sHostX: 0, sGuest: 0, sGuestX: 0 });
+    const a = Array.from({ length: n }, z);
+    for (const s of list) {
+        const g = a[keyOf(s)];
+        if (g === undefined) continue;
+        const x = has(s, selCode);
+        if (s.guests.length) { if (x) g.bGuestX++; else g.bGuest++; }
+        else { if (x) g.bHostX++; else g.bHost++; }
+        const xHost = x && isHost(selCode) ? 1 : 0, xGuest = x && !isHost(selCode) ? 1 : 0;
+        g.sHost += s.count - s.guests.length - xHost; g.sHostX += xHost;
+        g.sGuest += s.guests.length - xGuest;        g.sGuestX += xGuest;
+    }
+    return a;
+}
+
+// Halmozott oszlopok. Alulról: házigazda (sötét), felette vendég (világos).
+// Kiemelésnél a kiválasztott kód része teljes színnel a sáv ALJÁN, a többi áttetsző ("reflektor").
+function stackChart(id, categories, agg, fullNames, fadeIdx) {
+    const seasonA = i => fadeIdx && fadeIdx(i) ? 0.25 : 1;
+    const showHost = viewType !== 'guest', showGuest = viewType !== 'host';
+    const measures = viewMeasure === 'both' ? ['b', 's'] : [viewMeasure];
+    const both = measures.length === 2;
+    const series = [];
+    // Jelmagyarázat rácsban, ugyanúgy, mint az oszlopok: oszloponként egy mérőszám (és a kiemelt kód),
+    // felül a vendég, alatta a házigazda. A Highcharts soronként tölti ki, ehhez igazítjuk a sorrendet.
+    const nCols = measures.length + (selCode ? 1 : 0);
+    const rowGuest = 0, rowHost = showGuest ? nCols : 0;
+    const restA = selCode ? DIM : 1;
+    if (selCode) {
+        // Kiemelt kód: saját jelmagyarázat-elem a jobb szélső oszlopban; a kiemelt részek ehhez kapcsolódnak
+        series.push({ id: 'x', name: `${selCode} (kiemelt)`, legendIndex: rowGuest + measures.length, stack: measures[0],
+            color: COL[measures[0]][showHost ? 'host' : 'guest'], data: [] });
+    }
+    measures.forEach((m, mi) => {
+        const pts = (key, color, a) => agg.map((g, i) => ({ y: g[key], color: alpha(color, Math.min(a, seasonA(i))) }));
+        const name = t => both ? `${MEAS_NAME[m]} – ${t}` : (t[0].toUpperCase() + t.slice(1));
+        // A tömbben előbb álló sorozat kerül felülre → fentről lefelé soroljuk fel
+        if (showGuest) {
+            series.push({ name: name('vendég'), legendIndex: rowGuest + mi, stack: m, color: alpha(COL[m].guest, restA), data: pts(m + 'Guest', COL[m].guest, restA) });
+            if (selCode) series.push({ linkedTo: 'x', name: `${MEAS_NAME[m]} – ${selCode}`, stack: m, color: COL[m].guest, data: pts(m + 'GuestX', COL[m].guest, 1) });
+        }
+        if (showHost) {
+            series.push({ name: name('házigazda'), legendIndex: rowHost + mi, stack: m, color: alpha(COL[m].host, restA), data: pts(m + 'Host', COL[m].host, restA) });
+            if (selCode) series.push({ linkedTo: 'x', name: `${MEAS_NAME[m]} – ${selCode}`, stack: m, color: COL[m].host, data: pts(m + 'HostX', COL[m].host, 1) });
+        }
+    });
+    // Azonosítók a jelmagyarázat kattintásához
+    series.forEach(se => { if (!se.id && !se.linkedTo) se.id = id + '-' + se.legendIndex; });
+    const line = (g, m) => {
+        const host = g[m + 'Host'] + g[m + 'HostX'], guest = g[m + 'Guest'] + g[m + 'GuestX'];
+        const total = (showHost ? host : 0) + (showGuest ? guest : 0);
+        const parts = showHost && showGuest ? ` <span class="dim">(${m === 'b' ? 'csak házigazda' : 'házigazda'} ${host} · ${m === 'b' ? 'vendéggel' : 'vendég'} ${guest})</span>` : '';
+        const x = (showHost ? g[m + 'HostX'] : 0) + (showGuest ? g[m + 'GuestX'] : 0);
+        return `<span style="color:${COL[m].host}">■</span> ${MEAS_NAME[m]}: <b>${total}</b>${parts}` +
+            (selCode ? ` <span class="dim">· ebből</span> <span class="code">${selCode}</span> <b>${x}</b>` : '');
+    };
+    makeChart(id, {
+        chart: { type: 'column' },
+        legend: { enabled: false },
+        xAxis: { categories },
+        yAxis: { title: { text: 'darab' } },
+        plotOptions: { column: { stacking: 'normal', ...(both ? { groupPadding: 0.2, pointPadding: 0.08 } : {}) } },
+        tooltip: { formatter: function () {
+            const i = this.points[0].point.index, g = agg[i];
+            return `<div class="hc-tip"><b>${fullNames ? fullNames[i] : categories[i]}</b>` + measures.map(m => '<br>' + line(g, m)).join('') + '</div>';
+        } },
+        series
+    });
+    renderLegend(id, series.filter(se => !se.linkedTo), nCols);
+}
+
+// Jelmagyarázat HTML-rácsban a diagram alatt: oszloponként egy mérőszám (+ kiemelt kód),
+// felül vendég, alul házigazda – ugyanúgy, ahogy az oszlopok állnak. Kattintásra ki-be kapcsol.
+function renderLegend(chartId, items, nCols) {
+    const box = document.getElementById(chartId);
+    let lg = document.getElementById(chartId + '-legend');
+    if (!lg) { lg = document.createElement('div'); lg.id = chartId + '-legend'; lg.className = 'lg'; box.after(lg); }
+    lg.style.gridTemplateColumns = `repeat(${nCols}, auto)`;
+    const cells = [];
+    items.forEach(se => { cells[se.legendIndex] = se; });
+    lg.innerHTML = cells.map(se => se
+        ? `<button data-id="${se.id}"><i style="background:${se.color}"></i>${se.name}</button>`
+        : '<span></span>').join('');
+    const chart = charts.at(-1);
+    lg.onclick = e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        const se = chart.get(b.dataset.id);
+        if (!se) return;
+        se.setVisible(!se.visible);
+        b.classList.toggle('off', !se.visible);
+    };
+}
+
+function renderCharts() {
+    charts.splice(0).forEach(c => c.destroy());
+    const modeLbl = { b: 'begyújtás', s: 'szaunázás', both: 'begyújtás + szaunázás' }[viewMeasure];
+    document.querySelectorAll('.mode-chip').forEach(el => {
+        el.textContent = modeLbl;
+        el.className = 'mode-chip ' + viewMeasure;
+    });
+
+    // --- Szezonok (mindig az összes szezon; a nem kiválasztottak halványan) ---
+    const seasons = [...new Set(allSessions.map(s => seasonOf(s.date)))];
+    stackChart('chSeasons', seasons, aggregate(seasons.length, s => seasons.indexOf(seasonOf(s.date)), allSessions),
+        null, i => selSeasons.size > 0 && !selSeasons.has(seasons[i]));
+
+    // --- Havi eloszlás (szep → aug) ---
+    const monthOrder = [8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7];
+    stackChart('chMonths', monthOrder.map(m => MONTHS_HU[m]),
+        aggregate(12, s => monthOrder.indexOf(parseDate(s.date).getMonth()), sessions), monthOrder.map(m => MONTHS_FULL[m]));
+
+    // --- Hét napjai ---
+    stackChart('chWeekdays', DAYS_HU.map(d => d.slice(0, 3)), aggregate(7, s => weekdayIdx(s.date), sessions), DAYS_HU);
+
+    // --- Létszám (kiemelésnél a kód része teljes színnel alul, a többi áttetsző) ---
+    const maxN = Math.max(...sessions.map(s => s.count));
+    const hRest = Array(maxN).fill(0), hMine = Array(maxN).fill(0);
+    sessions.forEach(s => { if (has(s, selCode)) hMine[s.count - 1]++; else hRest[s.count - 1]++; });
+    const hs = [{ name: 'Begyújtás', color: alpha(COL.b.guest, selCode ? DIM : 1), data: hRest }];
+    if (selCode) hs.push({ name: selCode, color: COL.b.guest, data: hMine });
+    makeChart('chHeadcount', {
+        chart: { type: 'column' }, legend: { enabled: false },
+        xAxis: { categories: hRest.map((_, i) => `${i + 1} fő`) },
+        yAxis: { title: { text: 'darab' } },
+        plotOptions: { column: { stacking: 'normal' } },
+        tooltip: { formatter: function () {
+            const i = this.points[0].point.index;
+            return `<div class="hc-tip"><b>${i + 1} fő</b><br>Begyújtás: <b>${hRest[i] + hMine[i]}</b>` +
+                (selCode ? ` <span class="dim">· ebből</span> <span class="code">${selCode}</span> <b>${hMine[i]}</b>` : '') + '</div>';
+        } },
+        series: hs
+    });
+
+    // --- Vendégkör: a kiválasztott szezonok vendégei, az összes szezonra vett státuszuk szerint ---
+    const present = new Set(sessions.flatMap(s => s.guests));
+    const cats = [
+        { key: 'törzsvendég', name: 'Törzsvendég (5+)', color: '#b71c1c' },
+        { key: 'visszatérő', name: 'Visszatérő (2–4)', color: '#e57373' },
+        { key: 'egyszeri', name: 'Egyszeri (1)', color: '#f4c2c2' }
+    ];
+    const selStatus = selCode && !isHost(selCode) && present.has(selCode) ? people.get(selCode).status : null;
+    const pieData = cats.map(c => ({
+        name: c.name, y: [...present].filter(g => people.get(g).status === c.key).length,
+        color: alpha(c.color, selStatus && selStatus !== c.key ? DIM : 1), sliced: selStatus === c.key
+    }));
+    makeChart('chGuests', {
+        chart: { type: 'pie' },
+        title: { text: `<b style="font-size:22px">${present.size}</b><br><span style="font-size:11px">vendég</span>`, useHTML: true, verticalAlign: 'middle', floating: true, y: 6, style: { color: themeColors().text, textAlign: 'center' } },
+        legend: { enabled: true, layout: 'horizontal', align: 'center' },
+        tooltip: { shared: false, formatter: function () {
+            return `<div class="hc-tip"><b>${this.point.name}</b><br><b>${this.y}</b> vendég (${Math.round(this.percentage)}%)` +
+                (selStatus && this.point.sliced ? `<br><span class="code">${selCode}</span> ide tartozik` : '') + '</div>';
+        } },
+        plotOptions: { pie: { innerSize: '62%', borderWidth: 2, borderColor: document.body.getAttribute('data-theme') === 'dark' ? '#1e1e1e' : '#fff', showInLegend: true, slicedOffset: 8,
+            dataLabels: { enabled: true, distance: -22, format: '{y}', style: { fontSize: '12px', fontWeight: '700', textOutline: 'none', color: '#fff' }, filter: { property: 'y', operator: '>', value: 0 } } } },
+        series: [{ name: 'Vendégek', data: pieData }]
+    });
+}
+
+// =====================================================================
+//  NAPTÁR-HŐTÉRKÉP: szezononként egy sor (csak a szaunás hónapok), hetek oszlopokban.
+//  Négyzetes kockák; a méretük (10–11 px) a kártyához igazodik, mobilon görgethető.
+//  Színezés: létszám, max hőfok vagy üzemidő szerint.
+// =====================================================================
+let hmMode = 'count';
+const HM_MODES = {
+    count: { lvl: s => s.count >= 5 ? 4 : s.count >= 3 ? 3 : s.count === 2 ? 2 : 1, legend: ['1 fő', '2 fő', '3–4 fő', '5+ fő'], sensor: false },
+    max:   { lvl: s => { const a = sensorOf(s.date); return !a ? 0 : a.max >= 80 ? 4 : a.max >= 70 ? 3 : a.max >= 60 ? 2 : 1; }, legend: ['< 60 °C', '60–70 °C', '70–80 °C', '80+ °C'], sensor: true },
+    hot:   { lvl: s => { const a = sensorOf(s.date); return !a ? 0 : a.hot >= 180 ? 4 : a.hot >= 120 ? 3 : a.hot >= 60 ? 2 : 1; }, legend: ['< 1 óra', '1–2 óra', '2–3 óra', '3+ óra'], sensor: true }
+};
+
+function renderHeatmap() {
+    const wrap = document.getElementById('heatmap');
+    const mode = HM_MODES[hmMode];
+    const byDate = new Map(sessions.map(s => [s.date, s]));
+    const mIdx = s => (parseDate(s).getMonth() + 4) % 12;          // szezon-sorrend: szep = 0 … aug = 11
+    const used = allSessions.map(s => mIdx(s.date));
+    const m0 = Math.min(...used), m1 = Math.max(...used);
+    const seasons = [...new Set(sessions.map(s => seasonStart(s.date)))];
+    const monthDate = (y, m) => new Date(y + (m >= 4 ? 1 : 0), (8 + m) % 12, 1, 12);
+    const layout = seasons.map(y => {
+        const first = monthDate(y, m0), last = monthDate(y, m1 + 1);
+        const off = (first.getDay() + 6) % 7;
+        const days = Math.round((last - first) / 86400000);
+        return { y, first, off, days, weeks: Math.ceil((days + off) / 7) };
+    });
+    const maxWeeks = Math.max(...layout.map(l => l.weeks));
+    const avail = wrap.clientWidth - 44;
+    const unit = Math.max(12, Math.min(13, Math.floor(avail / maxWeeks)));   // 10–11 px-es négyzet + 2 px rés
+    const gap = 2, cw = unit - gap, top = 14, sx = unit, sy = unit, rx = 2;
+    let html = '', octX = 0;
+    for (const { y, first, off, days, weeks } of layout) {
+        let rects = '', labels = '';
+        for (let m = m0; m <= m1; m++) {
+            const k = Math.round((monthDate(y, m) - first) / 86400000) + off;
+            const col = Math.ceil(k / 7);   // az első teljesen az adott hónaphoz tartozó hét fölé
+            labels += `<text x="${col * sx}" y="10" font-size="9" fill="var(--text-dim)">${MONTHS_HU[(8 + m) % 12]}</text>`;
+            if (m === 1) octX = col * sx;
+        }
+        for (let i = 0; i < days; i++) {
+            const d = new Date(first.getFullYear(), first.getMonth(), first.getDate() + i, 12);
+            const ds = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+            const k = i + off, x = Math.floor(k / 7) * sx, yy = top + (k % 7) * sy;
+            const s = byDate.get(ds);
+            if (!s) { rects += `<rect x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="var(--hm-empty)"/>`; continue; }
+            const mine = has(s, selCode);
+            const op = selCode && !mine ? ' opacity="0.22"' : '';
+            const stroke = mine ? ` stroke="var(--text)" stroke-width="1.5"` : '';
+            const a = sensorOf(ds), sensor = hasSensor(ds);
+            const lv = mode.lvl(s);
+            const fill = lv ? `var(--hm-${lv})` : 'var(--hm-nodata)';
+            let tip = `${fmtDate(ds)} · ${s.count} fő (${s.people.join(', ')})`;
+            if (a) tip += ` · max ${fmtNum(a.max)} °C · üzemidő ${a.hot > 0 ? fmtMin(a.hot) : '—'}`;
+            else if (mode.sensor) tip += ' · nincs szenzoradat';
+            if (sensor) tip += ' · kattints a görbéért';
+            const rect = `<rect x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="${fill}"${op}${stroke}><title>${tip}</title></rect>`;
+            rects += sensor
+                ? `<a href="index.html?date=${ds}">${rect}<circle cx="${x + cw / 2}" cy="${yy + cw / 2}" r="2" fill="#fff"${op} pointer-events="none"/></a>`
+                : rect;
+        }
+        const w = weeks * sx, h = top + 7 * sy;
+        html += `<div class="hm-year"><div class="y" style="padding-top:${top}px">${y}/${pad2((y + 1) % 100)}</div><svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${labels}${rects}</svg></div>`;
+    }
+    wrap.innerHTML = html;
+    wrap.scrollLeft = Math.max(0, octX - 4);
+    document.getElementById('hmLegend').innerHTML =
+        mode.legend.map((t, i) => `<i style="background:var(--hm-${i + 1})"></i>${t}`).join(' ') +
+        (mode.sensor ? ` <i style="background:var(--hm-nodata);margin-left:6px"></i>nincs adat` : '') +
+        `<span style="margin-left: 8px;"><svg width="10" height="10" style="vertical-align: -1px"><rect width="10" height="10" rx="2" fill="var(--hm-3)"/><circle cx="5" cy="5" r="2" fill="#fff"/></svg> szenzoradat (kattintható)</span>`;
+}
+document.getElementById('segHm').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    document.querySelectorAll('#segHm button').forEach(x => x.classList.toggle('on', x === b));
+    hmMode = b.dataset.v;
+    renderHeatmap();
+});
+let hmResizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(hmResizeTimer);
+    hmResizeTimer = setTimeout(() => { if (allSessions.length) renderHeatmap(); }, 200);
+});
+
+// =====================================================================
+//  SZENZORADATOK (ThingSpeak, begyújtásonként; egyszer kérjük le) + BEGYÚJTÁS-LISTA
+// =====================================================================
+async function fetchDay(dateStr) {
+    const start = new Date(dateStr + 'T00:00:00'), end = new Date(start.getTime() + 30 * 3600000);  // másnap 06:00-ig
+    const s = start.toISOString(), e = end.toISOString();
+    const url = PROXY_URL
+        ? `${PROXY_URL}?start=${encodeURIComponent(s)}&end=${encodeURIComponent(e)}`
+        : `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${s}&end=${e}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    return (data.feeds || []).map(f => ({ x: new Date(f.created_at).getTime(), y: parseFloat(f.field1) }))
+        .filter(p => isFinite(p.x) && isFinite(p.y)).sort((a, b) => a.x - b.x);
+}
+
+function analyzeDay(pts) {
+    if (pts.length < 5) return null;
+    let iMax = 0;
+    pts.forEach((p, i) => { if (p.y > pts[iMax].y) iMax = i; });
+    const i60 = pts.findIndex(p => p.y >= 60);
+    let start = null, heat = null;
+    let k = i60 >= 0 ? i60 : iMax;
+    while (k > 0 && pts[k - 1].y >= 20) k--;       // begyújtás: a csúcs előtti utolsó 20 °C alatti mérés utáni pont
+    if (k > 0) start = pts[k].x;
+    if (i60 >= 0 && start !== null) heat = (pts[i60].x - start) / 60000;
+    let hot = 0;
+    for (let i = 1; i < pts.length; i++) {
+        if (pts[i].y >= 60 && pts[i - 1].y >= 60 && pts[i].x - pts[i - 1].x <= 5 * 60000) hot += pts[i].x - pts[i - 1].x;
+    }
+    return { max: pts[iMax].y, start, heat, hot: hot / 60000, reached: i60 >= 0 };
+}
+
+function sensorCells(a) {
+    if (a === undefined) return `<td colspan="4" class="dim">betöltés…</td>`;
+    if (a === 'err') return `<td colspan="4" class="dim">lekérési hiba</td>`;
+    if (!a) return `<td>—</td><td>—</td><td>—</td><td>—</td>`;
+    return `<td>${a.start ? fmtHM(a.start) : '—'}</td>` +
+        `<td>${a.heat !== null ? fmtMin(a.heat) : (a.reached ? '—' : '<span class="dim">nem érte el</span>')}</td>` +
+        `<td><b>${fmtNum(a.max)} °C</b></td>` +
+        `<td>${a.hot > 0 ? fmtMin(a.hot) : '—'}</td>`;
+}
+
+function codeChips(s) {
+    return s.people.slice().sort((a, b) => (isHost(b) - isHost(a)) || (a < b ? -1 : 1))
+        .map(p => `<span class="code${p === selCode ? ' me' : ''}${isHost(p) ? ' host' : ''}" title="${people.get(p) ? people.get(p).status : ''}">${p}</span>`).join('');
+}
+
+function tableRow(s) {
+    const d = hasSensor(s.date) ? `<a href="index.html?date=${s.date}" onclick="event.stopPropagation()">${fmtDate(s.date)}</a>` : fmtDate(s.date);
+    const cells = s.date < sensorStart ? `<td>—</td><td>—</td><td>—</td><td>—</td>` : sensorCells(sensorCache.get(s.date));
+    return `<td>${d}</td><td>${s.count}</td>${cells}<td class="chev"><i class="fas fa-chevron-down"></i></td>`;
+}
+
+function renderSensor() {
+    const body = document.getElementById('sensorBody');
+    const list = sessions.slice().reverse();
+    body.innerHTML = list.map(s =>
+        `<tr id="sr-${s.date}" class="row${has(s, selCode) ? ' hl' : ''}" title="${s.people.join(', ')}">${tableRow(s)}</tr>` +
+        `<tr class="det hidden" id="dt-${s.date}"><td colspan="7">Résztvevők: ${codeChips(s)}</td></tr>`).join('');
+    body.onclick = e => {
+        const tr = e.target.closest('tr.row');
+        if (!tr) return;
+        tr.classList.toggle('open');
+        document.getElementById('dt-' + tr.id.slice(3)).classList.toggle('hidden');
+    };
+    loadSensorData(list);
+}
+
+// Lekérés sorban, csak ami még nincs meg; közben frissíti a táblázatot, a naptárat és a mutatószámokat
+let sensorLoading = false;
+async function loadSensorData(list) {
+    if (sensorLoading) return;
+    sensorLoading = true;
+    let changed = false;
+    for (const s of list) {
+        if (s.date < sensorStart || sensorCache.has(s.date)) continue;
+        try { sensorCache.set(s.date, analyzeDay(await fetchDay(s.date))); }
+        catch (e) { sensorCache.set(s.date, 'err'); }
+        changed = true;
+        const tr = document.getElementById('sr-' + s.date);
+        if (tr) tr.innerHTML = tableRow(s);
+    }
+    sensorLoading = false;
+    if (changed) { saveSensorCache(); renderHeatmap(); renderKpis(); }
+}
+
+// A hőmérő bekötésének napja: a ThingSpeak-csatorna létrehozási dátuma
+async function detectSensorStart() {
+    if (PROXY_URL) return;
+    try {
+        const r = await fetch(`https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&results=1`);
+        const c = (await r.json()).channel;
+        if (c && c.created_at) {
+            const d = new Date(c.created_at);
+            sensorStart = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        }
+    } catch (e) { /* marad a SENSOR_START */ }
+}
+
+// =====================================================================
+//  BETÖLTÉS
+// =====================================================================
+function renderAll() {
+    renderHighlightLine();
+    renderKpis();
+    renderCharts();
+    renderHeatmap();
+    renderSensor();
+}
+
+// data/szenzor.csv: datum,begyujtas,felfutes_perc,max_c,uzemido_perc (üres sor = aznap nem volt mérés)
+async function loadSensorCsv() {
+    try {
+        const r = await fetch(SENSOR_URL + '?v=' + Date.now());
+        if (!r.ok) return;
+        for (const l of (await r.text()).split(/\r?\n/).slice(1)) {
+            const [d, start, heat, max, hot] = l.split(',').map(x => (x || '').trim());
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+            if (!max) { sensorCache.set(d, null); continue; }
+            sensorCache.set(d, {
+                max: parseFloat(max), start: start ? new Date(start).getTime() : null,
+                heat: heat === '' ? null : parseFloat(heat), hot: parseFloat(hot) || 0, reached: parseFloat(max) >= 60
+            });
+        }
+    } catch (e) { /* nincs ilyen fájl, vagy gépről nyitották meg – marad a ThingSpeak */ }
+}
+
+async function show(text) {
+    try { allSessions = parseCsv(text); } catch (e) { alert(e.message); return; }
+    if (!allSessions.length) { alert('A fájlban nem találtam szaunázást.'); return; }
+    await Promise.all([detectSensorStart(), loadSensorCsv()]);
+    buildPeople();
+    document.getElementById('loadCard').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+    applyFilters();
+}
+
+document.getElementById('fileInput').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(show); };
+[['segMeasure', v => { viewMeasure = v; }], ['segType', v => { viewType = v; }]].forEach(([id, set]) => {
+    document.getElementById(id).addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle('on', x === b));
+        set(b.dataset.v);
+        renderCharts();
+    });
+});
+document.getElementById('backBtn').onclick = () => { window.location.href = 'index.html'; };
+document.getElementById('themeBtn').onclick = () => {
+    const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    applyTheme(t);
+};
+
+applyTheme(currentTheme());
+
+// Ha az adatfájl elérhető, rögtön betölt; ha nem (pl. gépről megnyitva), előjön a kézi betöltés
+function boot() {
+    fetch(DATA_URL + '?v=' + Date.now())
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(show)
+        .catch(() => document.getElementById('loadCard').classList.remove('hidden'));
+}
+// Highcharts tartalék forrás, mint a monitoron
+if (window.Highcharts) boot();
+else {
+    const s = document.createElement('script');
+    s.src = 'https://code.highcharts.com/stock/11.4.8/highstock.js';
+    s.onload = boot;
+    s.onerror = () => { const c = document.getElementById('loadCard'); c.classList.remove('hidden'); c.innerHTML = '<b>A grafikon-könyvtár (Highcharts) nem töltődött be.</b>'; };
+    document.head.appendChild(s);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff" id="theme-meta">
+    <title>Kaisa Sauna Monitor & Predict</title>
+    <link rel="icon" type="image/png" href="heat.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Highcharts jsDelivr-ről (a code.highcharts.com sebességkorlátoz/tilt); tartalékok lent a szkriptben -->
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/highstock.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* --- Alapbeállítások & Változók --- */
+    :root { 
+        --bg: #f0f0f0; --card: white; --text: #333; --text-dim: #666; --border: #ddd; 
+        --temp-color: #d32f2f; --grad-color: #800000; --header-red: #d32f2f;
+        --gap: 8px; /* Egységes távolság változó */
+    }
+    [data-theme="dark"] { 
+        --bg: #121212; --card: #1e1e1e; --text: #ffffff; --text-dim: #b0b0b0; --border: #333; 
+        --temp-color: #ff4d4d; --grad-color: #c04040; --header-red: #ff4d4d;
+    }
+    * { font-family: 'Roboto', 'Segoe UI', sans-serif; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    html, body { background-color: var(--bg); transition: background-color 0.3s ease; }
+    body { 
+        height: 100dvh; margin: 0; padding: 6px; overflow: hidden; 
+        color: var(--text); display: flex; flex-direction: column; 
+    }
+
+/* --- Toolbar & Gombok --- */
+.toolbar { 
+    height: 50px; display: flex; align-items: center; justify-content: space-between;
+    gap: var(--gap); background: transparent; 
+    margin-bottom: var(--gap);
+    width: 100%;
+}
+
+.toolbar button, #dateBtn { 
+    flex: 1 1 0;
+    width: 100%;
+    height: 40px; display: flex; align-items: center; justify-content: center; 
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px; 
+    color: var(--text); cursor: pointer; transition: all 0.2s ease; font-size: 16px;
+    position: relative; padding: 0;
+}
+
+[data-theme="dark"] .toolbar button, [data-theme="dark"] #dateBtn { background: #252525; }
+
+@media (hover: hover) {
+    .toolbar button:hover, #dateBtn:hover { 
+        background: var(--bg); 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+    }
+}
+
+.toolbar button:active, #dateBtn:active { 
+    transform: scale(0.95);
+    filter: brightness(0.8);
+    background: var(--border);
+}
+
+/* "Követő" mód jelzése az Aktuális nézet gombon */
+.toolbar button.active { border-color: var(--header-red); color: var(--header-red); }
+
+.toolbar button:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+
+    /* --- Speciális Dátumválasztó (Input kezelés) --- */
+    #datePicker { 
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+        opacity: 0; cursor: pointer; z-index: 2; appearance: none; -webkit-appearance: none;
+    }
+
+    /* --- Stats Bar & Kártyák --- */
+    .stats-bar { display: flex; flex-direction: column; gap: var(--gap); margin-bottom: var(--gap); flex-shrink: 0; }
+    .status-eta-group { display: flex; flex-direction: row; gap: var(--gap); flex: 1; }
+
+    .card {
+        background: var(--card); padding: 0 8px; border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); flex: 1; display: flex;
+        flex-direction: column; border: 1px solid var(--border);
+        height: 50px; min-height: 50px; justify-content: center; overflow: hidden;
+    }
+
+    .values-grid { display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; text-align: center; width: 100%; }
+    .val-item { display: flex; flex-direction: column; align-items: center; }
+    .val-label { font-size: 11px; color: var(--text-dim); }
+    .val-data { font-size: 13px; font-weight: bold; }
+    .val-data.stale { opacity: 0.45; }
+    .val-sub { font-weight: normal; font-size: 11px; color: var(--text-dim); }
+
+    /* --- Napléptető nyilak a dátum kártyán (a rejtett dátumválasztó fölött) --- */
+    .day-nav {
+        position: absolute; top: 0; height: 100%; width: 24px; z-index: 6;
+        display: flex; align-items: center; justify-content: center;
+        background: transparent; border: none; padding: 0; cursor: pointer;
+        color: var(--header-red); font-size: 13px; transition: background 0.15s ease;
+    }
+    .day-nav.prev { left: 0; border-right: 1px solid var(--border); }
+    .day-nav.next { right: 0; border-left: 1px solid var(--border); }
+    @media (hover: hover) { .day-nav:hover:not(:disabled) { background: var(--bg); } }
+    .day-nav:active:not(:disabled) { background: var(--border); }
+    .day-nav:disabled { opacity: 0.25; cursor: default; }
+    .day-nav:focus-visible { outline: 2px solid var(--header-red); outline-offset: -2px; }
+    /* Felirat + dátum egy csoportként, középen a két nyíl között */
+    .date-center {
+        height: 100%; display: flex; align-items: center; justify-content: center;
+        gap: 18px; padding: 0 24px; white-space: nowrap;
+    }
+    @media (max-width: 380px) {
+        .date-center { gap: 12px; padding: 0 22px; }
+        .day-nav { width: 22px; }
+        .date-center #display-date { font-size: 12px !important; }
+    }
+    
+    .card-header-mini { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .card-header-mini i { font-size: 12px; margin-bottom: 2px; }
+    .card-title-mini { font-size: 12px; font-weight: bold; }
+
+    .status-badge { 
+        padding: 6px 4px; border-radius: 6px; color: white; font-size: 10px; 
+        font-weight: bold; width: 100%; text-align: center; display: flex; 
+        align-items: center; justify-content: center; min-height: 28px;
+    }
+
+    /* --- Chart & Modals --- */
+    #container { 
+        flex: 1; min-height: 0; width: 100%; background: var(--card); 
+        border-radius: 10px; border: 1px solid var(--border);
+    }
+
+    .modal { 
+        display: none; position: fixed; z-index: 1000; left: 0; top: 0; 
+        width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); 
+    }
+    .modal-content { 
+        background: var(--card); margin: 5% auto; padding: 25px; border-radius: 15px; 
+        width: 90%; max-width: 550px; border: 1px solid var(--border); 
+        font-size: 13px; line-height: 1.4; max-height: 85vh; overflow-y: auto; 
+    }
+    .close-btn { float: right; cursor: pointer; font-size: 20px; color: var(--text-dim); }
+    .info-sec { margin-bottom: 20px; }
+    .dim { color: var(--text-dim); }
+
+    /* --- Naptár ablak --- */
+    /* Lenyíló naptár a dátum kártya alatt (mint a gyári dátumválasztó) */
+    .cal-pop { position: fixed; z-index: 900; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+               box-shadow: 0 8px 24px rgba(0,0,0,0.22); padding: 10px; font-size: 13px; }
+    .cal-pop.hidden { display: none; }
+    .cal-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+    .cal-top button, .cal-foot button { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text); height: 34px; min-width: 34px; cursor: pointer; font-size: 13px; }
+    .cal-top button:disabled { opacity: 0.25; cursor: default; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .cal-grid .wd { text-align: center; font-size: 11px; color: var(--text-dim); font-weight: 700; padding-bottom: 2px; }
+    .cal-grid button { position: relative; height: 34px; border: none; border-radius: 6px; background: transparent; color: var(--text); font-size: 13px; cursor: pointer; }
+    @media (hover: hover) { .cal-grid button:not(:disabled):hover { background: var(--bg); } }
+    .cal-grid button.hot { background: rgba(211, 47, 47, 0.18); font-weight: 700; }
+    .cal-grid button.hot::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--header-red); }
+    .cal-grid button.today { box-shadow: inset 0 0 0 1.5px var(--header-red); }
+    .cal-grid button.sel { background: var(--header-red); color: #fff; font-weight: 700; }
+    .cal-grid button.sel::after { background: #fff; }
+    .cal-grid button:disabled { opacity: 0.3; cursor: default; }
+    .cal-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 12px; }
+    .cal-foot button { padding: 0 12px; }
+    .cal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--header-red); }
+    .info-sec h4 { 
+        margin: 0 0 8px 0; color: var(--header-red); border-bottom: 1px solid var(--border); 
+        padding-bottom: 4px; display: flex; align-items: center; gap: 8px; 
+    }
+    .info-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+    .info-icon-box { width: 25px; text-align: center; flex-shrink: 0; }
+
+    /* --- Highcharts Tooltip (kompakt) --- */
+    .highcharts-tooltip { pointer-events: none !important; }
+    .highcharts-tooltip > span,
+    .highcharts-tooltip-container > span,
+    .highcharts-tooltip foreignObject > body,
+    .highcharts-tooltip foreignObject > body > div {
+        width: max-content !important;
+        max-width: 200px !important;
+        white-space: nowrap !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+    .highcharts-tooltip foreignObject { overflow: visible !important; }
+    .highcharts-tooltip-box { fill: transparent !important; stroke-width: 0 !important; }
+
+    .hc-tip {
+        display: inline-block;
+        width: max-content;
+        max-width: 200px;
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+        padding: 6px 8px;
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+    .hc-tip .hc-time { font-weight: 700; font-size: 12px; display: block; margin-bottom: 3px; }
+    .hc-tip .hc-row { display: block; color: var(--text-dim); }
+    .hc-tip .hc-row b { color: var(--text); font-weight: 700; }
+    .hc-tip .hc-foot { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .hc-tip .hc-badge {
+        color: #fff; padding: 1px 5px; border-radius: 3px;
+        font-size: 10px; font-weight: 700; letter-spacing: 0.2px;
+    }
+    .hc-tip .hc-eta { color: var(--text-dim); font-size: 12px; }
+    .hc-tip .hc-eta b { color: var(--text); }
+    .hc-tip .hc-warn { color: #ff8c00; font-size: 12px; font-weight: 700; }
+
+    @media (max-width: 480px) {
+        .hc-tip { font-size: 12px; padding: 5px 7px; max-width: 175px; }
+        .hc-tip .hc-time { font-size: 12px; }
+        .highcharts-tooltip > span,
+        .highcharts-tooltip-container > span { max-width: 175px !important; }
+    }
+
+    /* --- Animációk --- */
+    .spinning { animation: fa-spin 1s infinite linear; color: var(--header-red) !important; }
+    .blink { animation: blinker 1.2s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0.3; } }
+    @media (prefers-reduced-motion: reduce) { .blink { animation: none; } }
+
+    /* --- Reszponzivitás --- */
+    @media (max-width: 767px) {
+        .toolbar { gap: 8px; }
+        .toolbar button, #dateBtn { height: 50px; }
+    }
+
+    @media (min-width: 768px) {
+        .toolbar { justify-content: flex-start; }
+        .toolbar button, #dateBtn { flex: none; width: 44px; }
+        .stats-bar { flex-direction: row; }
+        .status-eta-group { flex: 2; }
+    }
+
+    [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.9) brightness(1.5); }
+</style>
+</head>
+<body data-theme="light">
+
+    <div class="toolbar">
+        <button id="zoomNowBtn" title="Aktuális nézet (követi az időt)"><i class="fa-solid fa-crosshairs"></i></button>
+        <button id="homeBtn" title="Napi nézet"><i class="fas fa-maximize"></i></button>
+        <button id="refreshBtn" title="Frissítés"><i id="refreshIcon" class="fas fa-rotate"></i></button>
+        <button id="themeBtn" title="Téma"><i id="themeIcon" class="fas fa-circle-half-stroke"></i></button>
+        <button id="dbBtn" title="Dashboard"><i class="fa-solid fa-chart-simple"></i></button>
+        <button id="csvBtn" title="CSV export"><i class="fa-solid fa-file-csv"></i></button>
+        <button id="infoBtn" title="Jelmagyarázat"><i class="fas fa-circle-info"></i></button>
+    </div>
+
+<div class="stats-bar">
+    <div class="status-eta-group">
+        <div class="card narrow" id="dateCard" style="position: relative;">
+            <input type="date" id="datePicker" style="display: none;">
+            <button type="button" class="day-nav prev" id="prevDayBtn" title="Előző nap" aria-label="Előző nap"><i class="fas fa-chevron-left"></i></button>
+            <button type="button" class="day-nav next" id="nextDayBtn" title="Következő nap" aria-label="Következő nap"><i class="fas fa-chevron-right"></i></button>
+            <div class="date-center">
+                <div class="card-header-mini">
+                    <i class="fa-regular fa-calendar" style="color: var(--header-red);"></i>
+                    <span class="card-title-mini" style="color: var(--header-red);">Dátum</span>
+                </div>
+                <span id="display-date" class="val-data" style="font-size: 13px; line-height: 1.2; text-align: center;">----.--.--</span>
+            </div>
+        </div>
+
+        <div class="card narrow">
+            <div class="values-grid" style="grid-template-columns: 1fr 1fr; height: 100%; align-items: center;">
+                <div class="val-item">
+                    <div class="card-header-mini">
+                        <i class="fa-regular fa-clock" style="color: var(--header-red);"></i>
+                        <span class="card-title-mini" id="update-title" style="color: var(--header-red);">Utolsó adat</span>
+                    </div>
+                </div>
+                <div class="val-item" style="justify-content: center;">
+                    <span id="display-update" class="val-data" style="font-size: 13px; line-height: 1.15; text-align: center;">--:--:--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card wide">
+        <div class="values-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="val-item">
+                <div class="card-header-mini">
+                    <i class="fas fa-thermometer-half" style="color: var(--header-red);"></i>
+                    <span class="card-title-mini" style="color: var(--header-red);">T [°C]</span>
+                </div>
+            </div>
+            <div class="val-item"><span class="val-label">Akt</span><span class="val-data" id="t_akt">--</span></div>
+            <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="t_min">--</span></div>
+            <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="t_max">--</span></div>
+        </div>
+    </div>
+
+    <div class="card wide">
+        <div class="values-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="val-item">
+                <div class="card-header-mini">
+                    <i class="fas fa-chart-line" style="color: var(--header-red);"></i>
+                    <span class="card-title-mini" style="color: var(--header-red);">G [°C/p]</span>
+                </div>
+            </div>
+            <div class="val-item"><span class="val-label">Akt</span><span class="val-data" id="g_akt">--</span></div>
+            <div class="val-item"><span class="val-label">Min</span><span class="val-data" id="g_min">--</span></div>
+            <div class="val-item"><span class="val-label">Max</span><span class="val-data" id="g_max">--</span></div>
+        </div>
+    </div>
+
+    <div class="status-eta-group">
+        <div class="card narrow">
+            <div class="values-grid" style="grid-template-columns: 1fr 1fr; height: 100%; align-items: center;">
+                <div class="val-item">
+                    <div class="card-header-mini">
+                        <i class="fas fa-tasks" style="color: var(--header-red);"></i>
+                        <span class="card-title-mini" style="color: var(--header-red);">Állapot</span>
+                    </div>
+                </div>
+                <div class="val-item" style="justify-content: center;">
+                    <span id="status" class="status-badge" style="background: #888; width: 100%; padding: 8px 4px; font-size: 12px; line-height: 1.1; display: flex; align-items: center; justify-content: center; min-height: 10px;">...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card narrow">
+            <div class="values-grid" style="grid-template-columns: 0.7fr 1.3fr; height: 100%; align-items: center;">
+                <div class="val-item">
+                    <div class="card-header-mini">
+                        <i class="fas fa-hourglass-half" style="color: var(--header-red);"></i>
+                        <span class="card-title-mini" style="color: var(--header-red);">ETA</span>
+                    </div>
+                </div>
+                <div class="val-item" style="justify-content: center;">
+                    <span id="eta_val" class="val-data" style="font-size: 13px; line-height: 1.1; white-space: pre-line; text-align: center; margin-top: 0;">--:--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="container"></div>
+
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <i class="fas fa-times close-btn" id="modalClose"></i>
+            <h2 style="margin:0 0 20px 0; text-align:center;"><i class="fas fa-circle-info"></i> Jelmagyarázat</h2>
+            <div class="info-sec">
+                <h4><i class="fas fa-mouse-pointer"></i> Ikonok</h4>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-crosshairs"></i></div><div><b>Aktuális nézet:</b> nagyítás a jelenre</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-maximize"></i></div><div><b>Napi nézet:</b> a napi nézet visszaállítása</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fas fa-rotate"></i></div><div><b>Frissítés:</b> adatok frissítése (auto: perces)</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fas fa-circle-half-stroke"></i></div><div><b>Téma:</b> váltás a nappali / éjszakai nézet között</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-chart-simple"></i></div><div><b>Dashboard:</b> egy kis szaunastatisztika</div></div>
+                <div class="info-row"><div class="info-icon-box"><i class="fa-solid fa-file-csv"></i></div><div><b>CSV export:</b> napi adatok exportja</div></div>
+            </div>
+
+            <div class="info-sec">
+                <h4><i class="fa-regular fa-calendar"></i> Dátum</h4>
+                <p>A középre kattintva megnyílik a naptár.<br>A nyilakkal az előző / következő napra ugorhatsz.</p>
+            </div>
+
+            <div class="info-sec">
+                <h4><i class="fa-regular fa-clock"></i> Utolsó adat / Adatok</h4>
+                <p>A mai napon az utolsó mérés időpontja és a napi adatteljesség.<br>Archív napokon csak az adatteljesség látszik.</p>
+            </div>
+
+            <div class="info-sec">
+                <h4><i class="fas fa-thermometer-half"></i>T - Hőmérséklet [°C]</h4>
+                <p>A hőmérséklet aktuális értéke (akt), valamint az adott napi szélsőértékei (min/max).</p>
+                <p><i>A kártyát megérintve gőzt fakaszthatsz, sőt, az első gőzölés után mobilod megrázásával is „löttyinthetsz” a kövekre.</i></p>
+            </div>
+            
+            <div class="info-sec">
+                <h4><i class="fas fa-chart-line"></i>G - Változás [°C/perc]</h4>
+                <p>A hőmérséklet-változás irányának és mértékének aktuális értéke (akt), valamint az adott napi szélsőértékei (min/max).</p>
+                <p><i>A kártyára kattintva felcsendül Tapio Rautavaara „Löylyä lissää” című klasszikusa.</i></p>
+            </div>
+
+            <div class="info-sec">
+                <h4><i class="fas fa-tasks"></i> Állapot</h4>
+                <table style="width:100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; text-align: center;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); color: var(--text-dim);">
+                            <th style="padding: 8px 4px;">Állapot</th>
+                            <th style="padding: 8px 4px;">T [°C]</th>
+                            <th style="padding: 8px 4px;">G [°C/perc]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#000000; min-width: 90px; margin: 0 auto;">KÉSZENLÉTI</span></td>
+                            <td style="padding: 8px 4px;"><b>T</b> < 20 °C</td>
+                            <td style="padding: 8px 4px; color: #999;">—</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#d32f2f; min-width: 90px; margin: 0 auto;">FELFŰTÉSI</span></td>
+                            <td style="padding: 8px 4px;">20 °C ≤ <b>T</b> < 60 °C</td>
+                            <td style="padding: 8px 4px;"><b>G</b> > 0</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#1976d2; min-width: 90px; margin: 0 auto;">LEHŰLÉSI</span></td>
+                            <td style="padding: 8px 4px;">20 °C ≤ <b>T</b> < 60 °C</td>
+                            <td style="padding: 8px 4px;"><b>G</b> < 0</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#800000; min-width: 90px; margin: 0 auto;">ÜZEMI</span></td>
+                            <td style="padding: 8px 4px;"><b>T</b> ≥ 60 °C</td>
+                            <td style="padding: 8px 4px; color: #999;">—</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#A0522D; min-width: 90px; margin: 0 auto;">ARCHÍV</span></td>
+                            <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">Archív napokon részletek a tooltip-ben.</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#555555; min-width: 90px; margin: 0 auto;">NINCS ADAT</span></td>
+                            <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">Mai napon: az elmúlt 2 percben nem érkezett mérési adat.<br>Archív napon: amennyiben egyetlen adat sem érkezett.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="info-sec">
+                <h4><i class="fas fa-hourglass-half"></i> ETA</h4>
+                <p><b>Felfűtési</b> állapot esetén a 60 °C elérésének becsült időpontja és a hátralévő percek (T-perc).</p>
+                <p><b><i class="fas fa-fire" style="color:#ff8c00"></i> Tegyél rá fát!</b> jelenik meg helyette (és az állapotjelölő villog), ha a melegedés annyira lassul, hogy a mostani ütemben nem lenne meg a 60 °C. Fa rátétele után magától eltűnik.</p>
+            </div>
+        </div>
+
+    <!-- Naptár: a szaunás napok jelölve (a szaunanaplóból) -->
+    <div id="calPop" class="cal-pop hidden">
+        <div>
+            <div class="cal-top">
+                <button id="calPrev" aria-label="Előző hónap"><i class="fas fa-chevron-left"></i></button>
+                <b id="calTitle"></b>
+                <button id="calNext" aria-label="Következő hónap"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-foot">
+                <span><i class="cal-dot"></i> szaunázás volt</span>
+                <button id="calToday">Ma</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <canvas id="steamCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
+    <audio id="saunaSong" src="song.mp3" preload="auto"></audio>
+
+<script>
+// =====================================================================
+//  KONFIGURÁCIÓ
+// =====================================================================
+// Ha a proxy.php fel van töltve a szerverre, írd ide: 'proxy.php', és az
+// API_KEY-t hagyd üresen – így a kulcs nem látszik a böngészőben.
+const PROXY_URL = '';
+const API_KEY  = '4A8ZJFC1F0997T6A';
+const CHAN_ID  = '3213557';
+
+const STEP_MS        = 30 * 1000;       // a szenzor fix 30 mp-enként küld
+const GAP_MS         = 90 * 1000;       // ennél hosszabb szünet = adathiány (≥2 kimaradt mérés)
+const LEGACY_GAP_MS  = 5 * 60 * 1000;   // régi, változáskor küldő napokon (archív) ennyi számít kiesésnek
+const STALE_MS       = 2 * 60 * 1000;   // ennél régebbi utolsó adat = NINCS ADAT (elavult értékek)
+const ETA_WINDOW_MS  = 10 * 60 * 1000;  // Newton-illesztés ablaka
+const GRAD_WINDOW_MS = 5 * 60 * 1000;   // G: az utolsó 5 perc pontjaira illesztett egyenes meredeksége
+const G_HYST         = 0.05;            // FELFŰTÉSI ↔ LEHŰLÉSI váltáshoz a G ennyivel lépje át a 0-t (zajszűrés)
+const FIRE_MIN_T     = 30;              // "Tegyél rá fát!" csak e fölött (induláskor hamis riasztás volt)
+// Nagyítástól függő görbesimítás (csak a rajzra!).
+// A látható időtartam alapján választ: half = ±ennyi szomszédos pont átlaga (30 mp/pont).
+// Az első olyan sor érvényes, amelynél a látott időtartam >= minSpanH.
+const SMOOTH_LEVELS = [
+    { minSpanH: 8, half: 6 },   // egész nap / fél nap: ~6,5 perces ablak, sima görbe
+    { minSpanH: 3, half: 3 },   // 3–8 óra: ~3,5 perc
+    { minSpanH: 1, half: 1 },   // 1–3 óra: enyhe, ~1,5 perc
+    { minSpanH: 0, half: 0 }    // 1 óra alatt: valós adatok
+];
+const THEME_KEY      = 'kaisa-theme';
+
+const COLORS = {
+    ÜZEMI: "#800000", FELFŰTÉSI: "#d32f2f", LEHŰLÉSI: "#1976d2", KÉSZENLÉTI: "#000000",
+    ARCHÍV: "#A0522D", "NINCS ADAT": "#555555", HIBA: "#555555"
+};
+
+const THEMES = {
+    light: { label: '#666', grid: '#e6e6e6', line20: '#ff8c00', line60: '#d32f2f', meta: '#ffffff',
+             navOutline: '#cccccc', navMask: 'rgba(102,133,194,0.2)', handleBg: '#f2f2f2', handleBorder: '#999999' },
+    dark:  { label: '#b0b0b0', grid: '#333333', line20: '#ffae42', line60: '#ff4d4d', meta: '#121212',
+             navOutline: '#444444', navMask: 'rgba(255,255,255,0.08)', handleBg: '#333333', handleBorder: '#888888' }
+};
+
+let chart;
+let currentDayPoints = [];   // a kiválasztott nap feldolgozott pontjai (CSV-hez is)
+let currentGaps = [];        // a kiválasztott nap adathiányai
+let currentGapMs = 90 * 1000;
+let currentCompleteness = null;
+let followNow = false;       // Aktuális nézet "követő" módja
+let lastTodayStr = null;     // éjféli napváltás figyeléséhez
+
+// =====================================================================
+//  SEGÉDFÜGGVÉNYEK
+// =====================================================================
+const pad2 = n => String(n).padStart(2, '0');
+
+// Helyi (nem UTC!) dátum YYYY-MM-DD formában
+function localDateStr(d = new Date()) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function isTodaySelected() {
+    return document.getElementById('datePicker').value === localDateStr();
+}
+function dayBounds(selDate) {
+    return {
+        start: new Date(selDate + "T00:00:00").getTime(),
+        end:   new Date(selDate + "T23:59:59").getTime()
+    };
+}
+const fmtHM  = ms => new Date(ms).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+const fmtHMS = ms => new Date(ms).toLocaleTimeString('hu-HU', { hour12: false });
+const fmtG   = g  => (g === null || g === undefined || !isFinite(g)) ? '—' : (g > 0 ? '+' : '') + g.toFixed(2);
+const csvNum = (v, dec) => (v === null || v === undefined || !isFinite(v)) ? '—' : v.toFixed(dec).replace('.', ',');
+
+// Állapot: T < 20 KÉSZENLÉTI, T ≥ 60 ÜZEMI, köztük a G előjele dönt (melegszik / hűl).
+// A 0 körüli zaj miatt csak akkor vált FELFŰTÉSI és LEHŰLÉSI között, ha a G
+// legalább G_HYST-tel átlépi a 0-t. Ha a G épp nem számolható (adathiány utáni
+// első ~2,5 perc), az előző irány marad.
+function getStatusType(temp, grad, prev) {
+    if (temp >= 60) return "ÜZEMI";
+    if (temp < 20) return "KÉSZENLÉTI";
+    if (grad === null || grad === undefined) {
+        if (prev === "FELFŰTÉSI" || prev === "KÉSZENLÉTI") return "FELFŰTÉSI";
+        return "LEHŰLÉSI";
+    }
+    if (prev === "FELFŰTÉSI") return grad < -G_HYST ? "LEHŰLÉSI" : "FELFŰTÉSI";
+    if (prev === "LEHŰLÉSI") return grad > G_HYST ? "FELFŰTÉSI" : "LEHŰLÉSI";
+    return grad >= 0 ? "FELFŰTÉSI" : "LEHŰLÉSI";
+}
+
+// Mozgóátlagos simítás a rajzoláshoz. Adathiányon (lyukon) át nem simít,
+// a valódi érték rawY-ként megmarad (tooltip, kártyák, CSV azt használják).
+function smoothHalfForSpan(spanMs) {
+    const h = spanMs / 3600000;
+    for (const l of SMOOTH_LEVELS) if (h >= l.minSpanH) return l.half;
+    return 0;
+}
+
+function smoothForPlot(pts, half) {
+    if (half <= 0) return pts.map(p => ({ ...p, rawY: p.y }));
+    const maxDist = (half + 1) * 30000 * 1.5;
+    return pts.map((p, i) => {
+        let sum = 0, n = 0;
+        for (let j = i - half; j <= i + half; j++) {
+            if (j < 0 || j >= pts.length) continue;
+            if (Math.abs(pts[j].x - p.x) > maxDist) continue;
+            sum += pts[j].y; n++;
+        }
+        return { ...p, y: sum / n, rawY: p.y };
+    });
+}
+
+let currentSmoothHalf = null;
+
+function buildPlotData(half) {
+    const { start, end } = dayBounds(document.getElementById('datePicker').value);
+    const d = smoothForPlot(currentDayPoints, half);
+    // Magányos mérés (előtte és utána is kiesés): vonal nem rajzolható hozzá,
+    // ezért pöttyel jelöljük, hogy látható és rámutatható legyen
+    const pts = currentDayPoints;
+    for (let i = 0; i < pts.length; i++) {
+        const before = i === 0 ? Infinity : pts[i].x - pts[i - 1].x;
+        const after = i === pts.length - 1 ? Infinity : pts[i + 1].x - pts[i].x;
+        if (before > currentGapMs && after > currentGapMs) {
+            d[i].marker = { enabled: true, radius: 3.5, symbol: 'circle' };
+        }
+    }
+    d.unshift({ x: start, y: null });
+    d.push({ x: end, y: null });
+    return d;
+}
+
+// Nagyításkor/görgetéskor: ha másik simítási szint kell, újrarajzoljuk a görbét
+let smoothTimer = null;
+function scheduleSmoothingUpdate() {
+    clearTimeout(smoothTimer);
+    smoothTimer = setTimeout(() => {
+        if (!chart) return;
+        const ex = chart.xAxis[0].getExtremes();
+        const half = smoothHalfForSpan(ex.max - ex.min);
+        if (half === currentSmoothHalf) return;
+        currentSmoothHalf = half;
+        chart.series[0].setData(buildPlotData(half), true, false, false);
+        const now = chart.xAxis[0].getExtremes();
+        if (Math.abs(now.min - ex.min) > 1000 || Math.abs(now.max - ex.max) > 1000) {
+            chart.xAxis[0].setExtremes(ex.min, ex.max, true, false);
+        }
+    }, 150);
+}
+
+function linReg(xs, ys) {
+    const n = xs.length;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) { sx += xs[i]; sy += ys[i]; sxx += xs[i] * xs[i]; sxy += xs[i] * ys[i]; }
+    const d = n * sxx - sx * sx;
+    if (Math.abs(d) < 1e-9) return null;
+    const b = (n * sxy - sx * sy) / d;
+    return { a: (sy - b * sx) / n, b };
+}
+
+// Nem gyorsul-e a melegedés? (a G nem nőtt a ~90 mp-cel korábbihoz képest).
+// Ha fát tettél rá és a G újra nő, a riasztás azonnal megszűnik.
+function gNotRising(pts, i) {
+    const p = pts[i];
+    if (p.grad === null) return false;
+    for (let j = i - 1; j >= 0; j--) {
+        if (p.x - pts[j].x >= 90000) return pts[j].grad !== null && p.grad <= pts[j].grad + 0.01;
+    }
+    return false;
+}
+
+// ETA számítás egy helyen (kártya, tooltip, CSV is ezt használja).
+// Newton-modell: dT/dt = (T∞ − T)/τ  →  G = a + b·T,  T∞ = −a/b,  τ = −1/b
+// Visszatérés: null | { mins, time, at, model } | { fire: true, tinf }
+//   fire: a becsült maximum 60 °C alatt van ÉS a G éppen most is csökken ÉS T ≥ 30 °C
+//   (a becsült maximumot csak ehhez használjuk, önmagában nem írjuk ki: a valóságban
+//   a görbe a kályha/fa miatt laposodik ki, nem a modell szerint)
+function calcEta(pts, i) {
+    const p = pts[i];
+    if (p.y >= 60) return null;
+    const heating = p.stText === "FELFŰTÉSI";
+    if (!heating) return null;
+
+    // Amíg nincs G (adathiány után), az előző becslés marad
+    if (heating && p.grad === null && i > 0 && pts[i - 1].eta && pts[i - 1].eta.at) {
+        const m = Math.round((pts[i - 1].eta.at - p.x) / 60000);
+        if (m > 0) return { ...pts[i - 1].eta, mins: m };
+    }
+
+    const xs = [], ys = [];
+    for (let j = i; j >= 0 && p.x - pts[j].x <= ETA_WINDOW_MS; j--) {
+        if (pts[j].grad !== null) { xs.push(pts[j].y); ys.push(pts[j].grad); }
+    }
+    const tRange = xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+
+    if (xs.length >= 8 && tRange >= 1.5) {
+        const reg = linReg(xs, ys);
+        if (reg && reg.b < 0) {
+            const tinf = -reg.a / reg.b;
+            const tau = -1 / reg.b;
+            if (tinf <= 60) {
+                // Csak akkor riasztunk, ha a melegedés nem gyorsul; ha a G már
+                // újra nő (fát tettél rá), a riasztás megszűnik
+                if (p.y >= FIRE_MIN_T && gNotRising(pts, i)) return { fire: true, tinf };
+            } else if (heating) {
+                const mins = tau * Math.log((tinf - p.y) / (tinf - 60));
+                if (isFinite(mins) && mins > 0 && mins < 24 * 60) {
+                    const m = Math.round(mins);
+                    return { mins: m, time: fmtHM(p.x + m * 60000), at: p.x + m * 60000, model: 'newton' };
+                }
+            }
+        }
+    }
+    // Tartalék: lineáris becslés
+    if (heating && p.grad !== null && p.grad > 0.05) {
+        const m = Math.round((60 - p.y) / p.grad);
+        return { mins: m, time: fmtHM(p.x + m * 60000), at: p.x + m * 60000, model: 'linear' };
+    }
+    return null;
+}
+
+// Nyers feedből tiszta, rendezett pontsor gradienssel, állapottal, ETA-val
+function buildSeries(feeds) {
+    const pts = [];
+    for (const f of feeds) {
+        const x = new Date(f.created_at).getTime();
+        const y = parseFloat(f.field1);
+        if (isFinite(x) && isFinite(y)) pts.push({ x, y });   // hibás/üres mezők kiszűrve → nincs NaN
+    }
+    pts.sort((a, b) => a.x - b.x);
+
+    // G: az utolsó 5 perc összes pontjára illesztett egyenes meredeksége [°C/perc].
+    // Nem számolható, ha az 5 perces ablakban 3-nál kevesebb mérés van, vagy a mérések
+    // 2,5 percnél rövidebb időt fognak át (gyakorlatilag: adathiány utáni első ~2,5 perc).
+    let j0 = 0, prevSt = null;
+    for (let i = 0; i < pts.length; i++) {
+        while (pts[j0].x <= pts[i].x - GRAD_WINDOW_MS) j0++;
+        let grad = null;
+        const n = i - j0 + 1;
+        if (n >= 3 && pts[i].x - pts[j0].x >= 2.5 * 60000) {
+            const xs = [], ys = [];
+            for (let j = j0; j <= i; j++) { xs.push((pts[j].x - pts[i].x) / 60000); ys.push(pts[j].y); }
+            const reg = linReg(xs, ys);
+            if (reg) grad = reg.b;
+        }
+        pts[i].grad = grad;
+        pts[i].stText = getStatusType(pts[i].y, grad, prevSt);
+        prevSt = pts[i].stText;
+    }
+    for (let i = 0; i < pts.length; i++) pts[i].eta = calcEta(pts, i);
+    return pts;
+}
+
+// Adathiányok keresése a nap ablakában (a 3 órás pufferrel együtt, így az éjfélen
+// átnyúló kiesés is helyesen látszik). realFrom/realTo: az utolsó/első valódi mérés.
+// Fix 30 mp-es küldésű-e a nap? (a régi beállítás csak változáskor küldött)
+function isFixedStep(pts) {
+    if (pts.length < 20) return true;
+    let ok = 0;
+    for (let i = 1; i < pts.length; i++) if (Math.abs(pts[i].x - pts[i - 1].x - STEP_MS) <= 1000) ok++;
+    return ok / (pts.length - 1) > 0.8;
+}
+
+function findGaps(all, dStart, dEnd, today, gapMs = GAP_MS) {
+    const until = today ? Math.min(Date.now(), dEnd) : dEnd;
+    const gaps = [];
+    let prev = null;
+    for (const p of all) {
+        const gapLen = prev ? p.x - prev.x : p.x - dStart;
+        if (gapLen > gapMs) {
+            const from = Math.max(prev ? prev.x : dStart, dStart);
+            const to = Math.min(p.x, until);
+            if (to > from && from < until && to > dStart) {
+                gaps.push({ from, to, realFrom: prev ? prev.x : null, realTo: p.x,
+                            yFrom: prev ? prev.y : null, yTo: p.y, ongoing: false });
+            }
+        }
+        prev = p;
+        if (p.x > until) break;
+    }
+    // Nyitott vég: az utolsó mérés után nem jött több adat
+    if (!prev || (prev.x <= until && until - prev.x > gapMs)) {
+        gaps.push({ from: prev ? Math.max(prev.x, dStart) : dStart, to: until,
+                    realFrom: prev ? prev.x : null, realTo: null,
+                    yFrom: prev ? prev.y : null, yTo: null, ongoing: today });
+    }
+    return gaps;
+}
+
+// Megérkezett 30 mp-es mérések aránya [%]
+function calcCompleteness(dayPts, dStart, until) {
+    if (until < dStart) return 100;
+    const expected = Math.floor((until - dStart) / STEP_MS) + 1;
+    const slots = new Set(dayPts.filter(p => p.x <= until).map(p => Math.round(p.x / STEP_MS)));
+    return Math.min(100, 100 * slots.size / expected);
+}
+
+const fmtPct = v => v === null ? '—' : (v >= 99.95 ? '100' : v === 0 ? '0' : v.toFixed(1).replace('.', ',')) + '%';
+function fmtDur(ms) {
+    const m = ms / 60000;
+    if (m < 60) return m.toFixed(1).replace('.', ',').replace(/,0$/, '') + ' perc';
+    const tm = Math.round(m), h = Math.floor(tm / 60), mm = tm % 60;
+    return mm ? `${h} ó ${mm} p` : `${h} óra`;
+}
+const gapDurMs = g => (g.ongoing ? Date.now() : (g.realTo ?? g.to)) - (g.realFrom ?? g.from);
+
+// A kiesést jelző szürke pontozott vonal pontjai (30 mp-enként, hogy a tooltip bárhol "elkapja")
+// baseline: ha a kiesés egyik oldalán sincs mérés (pl. egész nap nincs adat),
+// ezen a szinten húzzuk a pontozott vonalat, hogy a tooltip ott is működjön.
+function buildGapData(gaps, baseline = 0) {
+    const d = [];
+    for (const g of gaps) {
+        let y0 = g.yFrom ?? g.yTo, y1 = g.yTo ?? g.yFrom;
+        if (y0 === null || y0 === undefined) { y0 = baseline; y1 = baseline; }
+        const rf = g.realFrom ?? g.from, rt = g.realTo ?? g.to;
+        // A valódi mérés körüli ±15 mp a mérésé marad, így az (pl. egy magányos pont)
+        // tooltippel elérhető; a kiesés-vonal csak utána kezdődik
+        const a = g.from + (g.realFrom !== null && g.from === g.realFrom ? STEP_MS / 2 : 0);
+        const b = g.to - (g.realTo !== null && g.to === g.realTo ? STEP_MS / 2 : 0);
+        if (b <= a) continue;
+        const n = Math.max(1, Math.round((b - a) / STEP_MS));
+        for (let k = 0; k <= n; k++) {
+            const x = a + (b - a) * k / n;
+            const t = rt > rf ? (x - rf) / (rt - rf) : 0;
+            d.push({ x, y: y0 + (y1 - y0) * t, gap: g });
+        }
+        d.push({ x: g.to, y: null });
+    }
+    return d;
+}
+
+function gapTooltipHtml(g, x) {
+    const { start, end } = dayBounds(document.getElementById('datePicker').value);
+    let rows;
+    if (g.realFrom === null && g.realTo === null && !g.ongoing) {
+        rows = `<span class="hc-row"><b>Az egész napon</b></span>`;
+    } else {
+        // Ha a nap eleje előtt (a lekért 3 órás pufferben) sincs mérés, nem tudjuk,
+        // mikor volt az utolsó – csak azt, hogy 00:00 óta nincs
+        const first = g.realFrom === null
+            ? `<span class="hc-row">Kezdete <b>00:00 vagy korábban</b></span>`
+            : `<span class="hc-row">Utolsó adat <b>${fmtHMS(g.realFrom)}${g.realFrom < start ? ' (előző nap)' : ''}</b></span>`;
+        const next = g.ongoing ? 'még nincs'
+            : g.realTo === null ? 'a nap végéig nincs'
+            : fmtHMS(g.realTo) + (g.realTo > end ? ' (másnap)' : '');
+        rows = first + `<span class="hc-row">Következő <b>${next}</b></span>`;
+    }
+    return `<div class="hc-tip">` +
+           `<span class="hc-time">${fmtHMS(x)}</span>` +
+           `<span class="hc-foot"><span class="hc-badge" style="background:${COLORS["NINCS ADAT"]}">NINCS ADAT</span>` +
+           `<span class="hc-eta"><b>${fmtDur(gapDurMs(g))}</b>${g.ongoing ? ' óta' : ''}</span></span>` +
+           rows +
+           `</div>`;
+}
+
+// "Utolsó adat" / "Adatok" kártya: idő + adatteljesség
+function renderDataCard(today, last, pct, gaps) {
+    const title = document.getElementById('update-title');
+    const disp = document.getElementById('display-update');
+    const n = gaps.length;
+    const nTxt = n === 0 ? 'nincs kiesés' : `${n} kiesés`;
+    title.innerText = today ? 'Utolsó adat' : 'Adatok';
+    if (today) {
+        const t = last ? new Date(last.x).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--';
+        disp.innerHTML = `${t}<br><span class="val-sub">${fmtPct(pct)} · ${nTxt}</span>`;
+    } else if (pct === null) {
+        disp.innerHTML = `${nTxt}<br><span class="val-sub">régi küldési mód</span>`;
+    } else {
+        disp.innerHTML = `${fmtPct(pct)}<br><span class="val-sub">${nTxt}</span>`;
+    }
+    disp.closest('.card').title = n
+        ? 'Kiesések:\n' + gaps.map(g => `${fmtHMS(g.realFrom ?? g.from)} – ${g.ongoing ? 'most' : fmtHMS(g.realTo ?? g.to)} (${fmtDur(gapDurMs(g))})`).join('\n')
+        : '';
+}
+
+async function fetchFeeds(fromMs, toMs) {
+    const start = new Date(fromMs).toISOString();
+    const end   = new Date(toMs).toISOString();
+    const url = PROXY_URL
+        ? `${PROXY_URL}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&_nocache=${Date.now()}`
+        : `https://api.thingspeak.com/channels/${CHAN_ID}/feeds.json?api_key=${API_KEY}&start=${start}&end=${end}&_nocache=${Date.now()}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data.feeds) ? data.feeds : [];
+}
+
+function setStatus(text, blink = false, title = '') {
+    const st = document.getElementById('status');
+    st.innerText = text;
+    st.style.background = COLORS[text] || '#888';
+    st.classList.toggle('blink', blink);
+    st.title = title;
+}
+
+// ETA kártya. Visszaad: true, ha tűz-figyelmeztetés van (villogjon az állapot)
+function renderEta(p) {
+    const span = document.getElementById('eta_val');
+    span.style.color = "";
+    span.style.fontSize = "13px";
+    const eta = p.eta;
+    if (!eta) { span.innerHTML = "&nbsp;"; return false; }
+    if (eta.fire) {
+        span.innerHTML = `<i class="fas fa-fire"></i> Tegyél<br>rá fát!`;
+        span.style.color = "#ff8c00";
+        span.style.fontSize = "11px";
+        return true;
+    }
+    span.innerText = `${eta.time}\n(T-${eta.mins})`;
+    return false;
+}
+
+function shiftDate(dateStr, days) {
+    const d = new Date(dateStr + "T12:00:00");
+    d.setDate(d.getDate() + days);
+    return localDateStr(d);
+}
+
+function updateDayNavState() {
+    const sel = document.getElementById('datePicker').value;
+    document.getElementById('nextDayBtn').disabled = !sel || sel >= localDateStr();
+}
+
+function renderDateCard(selDate) {
+    updateDayNavState();
+    const daysHu = ['vasárnap', 'hétfő', 'kedd', 'szerda', 'csütörtök', 'péntek', 'szombat'];
+    const dayName = daysHu[new Date(selDate + "T12:00:00").getDay()];
+    document.getElementById('display-date').innerHTML =
+        `${selDate.replace(/-/g, ".")}<br><span style="font-weight: normal; font-size: 11px; color: var(--text-dim); text-transform: capitalize;">${dayName}</span>`;
+}
+
+function clearCards() {
+    ['t_akt', 't_min', 't_max', 'g_akt', 'g_min', 'g_max'].forEach(id => {
+        const el = document.getElementById(id);
+        el.innerText = '--';
+        el.classList.remove('stale');
+    });
+    document.getElementById('eta_val').innerHTML = "&nbsp;";
+    document.getElementById('display-update').innerText = "";
+    document.getElementById('display-update').closest('.card').title = "";
+}
+
+function nowView() {
+    const now = Date.now();
+    return [now - 3600000, now + 1800000];
+}
+
+// =====================================================================
+//  ADATFRISSÍTÉS
+// =====================================================================
+let loadSeq = 0;
+async function updateArchiveData(preserveView = false) {
+    if (!chart) return;
+    const seq = ++loadSeq;
+    const icon = document.getElementById('refreshIcon');
+    icon.classList.add('spinning');
+
+    const oldExtremes = (preserveView && chart) ? chart.xAxis[0].getExtremes() : null;
+    const selDate = document.getElementById('datePicker').value;
+    const today = isTodaySelected();
+    const { start: dStartMs, end: dEndMs } = dayBounds(selDate);
+
+    renderDateCard(selDate);
+    document.getElementById('refreshBtn').disabled = !today;
+    if (!today) followNow = false;
+
+    try {
+        const feeds = await fetchFeeds(dStartMs - 10800000, dEndMs + 10800000);
+        if (seq !== loadSeq) return;   // közben már másik napra léptünk → ezt a választ eldobjuk
+        const all = buildSeries(feeds);
+        currentDayPoints = all.filter(p => p.x >= dStartMs && p.x <= dEndMs);
+        const fixedStep = isFixedStep(currentDayPoints);
+        const gapMs = fixedStep ? GAP_MS : LEGACY_GAP_MS;
+        currentGapMs = gapMs;
+        currentGaps = findGaps(all, dStartMs, dEndMs, today, gapMs);
+        // Mai napon az utolsó percet még nem várjuk el (késleltetés).
+        // Régi (változáskor küldő) napokon az adatteljesség nem értelmezhető.
+        const untilPct = today ? Math.min(Date.now() - 60000, dEndMs) : dEndMs;
+        currentCompleteness = fixedStep ? calcCompleteness(currentDayPoints, dStartMs, untilPct) : null;
+        chart.series[0].update({ gapSize: gapMs }, false);
+
+        // A célnézet előre kiszámolva, hogy rögtön a hozzá illő simítással rajzoljunk
+        let target;
+        if (followNow && today) target = nowView();
+        else if (preserveView && oldExtremes) target = [oldExtremes.min, oldExtremes.max];
+        else target = [dStartMs, dEndMs];
+
+        currentSmoothHalf = smoothHalfForSpan(target[1] - target[0]);
+        chart.series[0].setData(buildPlotData(currentSmoothHalf), false);
+        chart.series[1].setData(buildGapData(currentGaps), false);
+
+        if (currentDayPoints.length === 0) {
+            // Nincs adat ezen a napon → ne maradjon kint az előző nap
+            clearCards();
+            setStatus("NINCS ADAT");
+            chart.yAxis[0].setExtremes(0, 90, false);
+            chart.series[0].update({ threshold: 0 }, false);
+        } else {
+            const last = currentDayPoints[currentDayPoints.length - 1];
+            const tAkt = document.getElementById('t_akt');
+            const gAkt = document.getElementById('g_akt');
+
+            if (!today) {
+                tAkt.innerHTML = "&nbsp;"; gAkt.innerHTML = "&nbsp;";
+                tAkt.classList.remove('stale'); gAkt.classList.remove('stale');
+                document.getElementById('eta_val').innerHTML = "&nbsp;";
+                setStatus("ARCHÍV");
+            } else {
+                const stale = Date.now() - last.x > STALE_MS;
+                tAkt.innerText = last.y.toFixed(1);
+                gAkt.innerText = fmtG(last.grad);
+                tAkt.classList.toggle('stale', stale);
+                gAkt.classList.toggle('stale', stale);
+
+                if (stale) {
+                    document.getElementById('eta_val').innerHTML = "&nbsp;";
+                    setStatus("NINCS ADAT", false, `Utolsó mért állapot: ${last.stText}`);
+                } else {
+                    const fire = renderEta(last);
+                    setStatus(last.stText, fire);   // villogás = teendő van
+                }
+            }
+
+            // Napi szélsőértékek
+            const tVals = currentDayPoints.map(p => p.y);
+            const gVals = currentDayPoints.map(p => p.grad).filter(g => g !== null);
+            const rMin = Math.min(...tVals), rMax = Math.max(...tVals);
+            document.getElementById('t_min').innerText = rMin.toFixed(1);
+            document.getElementById('t_max').innerText = rMax.toFixed(1);
+            document.getElementById('g_min').innerText = gVals.length ? fmtG(Math.min(...gVals)) : '—';
+            document.getElementById('g_max').innerText = gVals.length ? fmtG(Math.max(...gVals)) : '—';
+
+            let yMin = 0, yMax = 90;
+            if (rMin - 5 < yMin) yMin = Math.floor((rMin - 5) / 10) * 10;
+            if (rMax + 5 > yMax) yMax = Math.ceil((rMax + 5) / 10) * 10;
+            chart.yAxis[0].setExtremes(yMin, yMax, false);
+            chart.series[0].update({ threshold: yMin }, false);
+        }
+
+        renderDataCard(today, currentDayPoints[currentDayPoints.length - 1], currentCompleteness, currentGaps);
+        chart.redraw();
+
+        // Nézet beállítása
+        chart.xAxis[0].setExtremes(target[0], target[1]);
+    } catch (e) {
+        console.error(e);
+        setStatus("HIBA", false, `Adatlekérési hiba: ${e.message}`);
+        document.getElementById('eta_val').innerText = "Nem sikerült\nlekérni";
+    } finally {
+        updateZoomNowState();
+        setTimeout(() => icon.classList.remove('spinning'), 500);
+    }
+}
+
+// =====================================================================
+//  CHART
+// =====================================================================
+function initChart(theme) {
+    const c = THEMES[theme];
+    chart = Highcharts.stockChart('container', {
+        chart: { zoomType: 'x', backgroundColor: 'transparent', spacingBottom: 10, reflow: true },
+        rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
+        navigator: {
+            enabled: true, margin: 10, height: 40,
+            outlineColor: c.navOutline, maskFill: c.navMask,
+            handles: { backgroundColor: c.handleBg, borderColor: c.handleBorder },
+            xAxis: {
+                tickPixelInterval: 60,
+                gridLineColor: c.grid,
+                labels: { style: { fontSize: '11px', color: c.label } },
+                dateTimeLabelFormats: { minute: '%Hh', hour: '%Hh', day: '%Hh', week: '%Hh', month: '%Hh' },
+                units: [['hour', [1, 2, 4]]]
+            }
+        },
+        time: { useUTC: false },
+        plotOptions: { series: { states: { hover: { lineWidthPlus: 0 }, inactive: { opacity: 1 } } } },
+        xAxis: {
+            type: 'datetime', ordinal: false, minRange: 30 * 60 * 1000,
+            events: {
+                afterSetExtremes: function (e) {
+                    // Felhasználói nagyítás / navigátor-húzás kikapcsolja a követő módot
+                    if (e && e.trigger) followNow = false;
+                    updateHomeBtnState();
+                    updateZoomNowState();
+                    scheduleSmoothingUpdate();
+                }
+            },
+            labels: { format: '{value:%H:%M}', autoRotation: false, style: { color: c.label, fontSize: '11px' } },
+            dateTimeLabelFormats: { minute: '%H:%M', hour: '%H:%M' },
+            units: [['minute', [1, 5, 10, 15, 30]], ['hour', [1, 2, 3, 6]]], tickPixelInterval: 100
+        },
+        yAxis: {
+            opposite: false, tickInterval: 10, gridLineColor: c.grid,
+            labels: { style: { color: c.label } },
+            startOnTick: true, endOnTick: true,
+            plotLines: [
+                { id: 'limit-20', value: 20, color: c.line20, width: 2, dashStyle: 'Dash', zIndex: 3 },
+                { id: 'limit-60', value: 60, color: c.line60, width: 2, dashStyle: 'Dash', zIndex: 3 }
+            ]
+        },
+        tooltip: {
+            split: false, shared: true, useHTML: true,
+            backgroundColor: 'transparent', borderWidth: 0, shadow: false, padding: 0, outside: false,
+            style: { fontSize: '11px', pointerEvents: 'none', width: 'auto', whiteSpace: 'nowrap' },
+            positioner: function (labelWidth, labelHeight, point) {
+                const ch = this.chart;
+                const pad = 6;
+                let w = labelWidth, h = labelHeight;
+                const tip = (ch.container && ch.container.querySelector('.hc-tip')) ||
+                            document.querySelector('.highcharts-tooltip-container .hc-tip') ||
+                            document.querySelector('.hc-tip');
+                if (tip) {
+                    const r = tip.getBoundingClientRect();
+                    if (r.width > 0) { w = r.width + 2; h = r.height + 2; }
+                }
+                let x = point.plotX + ch.plotLeft + 14;
+                if (x + w > ch.chartWidth - pad) x = point.plotX + ch.plotLeft - w - 14;
+                x = Math.max(pad, Math.min(x, Math.max(pad, ch.chartWidth - w - pad)));
+                let y = point.plotY + ch.plotTop - h - 10;
+                if (y < pad) y = point.plotY + ch.plotTop + 14;
+                y = Math.max(pad, Math.min(y, Math.max(pad, ch.chartHeight - h - pad)));
+                return { x: x, y: y };
+            },
+            formatter: function () {
+                const p = this.points[0].point;
+                if (p.y === null) return false;
+                if (p.gap) return gapTooltipHtml(p.gap, this.x);
+                const color = COLORS[p.stText];
+                const fire = p.eta && p.eta.fire;
+                const blinkClass = fire ? " blink" : "";
+                let etaStr = "";
+                if (p.eta) {
+                    if (fire) {
+                        etaStr = `<span class="hc-warn"><i class="fas fa-fire"></i> Tegyél rá fát!</span>`;
+                    } else {
+                        etaStr = `<span class="hc-eta">ETA <b>${p.eta.time}</b> (T-${p.eta.mins})</span>`;
+                    }
+                }
+                return `<div class="hc-tip">` +
+                       `<span class="hc-time">${fmtHMS(this.x)}</span>` +
+                       `<span class="hc-row">T <b>${(p.rawY ?? p.y).toFixed(1)} °C</b> &nbsp;·&nbsp; G <b>${fmtG(p.grad)} °C/p</b></span>` +
+                       `<span class="hc-foot"><span class="hc-badge${blinkClass}" style="background:${color}">${p.stText}</span>${etaStr}</span>` +
+                       `</div>`;
+            }
+        },
+        series: [{
+            name: 'Szauna', type: 'areaspline', color: '#ff4444', lineWidth: 2.5,
+            dataGrouping: { enabled: false }, gapSize: GAP_MS, gapUnit: 'value',
+            turboThreshold: 0,   // objektum-pontok 1000 fölött is (egy nap ~2880 pont)
+            fillColor: { linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, stops: [[0, 'rgba(255, 68, 68, 0.4)'], [1, 'rgba(255, 68, 68, 0.05)']] },
+            marker: { enabled: false, states: { hover: { enabled: false } } }   // soha nincsenek pontjelölők
+        }, {
+            // Adathiány: szürke pontozott vonal, a tooltip ezen "NINCS ADAT"-ot ír ki
+            name: 'Nincs adat', type: 'line', color: '#9e9e9e', lineWidth: 1.5, dashStyle: 'ShortDot',
+            dataGrouping: { enabled: false }, turboThreshold: 0, showInNavigator: false,
+            marker: { enabled: false, states: { hover: { enabled: false } } },
+            states: { hover: { lineWidthPlus: 0 } }
+        }]
+    });
+    updateHomeBtnState();
+}
+
+function updateHomeBtnState() {
+    const homeBtn = document.getElementById('homeBtn');
+    if (!chart || !homeBtn) return;
+    const extremes = chart.xAxis[0].getExtremes();
+    const { start, end } = dayBounds(document.getElementById('datePicker').value);
+    homeBtn.disabled = Math.abs(extremes.min - start) < 1000 && Math.abs(extremes.max - end) < 1000;
+}
+
+function updateZoomNowState() {
+    document.getElementById('zoomNowBtn').classList.toggle('active', followNow);
+}
+
+// =====================================================================
+//  TÉMA (megjegyzi a választást, alapból a rendszer beállítását követi)
+// =====================================================================
+function getSavedTheme() {
+    try {
+        const s = localStorage.getItem(THEME_KEY);
+        if (s === 'dark' || s === 'light') return s;
+    } catch (e) { /* privát mód stb. */ }
+    return null;
+}
+function getSystemTheme() {
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+    const c = THEMES[theme];
+    document.body.setAttribute('data-theme', theme);
+    const meta = document.getElementById('theme-meta');
+    if (meta) meta.setAttribute('content', c.meta);
+    if (!chart) return;
+    chart.update({
+        xAxis: { labels: { style: { color: c.label } } },
+        yAxis: {
+            gridLineColor: c.grid,
+            labels: { style: { color: c.label } },
+            plotLines: [
+                { id: 'limit-20', value: 20, color: c.line20, width: 2, dashStyle: 'Dash', zIndex: 3 },
+                { id: 'limit-60', value: 60, color: c.line60, width: 2, dashStyle: 'Dash', zIndex: 3 }
+            ]
+        },
+        navigator: {
+            outlineColor: c.navOutline, maskFill: c.navMask,
+            handles: { backgroundColor: c.handleBg, borderColor: c.handleBorder },
+            xAxis: { gridLineColor: c.grid, labels: { style: { color: c.label } } }
+        }
+    });
+}
+
+document.getElementById('themeBtn').onclick = () => {
+    const newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(THEME_KEY, newTheme); } catch (e) {}
+    applyTheme(newTheme);
+};
+
+// Ha nincs mentett választás, kövesse a rendszer témaváltását
+if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onSys = () => { if (!getSavedTheme()) applyTheme(getSystemTheme()); };
+    if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
+}
+
+// =====================================================================
+//  EASTER EGG: GŐZ
+// =====================================================================
+let sParticles = [];
+let sAudioCtx = null;
+let noiseBuffer = null;
+let steamRAF = null;
+const sCanvas = document.getElementById('steamCanvas');
+const sCtx = sCanvas.getContext('2d');
+
+function resizeSteamCanvas() {
+    sCanvas.width = window.innerWidth;
+    sCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeSteamCanvas);
+resizeSteamCanvas();
+
+function newParticle(yOffset) {
+    return {
+        x: Math.random() * sCanvas.width,
+        y: sCanvas.height + yOffset,
+        size: Math.random() * 100 + 80,
+        speedY: Math.random() * 5 + 4,
+        speedX: (Math.random() - 0.5) * 10,
+        opacity: 0.9,
+        growth: 2.5
+    };
+}
+
+function startSteamEasterEgg() {
+    // Hang
+    if (!sAudioCtx) sAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (sAudioCtx.state === 'suspended') sAudioCtx.resume();
+    const duration = 5.0;
+    if (!noiseBuffer) {
+        noiseBuffer = sAudioCtx.createBuffer(1, sAudioCtx.sampleRate * duration, sAudioCtx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    const source = sAudioCtx.createBufferSource();
+    source.buffer = noiseBuffer;
+    const filter = sAudioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3000, sAudioCtx.currentTime);
+    const gain = sAudioCtx.createGain();
+    source.connect(filter); filter.connect(gain); gain.connect(sAudioCtx.destination);
+    gain.gain.setValueAtTime(0, sAudioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.25, sAudioCtx.currentTime + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, sAudioCtx.currentTime + duration);
+    source.start();
+
+    // Részecskék
+    sParticles = [];
+    for (let i = 0; i < 20; i++) sParticles.push(newParticle(50));
+    for (let i = 0; i < 80; i++) setTimeout(() => sParticles.push(newParticle(120)), i * 5);
+
+    // Csak egy animációs ciklus futhat egyszerre (különben felgyorsul)
+    if (steamRAF) cancelAnimationFrame(steamRAF);
+
+    function render() {
+        sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
+        if (sParticles.length === 0) { steamRAF = null; return; }
+        for (let i = 0; i < sParticles.length; i++) {
+            const p = sParticles[i];
+            p.y -= p.speedY;
+            p.x += p.speedX;
+            p.size += p.growth;
+            p.opacity -= 0.0035;
+            if (p.opacity <= 0 || p.y < -500) { sParticles.splice(i, 1); i--; continue; }
+            const grad = sCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${p.opacity})`);
+            grad.addColorStop(0.4, `rgba(220, 220, 220, ${p.opacity * 0.6})`);
+            grad.addColorStop(1, `rgba(220, 220, 220, 0)`);
+            sCtx.fillStyle = grad;
+            sCtx.beginPath();
+            sCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            sCtx.fill();
+        }
+        steamRAF = requestAnimationFrame(render);
+    }
+    steamRAF = requestAnimationFrame(render);
+}
+
+// Rázás
+let isSteamRunning = false;
+let shakeInitialized = false;
+
+function handleShake(event) {
+    if (isSteamRunning) return;
+    const acc = event.accelerationIncludingGravity;
+    if (!acc) return;
+    const threshold = 15;
+    if (Math.abs(acc.x) > threshold || Math.abs(acc.y) > threshold || Math.abs(acc.z) > threshold) {
+        isSteamRunning = true;
+        startSteamEasterEgg();
+        setTimeout(() => { isSteamRunning = false; }, 2000);
+    }
+}
+
+const tCard = document.querySelectorAll('.card.wide')[0];
+tCard.style.cursor = 'pointer';
+tCard.onclick = function () {
+    startSteamEasterEgg();
+    if (!shakeInitialized) {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission()
+                .then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('devicemotion', handleShake);
+                        shakeInitialized = true;
+                    }
+                })
+                .catch(console.error);
+        } else {
+            window.addEventListener('devicemotion', handleShake);
+            shakeInitialized = true;
+        }
+    }
+};
+
+// Zene (G kártya)
+(function () {
+    const gCard = document.querySelectorAll('.card.wide')[1];
+    const song = document.getElementById('saunaSong');
+    if (!gCard || !song) return;
+    const resetCardStyle = () => {
+        gCard.style.opacity = "1";
+        gCard.style.border = "1px solid var(--border)";
+    };
+    gCard.style.setProperty('cursor', 'pointer', 'important');
+    gCard.onclick = function () {
+        if (song.paused) {
+            song.play().then(() => {
+                gCard.style.opacity = "0.7";
+                gCard.style.border = "1px solid var(--temp-color)";
+            }).catch(error => console.error("Lejátszási hiba:", error));
+        } else {
+            song.pause();
+            song.currentTime = 0;
+            resetCardStyle();
+        }
+    };
+    song.onended = function () {
+        resetCardStyle();
+        song.currentTime = 0;
+    };
+})();
+
+// =====================================================================
+//  GOMBOK, DÁTUMVÁLASZTÓ
+// =====================================================================
+document.getElementById('infoBtn').onclick = () => { document.getElementById('infoModal').style.display = 'block'; };
+document.getElementById('modalClose').onclick = () => { document.getElementById('infoModal').style.display = 'none'; };
+window.onclick = (e) => { if (e.target.classList && e.target.classList.contains('modal')) e.target.style.display = 'none'; };
+document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
+document.getElementById('refreshBtn').onclick = () => updateArchiveData(true);
+
+document.getElementById('zoomNowBtn').onclick = async () => {
+    const datePicker = document.getElementById('datePicker');
+    const todayStr = localDateStr();
+    if (datePicker.value !== todayStr) {
+        datePicker.value = todayStr;
+        await updateArchiveData(false);
+    }
+    followNow = true;
+    const [a, b] = nowView();
+    chart.xAxis[0].setExtremes(a, b);
+    updateHomeBtnState();
+    updateZoomNowState();
+};
+
+document.getElementById('homeBtn').onclick = () => {
+    followNow = false;
+    const { start, end } = dayBounds(document.getElementById('datePicker').value);
+    chart.xAxis[0].setExtremes(start, end);
+    updateZoomNowState();
+};
+
+const datePickerEl = document.getElementById('datePicker');
+
+function goToDay(offset) {
+    const dp = document.getElementById('datePicker');
+    const target = shiftDate(dp.value, offset);
+    if (target > localDateStr()) return;
+    dp.value = target;
+    followNow = false;
+    updateDayNavState();
+    updateArchiveData(false);
+}
+['prevDayBtn', 'nextDayBtn'].forEach((id, i) => {
+    document.getElementById(id).addEventListener('click', e => {
+        e.stopPropagation();          // ne nyíljon meg a naptár
+        goToDay(i === 0 ? -1 : 1);
+    });
+});
+// Asztali gépen a ← → billentyűk is lapoznak (ha nincs nyitva a jelmagyarázat)
+document.addEventListener('keydown', e => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === 'Escape') { closeCal(); document.getElementById('infoModal').style.display = 'none'; return; }
+    if (document.getElementById('infoModal').style.display === 'block') return;
+    if (calOpen()) {
+        if (e.key === 'ArrowLeft') calShift(-1); else if (e.key === 'ArrowRight' && !document.getElementById('calNext').disabled) calShift(1);
+        return;
+    }
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft') goToDay(-1);
+    else if (e.key === 'ArrowRight') goToDay(1);
+});
+
+// ---- Naptár: a szaunás napok a szaunanaplóból (data/alkalmak.csv – csak a dátumok kellenek) ----
+let sessionDays = new Set();
+let calY, calM;            // a naptárban mutatott hónap
+fetch('data/alkalmak.csv?v=' + Date.now())
+    .then(r => r.ok ? r.text() : '')
+    .then(t => {
+        sessionDays = new Set(t.split(/\r?\n/).map(l => l.split(/[,;]/)[0].trim()).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)));
+        if (calOpen()) renderCal();
+    })
+    .catch(() => { /* gépről megnyitva nem érhető el – ilyenkor nincs jelölés */ });
+
+function renderCal() {
+    const sel = datePickerEl.value, today = localDateStr();
+    const hot = sessionDays;
+    const monthsHu = ['január', 'február', 'március', 'április', 'május', 'június', 'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
+    document.getElementById('calTitle').textContent = `${calY}. ${monthsHu[calM]}`;
+    const now = new Date();
+    document.getElementById('calNext').disabled = calY > now.getFullYear() || (calY === now.getFullYear() && calM >= now.getMonth());
+    const off = (new Date(calY, calM, 1).getDay() + 6) % 7;
+    const days = new Date(calY, calM + 1, 0).getDate();
+    let html = ['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'].map(d => `<div class="wd">${d}</div>`).join('');
+    html += '<div></div>'.repeat(off);
+    for (let d = 1; d <= days; d++) {
+        const ds = `${calY}-${pad2(calM + 1)}-${pad2(d)}`;
+        const cls = [hot.has(ds) ? 'hot' : '', ds === today ? 'today' : '', ds === sel ? 'sel' : ''].filter(Boolean).join(' ');
+        html += `<button data-d="${ds}" class="${cls}"${ds > today ? ' disabled' : ''}${hot.has(ds) ? ' title="szaunázás volt"' : ''}>${d}</button>`;
+    }
+    document.getElementById('calGrid').innerHTML = html;
+}
+
+function placeCal() {
+    const pop = document.getElementById('calPop'), r = document.getElementById('dateCard').getBoundingClientRect();
+    const w = Math.min(Math.max(r.width, 300), window.innerWidth - 12);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(6, Math.min(r.left, window.innerWidth - w - 6)) + 'px';
+    pop.style.top = (r.bottom + 6) + 'px';
+}
+const calOpen = () => !document.getElementById('calPop').classList.contains('hidden');
+function openCal() {
+    if (calOpen()) { closeCal(); return; }
+    const d = parseDateStr(datePickerEl.value);
+    calY = d.getFullYear(); calM = d.getMonth();
+    placeCal();
+    document.getElementById('calPop').classList.remove('hidden');
+    renderCal();
+}
+function closeCal() { document.getElementById('calPop').classList.add('hidden'); }
+// Mellé kattintva bezárul, mint a gyári dátumválasztó
+document.addEventListener('click', e => {
+    if (calOpen() && !e.target.closest('#calPop') && !e.target.closest('#dateCard')) closeCal();
+});
+window.addEventListener('resize', () => { if (calOpen()) placeCal(); });
+function calShift(n) {
+    calM += n;
+    if (calM < 0) { calM = 11; calY--; }
+    if (calM > 11) { calM = 0; calY++; }
+    renderCal();
+}
+const parseDateStr = s => new Date(s + 'T12:00:00');
+
+document.getElementById('dateCard').onclick = openCal;
+document.getElementById('calPrev').onclick = () => calShift(-1);
+document.getElementById('calNext').onclick = () => calShift(1);
+document.getElementById('calToday').onclick = () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); renderCal(); };
+document.getElementById('calGrid').onclick = e => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    datePickerEl.value = b.dataset.d;
+    closeCal();
+    followNow = false;
+    updateDayNavState();
+    updateArchiveData(false);
+};
+
+// CSV export – magyar Excelhez: pontosvessző + tizedesvessző
+document.getElementById('csvBtn').onclick = () => {
+    const selDate = document.getElementById('datePicker').value;
+    const tMin = document.getElementById('t_min').innerText.replace('.', ',');
+    const tMax = document.getElementById('t_max').innerText.replace('.', ',');
+    let csv = `Kaisa Sauna - napi adatok exportja;${selDate}\n-----------------------------------\n`;
+    csv += `Min hőm:;${tMin} °C\nMax hőm:;${tMax} °C\n`;
+    csv += `Adatteljesség:;${currentCompleteness === null ? '— (régi, változáskor küldő mód)' : fmtPct(currentCompleteness)}\nKiesések száma:;${currentGaps.length}\n`;
+    currentGaps.forEach(g => {
+        csv += `Kiesés:;${fmtHMS(g.realFrom ?? g.from)};${g.ongoing ? 'most' : fmtHMS(g.realTo ?? g.to)};${fmtDur(gapDurMs(g))}\n`;
+    });
+    csv += "Dátum;Idő;Hőmérséklet [°C];Változás [°C/perc];Állapot;ETA [időpont];ETA [időtartam, perc]\n";
+    currentDayPoints.forEach(p => {
+        let eT = "—", eM = "—";
+        if (p.eta) {
+            if (p.eta.fire) eT = "Tegyél rá fát!";
+            else { eT = p.eta.time; eM = p.eta.mins; }
+        }
+        csv += `${selDate};${fmtHMS(p.x)};${csvNum(p.y, 1)};${csvNum(p.grad, 2)};${p.stText};${eT};${eM}\n`;
+    });
+    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `kaisa_sauna_export_${selDate}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+};
+
+// =====================================================================
+//  INICIALIZÁLÁS
+// =====================================================================
+const initialTheme = getSavedTheme() || getSystemTheme();
+applyTheme(initialTheme);
+
+lastTodayStr = localDateStr();
+datePickerEl.value = lastTodayStr;
+datePickerEl.max = lastTodayStr;
+// ?date=ÉÉÉÉ-HH-NN: egy adott nap megnyitása (pl. a dashboardról)
+const urlDate = new URLSearchParams(location.search).get('date');
+if (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate) && urlDate <= lastTodayStr) datePickerEl.value = urlDate;
+
+renderDateCard(datePickerEl.value);
+
+// Hiba kijelzése közvetlenül a felületen (F12 nélkül is látszik, mi a gond)
+function showFatal(short, detail) {
+    setStatus("HIBA", false, detail);
+    document.getElementById('eta_val').innerText = short;
+    document.getElementById('display-update').innerText = "";
+}
+
+window.addEventListener('error', e => {
+    showFatal("Szkript-\nhiba", `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})`);
+});
+
+function boot() {
+    try {
+        initChart(initialTheme);
+    } catch (e) {
+        console.error(e);
+        showFatal("Grafikon-\nhiba", e.message);
+        return;
+    }
+    updateArchiveData();
+    setTimeout(() => { if (chart) chart.reflow(); }, 500);
+}
+
+// Tartalék források sorban, ha a jsDelivr nem töltött be.
+// Az utolsó egy helyi fájl: ha letöltöd a highstock.js-t a HTML mellé, internet-CDN nélkül is megy.
+const HC_FALLBACKS = [
+    'https://code.highcharts.com/stock/11.4.8/highstock.js',
+    'highstock.js'
+];
+
+function loadHighchartsFallback(i = 0) {
+    if (window.Highcharts) { boot(); return; }
+    if (i >= HC_FALLBACKS.length) {
+        showFatal("Nincs\nHighcharts", "A Highcharts könyvtár egyik forrásból sem töltődött be (nincs internet, blokkolja egy bővítmény, vagy a CDN kitiltott).");
+        return;
+    }
+    const s = document.createElement('script');
+    s.src = HC_FALLBACKS[i];
+    s.onload = () => window.Highcharts ? boot() : loadHighchartsFallback(i + 1);
+    s.onerror = () => loadHighchartsFallback(i + 1);
+    document.head.appendChild(s);
+}
+
+if (window.Highcharts) boot(); else loadHighchartsFallback();
+
+setInterval(() => {
+    const todayStr = localDateStr();
+    // Éjféli napváltás: ha az előző "mai" nap volt kiválasztva, lépjünk át az újra
+    if (todayStr !== lastTodayStr) {
+        const wasOnToday = datePickerEl.value === lastTodayStr;
+        lastTodayStr = todayStr;
+        datePickerEl.max = todayStr;
+        updateDayNavState();
+        if (wasOnToday) {
+            datePickerEl.value = todayStr;
+            updateArchiveData(false);
+            return;
+        }
+    }
+    if (isTodaySelected()) updateArchiveData(true);
+}, 60000);
+</script>
+</body>
+</html>
