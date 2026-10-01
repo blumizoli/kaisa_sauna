@@ -105,6 +105,9 @@
     .day-nav:disabled { opacity: 0.25; cursor: default; }
     .day-nav:focus-visible { outline: 2px solid var(--header-red); outline-offset: -2px; }
     /* Felirat + dátum egy csoportként, középen a két nyíl között */
+    /* A dátum-terület egy valódi gomb: minden böngészőben (iOS Safarin is) biztosan kattintható */
+    button.date-center { width: 100%; background: none; border: none; color: inherit; font: inherit; cursor: pointer; margin: 0; }
+    #dateCard { cursor: pointer; }
     .date-center {
         height: 100%; display: flex; align-items: center; justify-content: center;
         gap: 18px; padding: 0 24px; white-space: nowrap;
@@ -146,7 +149,7 @@
 
     /* --- Naptár ablak --- */
     /* Lenyíló naptár a dátum kártya alatt (mint a gyári dátumválasztó) */
-    .cal-pop { position: fixed; z-index: 900; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    .cal-pop { position: fixed; z-index: 3000; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
                box-shadow: 0 8px 24px rgba(0,0,0,0.22); padding: 10px; font-size: 13px; }
     .cal-pop.hidden { display: none; }
     .cal-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
@@ -263,13 +266,13 @@
             <input type="date" id="datePicker" style="display: none;">
             <button type="button" class="day-nav prev" id="prevDayBtn" title="Előző nap" aria-label="Előző nap"><i class="fas fa-chevron-left"></i></button>
             <button type="button" class="day-nav next" id="nextDayBtn" title="Következő nap" aria-label="Következő nap"><i class="fas fa-chevron-right"></i></button>
-            <div class="date-center">
+            <button type="button" class="date-center" id="dateOpenBtn" title="Naptár megnyitása" aria-label="Naptár megnyitása">
                 <div class="card-header-mini">
                     <i class="fa-regular fa-calendar" style="color: var(--header-red);"></i>
                     <span class="card-title-mini" style="color: var(--header-red);">Dátum</span>
                 </div>
                 <span id="display-date" class="val-data" style="font-size: 13px; line-height: 1.2; text-align: center;">----.--.--</span>
-            </div>
+            </button>
         </div>
 
         <div class="card narrow">
@@ -364,12 +367,12 @@
 
             <div class="info-sec">
                 <h4><i class="fa-regular fa-calendar"></i> Dátum</h4>
-                <p>A középre kattintva megnyílik a naptár.<br>A nyilakkal az előző / következő napra ugorhatsz.</p>
+                <p>A közepére kattintva megnyílik a naptár.<br>A nyilakkal az előző / következő napra ugorhatsz.</p>
             </div>
 
             <div class="info-sec">
                 <h4><i class="fa-regular fa-clock"></i> Utolsó adat / Adatok</h4>
-                <p>A mai napon az utolsó mérés időpontja és a napi adatteljesség.<br>Archív napokon csak az adatteljesség látszik.</p>
+                <p>Mai napon: az utolsó mérés időpontja és a napi adatteljesség.<br>Archív napon: csak az adatteljesség látszik.</p>
             </div>
 
             <div class="info-sec">
@@ -396,7 +399,7 @@
                     </thead>
                     <tbody>
                         <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#000000; min-width: 90px; margin: 0 auto;">KÉSZENLÉTI</span></td>
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#f57c00; min-width: 90px; margin: 0 auto;">KÉSZENLÉTI</span></td>
                             <td style="padding: 8px 4px;"><b>T</b> < 20 °C</td>
                             <td style="padding: 8px 4px; color: #999;">—</td>
                         </tr>
@@ -406,14 +409,14 @@
                             <td style="padding: 8px 4px;"><b>G</b> > 0</td>
                         </tr>
                         <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#1976d2; min-width: 90px; margin: 0 auto;">LEHŰLÉSI</span></td>
-                            <td style="padding: 8px 4px;">20 °C ≤ <b>T</b> < 60 °C</td>
-                            <td style="padding: 8px 4px;"><b>G</b> < 0</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 8px 0;"><span class="status-badge" style="background:#800000; min-width: 90px; margin: 0 auto;">ÜZEMI</span></td>
                             <td style="padding: 8px 4px;"><b>T</b> ≥ 60 °C</td>
                             <td style="padding: 8px 4px; color: #999;">—</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px 0;"><span class="status-badge" style="background:#1976d2; min-width: 90px; margin: 0 auto;">LEHŰLÉSI</span></td>
+                            <td style="padding: 8px 4px;">20 °C ≤ <b>T</b> < 60 °C</td>
+                            <td style="padding: 8px 4px;"><b>G</b> < 0</td>
                         </tr>
                         <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 8px 0;"><span class="status-badge" style="background:#A0522D; min-width: 90px; margin: 0 auto;">ARCHÍV</span></td>
@@ -433,6 +436,8 @@
             </div>
         </div>
 
+    </div>
+
     <!-- Naptár: a szaunás napok jelölve (a szaunanaplóból) -->
     <div id="calPop" class="cal-pop hidden">
         <div>
@@ -447,7 +452,6 @@
                 <button id="calToday">Ma</button>
             </div>
         </div>
-    </div>
     </div>
 
     <canvas id="steamCanvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
@@ -483,7 +487,7 @@ const SMOOTH_LEVELS = [
 const THEME_KEY      = 'kaisa-theme';
 
 const COLORS = {
-    ÜZEMI: "#800000", FELFŰTÉSI: "#d32f2f", LEHŰLÉSI: "#1976d2", KÉSZENLÉTI: "#000000",
+    ÜZEMI: "#800000", FELFŰTÉSI: "#d32f2f", LEHŰLÉSI: "#1976d2", KÉSZENLÉTI: "#f57c00",
     ARCHÍV: "#A0522D", "NINCS ADAT": "#555555", HIBA: "#555555"
 };
 
@@ -1434,7 +1438,7 @@ function openCal() {
 function closeCal() { document.getElementById('calPop').classList.add('hidden'); }
 // Mellé kattintva bezárul, mint a gyári dátumválasztó
 document.addEventListener('click', e => {
-    if (calOpen() && !e.target.closest('#calPop') && !e.target.closest('#dateCard')) closeCal();
+    if (calOpen() && !e.target.closest('#calPop') && !e.target.closest('#dateOpenBtn')) closeCal();
 });
 window.addEventListener('resize', () => { if (calOpen()) placeCal(); });
 function calShift(n) {
@@ -1445,7 +1449,7 @@ function calShift(n) {
 }
 const parseDateStr = s => new Date(s + 'T12:00:00');
 
-document.getElementById('dateCard').onclick = openCal;
+document.getElementById('dateOpenBtn').addEventListener('click', e => { e.stopPropagation(); openCal(); });
 document.getElementById('calPrev').onclick = () => calShift(-1);
 document.getElementById('calNext').onclick = () => calShift(1);
 document.getElementById('calToday').onclick = () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); renderCal(); };
