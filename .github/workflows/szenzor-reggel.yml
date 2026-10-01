@@ -1,0 +1,41 @@
+# Szenzor-összesítő – reggeli futás: feldolgozza az előző esti szaunázást (amikor beíráskor a nap még nem zárult le).
+# A GitHub 60 nap tétlenség után kikapcsolhatja; ilyenkor a következő alkalmak.csv-módosítás visszakapcsolja.
+name: Szenzor-összesítő (reggel)
+
+on:
+  schedule:
+    - cron: '30 5 * * *'      # naponta 05:30 UTC (télen 06:30, nyáron 07:30 magyar idő)
+  workflow_dispatch:
+
+permissions:
+  contents: write             # a data/szenzor.csv visszamentéséhez
+
+concurrency:
+  group: szenzor
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Összesítő számolása
+        run: node scripts/szenzor.mjs
+        env:
+          THINGSPEAK_API_KEY: ${{ secrets.THINGSPEAK_API_KEY }}
+          CHAN_ID: '3213557'
+          SENSOR_START: '2025-12-01'
+      - name: Mentés a repóba
+        run: |
+          if git diff --quiet -- data/szenzor.csv && git ls-files --error-unmatch data/szenzor.csv >/dev/null 2>&1; then
+            echo "Nincs változás."; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/szenzor.csv
+          git commit -m "Szenzor-összesítő frissítése"
+          git pull --rebase
+          git push
