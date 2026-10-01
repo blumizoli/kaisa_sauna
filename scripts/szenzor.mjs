@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 
 const CHAN_ID = process.env.CHAN_ID || '3213557';
-const API_KEY = process.env.THINGSPEAK_API_KEY || '';
+const API_KEY = process.env.THINGSPEAK_API_KEY || '4A8ZJFC1F0997T6A';
 const SENSOR_START = process.env.SENSOR_START || '2025-12-01';   // a hőmérő bekötése
 const TZ = 'Europe/Budapest';
 const ALK = 'data/alkalmak.csv', OUT = 'data/szenzor.csv';
