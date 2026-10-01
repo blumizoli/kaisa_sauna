@@ -1,0 +1,47 @@
+# Szenzor-összesítő – azonnali futás: ha a szaunanapló (data/alkalmak.csv) változik.
+# (Ennek nincs időzítése, ezért a GitHub soha nem kapcsolja ki inaktivitás miatt.)
+name: Szenzor-összesítő
+
+on:
+  push:
+    paths: ['data/alkalmak.csv']
+  workflow_dispatch:          # kézi indítás: Actions → Szenzor-összesítő → Run workflow
+
+permissions:
+  contents: write             # a data/szenzor.csv visszamentéséhez
+  actions: write              # a reggeli futás újraélesztéséhez
+
+concurrency:
+  group: szenzor
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      # Ha a reggeli futást a GitHub 60 nap tétlenség után kikapcsolta, itt visszakapcsoljuk
+      - name: Reggeli futás ébren tartása
+        run: gh workflow enable szenzor-reggel.yml --repo "$GITHUB_REPOSITORY" || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Összesítő számolása
+        run: node scripts/szenzor.mjs
+        env:
+          THINGSPEAK_API_KEY: ${{ secrets.THINGSPEAK_API_KEY }}
+          CHAN_ID: '3213557'
+          SENSOR_START: '2025-12-01'
+      - name: Mentés a repóba
+        run: |
+          if git diff --quiet -- data/szenzor.csv && git ls-files --error-unmatch data/szenzor.csv >/dev/null 2>&1; then
+            echo "Nincs változás."; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/szenzor.csv
+          git commit -m "Szenzor-összesítő frissítése"
+          git pull --rebase
+          git push
