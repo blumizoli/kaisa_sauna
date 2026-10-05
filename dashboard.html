@@ -171,7 +171,47 @@
                     font-size: 16px;
                 }
             }
+            /* --- Dashboard színvilág --- */
+            :root {
+                --bg: #f0f0f0; --card: #fff; --text: #333; --border: #ddd;
+                --accent: #d32f2f; --input: #f7f7f7;
+            }
+            html[data-theme="dark"] {
+                --bg: #121212; --card: #1e1e1e; --text: #fff; --border: #333;
+                --accent: #ff4d4d; --input: #252525;
+            }
+            .staticrypt-body, .staticrypt-content {
+                background: var(--bg);
+                font-family: 'Roboto', 'Segoe UI', sans-serif;
+            }
+            .staticrypt-form {
+                background: var(--card); color: var(--text);
+                border: 1px solid var(--border); border-radius: 8px; box-shadow: none;
+            }
+            .staticrypt-hr { border-top-color: var(--border); }
+            .staticrypt-password-container {
+                background: var(--input); border: 1px solid var(--border); border-radius: 8px;
+            }
+            .staticrypt-form input[type="password"], input[type="text"] { color: var(--text); }
+            .staticrypt-form .staticrypt-decrypt-button,
+            .staticrypt-form .staticrypt-decrypt-button:hover,
+            .staticrypt-form .staticrypt-decrypt-button:active,
+            .staticrypt-form .staticrypt-decrypt-button:focus {
+                background: var(--accent); border-radius: 8px; font-weight: 700;
+            }
+            html[data-theme="dark"] .staticrypt-toggle-password-visibility { filter: invert(1); }
         </style>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+        <meta name="theme-color" id="staticrypt-theme-meta" content="#ffffff" />
+        <script>
+            (function () { try {
+                const t = localStorage.getItem('kaisa-theme');
+                if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    document.getElementById('staticrypt-theme-meta').setAttribute('content', '#121212');
+                }
+            } catch (e) {} })();
+        </script>
     </head>
 
     <body class="staticrypt-body">
