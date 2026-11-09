@@ -869,6 +869,27 @@ function renderEta(p) {
     return false;
 }
 
+// A kiválasztott nap a linkben: archív napon ?date=ÉÉÉÉ-HH-NN, a mai napon tiszta link
+// (így a könyvjelzőzött / megosztott alap link mindig a mát mutatja). Nem kerül a böngésző
+// előzményeibe minden lapozás, csak a jelenlegi bejegyzés címe frissül.
+function syncDateUrl(selDate) {
+    try {
+        const url = new URL(location.href);
+        if (selDate === localDateStr()) url.searchParams.delete('date');
+        else url.searchParams.set('date', selDate);
+        if (url.href !== location.href) history.replaceState(null, '', url.href);
+    } catch (e) { /* pl. régi böngésző – a link nem frissül, más nem romlik el */ }
+}
+
+// Az előző oldal címe, ha az ugyanebben a mappában lévő `name` volt (különben null)
+function sameDirRef(name) {
+    try {
+        const r = new URL(document.referrer);
+        const dir = location.pathname.replace(/[^/]*$/, '');
+        return r.origin === location.origin && r.pathname === dir + name ? r.href : null;
+    } catch (e) { return null; }
+}
+
 function shiftDate(dateStr, days) {
     const d = new Date(dateStr + "T12:00:00");
     d.setDate(d.getDate() + days);
@@ -920,6 +941,7 @@ async function updateArchiveData(preserveView = false) {
     const { start: dStartMs, end: dEndMs } = dayBounds(selDate);
 
     renderDateCard(selDate);
+    syncDateUrl(selDate);
     document.getElementById('refreshBtn').disabled = !today;
     if (!today) followNow = false;
 
@@ -1336,7 +1358,8 @@ tCard.onclick = function () {
 document.getElementById('infoBtn').onclick = () => { document.getElementById('infoModal').style.display = 'block'; };
 document.getElementById('modalClose').onclick = () => { document.getElementById('infoModal').style.display = 'none'; };
 window.onclick = (e) => { if (e.target.classList && e.target.classList.contains('modal')) e.target.style.display = 'none'; };
-document.getElementById('dbBtn').onclick = () => { window.location.href = 'dashboard.html'; };
+// Ha a dashboardról jöttünk, oda térünk vissza, a szűrőivel együtt (azok a linkjében vannak)
+document.getElementById('dbBtn').onclick = () => { window.location.href = sameDirRef('dashboard.html') || 'dashboard.html'; };
 document.getElementById('refreshBtn').onclick = () => updateArchiveData(true);
 
 document.getElementById('zoomNowBtn').onclick = async () => {
