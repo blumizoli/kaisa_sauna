@@ -174,6 +174,10 @@
     tr.hl td { background: var(--hl-bg); }
     tr.hl td:first-child { box-shadow: inset 3px 0 0 var(--header-red); }
     tr.fade td { opacity: 0.35; }
+    th[data-sort] { cursor: pointer; user-select: none; -webkit-user-select: none; }
+    @media (hover: hover) { th[data-sort]:hover { color: var(--text); } }
+    th[data-sort].on { color: var(--header-red); }
+    th .srt { margin-left: 3px; font-size: 10px; }
 
     #loadCard { text-align: center; font-size: 13px; line-height: 1.5; }
     #loadCard label { display: inline-block; margin-top: 8px; background: var(--header-red); color: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
@@ -267,10 +271,10 @@
                     <h3><i class="fa-solid fa-list"></i> Begyújtások</h3>
                     <div class="seg small" id="segTbl"><button data-v="filt">Szűrt</button><button data-v="all" class="on">Mind</button></div>
                 </div>
-                <div class="sub">Felfűtés: 20 °C-tól 60 °C-ig. Üzemidő: 60 °C fölött töltött idő. A hőmérő bekötése előtti napoknál nincs szenzoradat (—). Egy sorra koppintva látszanak a résztvevők; a piros dátum megnyitja a nap görbéjét. Szezonra vagy személyre szűrve a „Szűrt” nézet csak a találatokat mutatja; „Mind” nézetben minden sor látszik: a ki nem választott szezonok halványan, a kiemelt személy sorai piros jelöléssel.</div>
+                <div class="sub">Felfűtés: 20 °C-tól 60 °C-ig. Üzemidő: 60 °C fölött töltött idő. A hőmérő bekötése előtti napoknál nincs szenzoradat (—). Az oszlopfejlécre koppintva rendez, ismét koppintva megfordítja a sorrendet (a szenzoradat nélküli sorok mindig a végére kerülnek). Egy sorra koppintva látszanak a résztvevők; a piros dátum megnyitja a nap görbéjét. Szezonra vagy személyre szűrve a „Szűrt” nézet csak a találatokat mutatja; „Mind” nézetben minden sor látszik: a ki nem választott szezonok halványan, a kiemelt személy sorai piros jelöléssel.</div>
                 <div class="tbl-wrap">
                     <table>
-                        <thead><tr><th>Dátum</th><th>Fő</th><th>Begyújtás</th><th>Felfűtés</th><th>Max<span class="th-w"> hőfok</span></th><th>Üzemidő</th><th></th></tr></thead>
+                        <thead id="sensorHead"><tr><th data-sort="date">Dátum</th><th data-sort="count">Fő</th><th data-sort="start">Begyújtás</th><th data-sort="heat">Felfűtés</th><th data-sort="max">Max<span class="th-w"> hőfok</span></th><th data-sort="hot">Üzemidő</th><th></th></tr></thead>
                         <tbody id="sensorBody"></tbody>
                     </table>
                 </div>
@@ -1024,6 +1028,51 @@ function tableRow(s) {
     return `<td>${d}</td><td>${s.count}</td>${cells}<td class="chev"><i class="fas fa-chevron-down"></i></td>`;
 }
 
+// --- Rendezés az oszlopfejlécre koppintva ---
+// dir: 1 = növekvő, -1 = csökkenő. Új oszlopra koppintva az „érdekesebb” irány az első
+// (pl. a legtöbb fő, a legmagasabb hőfok, de a leggyorsabb felfűtés, a legkorábbi kezdés).
+const SORT_DEF_DIR = { date: -1, count: -1, start: 1, heat: 1, max: -1, hot: -1 };
+let tblSort = { key: 'date', dir: -1 };
+const sensOk = s => s.date >= sensorStart ? sensorOf(s.date) : null;
+const SORT_VAL = {
+    date:  s => s.date,
+    count: s => s.count,
+    start: s => { const a = sensOk(s); if (!a || !a.start) return null; const d = new Date(a.start); return d.getHours() * 60 + d.getMinutes(); },
+    heat:  s => { const a = sensOk(s); return a && a.heat !== null ? a.heat : null; },
+    max:   s => { const a = sensOk(s); return a ? a.max : null; },
+    hot:   s => { const a = sensOk(s); return a && a.hot > 0 ? a.hot : null; }
+};
+function sortRows(rows) {
+    const { key, dir } = tblSort;
+    if (key === 'date' && dir === -1) return rows;   // az alap sorrend (legfrissebb elöl)
+    const v = SORT_VAL[key];
+    return rows.slice().sort((a, b) => {
+        const x = v(a), y = v(b);
+        if (x === null && y !== null) return 1;      // hiányzó érték mindig a végére
+        if (y === null && x !== null) return -1;
+        if (x !== null && x !== y) return (x < y ? -1 : 1) * dir;
+        return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;   // egyezésnél a frissebb elöl
+    });
+}
+function renderSortHead() {
+    document.querySelectorAll('#sensorHead th[data-sort]').forEach(th => {
+        const on = th.dataset.sort === tblSort.key;
+        th.classList.toggle('on', on);
+        const old = th.querySelector('.srt');
+        if (old) old.remove();
+        if (on) th.insertAdjacentHTML('beforeend', `<i class="fas fa-caret-${tblSort.dir > 0 ? 'up' : 'down'} srt"></i>`);
+    });
+}
+document.getElementById('sensorHead').addEventListener('click', e => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    const k = th.dataset.sort;
+    tblSort = k === tblSort.key ? { key: k, dir: -tblSort.dir } : { key: k, dir: SORT_DEF_DIR[k] };
+    renderSensor();
+    document.querySelector('.tbl-wrap').scrollTop = 0;
+    updateResetBtn();
+});
+
 function renderSensor() {
     const body = document.getElementById('sensorBody');
     const list = allSessions.slice().reverse();
@@ -1035,7 +1084,8 @@ function renderSensor() {
     seg.classList.toggle('dis', !filtering);
     seg.querySelector('[data-v="filt"]').textContent = filtering ? `Szűrt (${nMatch})` : 'Szűrt';
     setSeg('segTbl', filtering && tblFilt ? 'filt' : 'all');
-    const shown = filtering && tblFilt ? list.filter(match) : list;
+    const shown = sortRows(filtering && tblFilt ? list.filter(match) : list);
+    renderSortHead();
     body.innerHTML = shown.length ? '' : '<tr><td colspan="7" class="dim" style="text-align:center;padding:14px">Nincs találat.</td></tr>';
     body.innerHTML += shown.map(s =>
         `<tr id="sr-${s.date}" class="row${has(s, selCode) ? ' hl' : ''}${inSel(s) ? '' : ' fade'}" title="${s.people.join(', ')}">${tableRow(s)}</tr>` +
@@ -1070,7 +1120,10 @@ async function loadSensorData(list) {
         if (tr) tr.innerHTML = tableRow(s);
     }
     sensorLoading = false;
-    if (changed) { saveSensorCache(); renderHeatmap(); renderKpis(); }
+    if (changed) {
+        saveSensorCache(); renderHeatmap(); renderKpis();
+        if (!['date', 'count'].includes(tblSort.key)) renderSensor();   // az új szenzoradatokkal újrarendez
+    }
 }
 
 // A hőmérő bekötésének napja: a ThingSpeak-csatorna létrehozási dátuma
@@ -1139,18 +1192,19 @@ document.getElementById('fileInput').onchange = e => { const f = e.target.files[
     });
 });
 // --- Alaphelyzet: szezonok, személy, oszlopdiagram- és naptár-kapcsolók (a téma marad) ---
-const isDefault = () => !selSeasons.size && !selCode && viewMeasures.size === 1 && viewMeasures.has('b') && viewTypes.size === 2 && hmMode === 'count';
+const isDefault = () => !selSeasons.size && !selCode && viewMeasures.size === 1 && viewMeasures.has('b') && viewTypes.size === 2 && hmMode === 'count' && tblSort.key === 'date' && tblSort.dir === -1;
 // Minden állapotváltozásnál ez fut le, így a link is itt frissül
 function updateResetBtn() { document.getElementById('resetBtn').classList.toggle('idle', isDefault()); syncUrlState(); }
 
 // =====================================================================
 //  ÁLLAPOT A LINKBEN – csak ami eltér az alaphelyzettől, így az alap link tiszta marad.
 //  ?szezon=2024-25,2025-26 &szemely=ABC &mutato=begyujtas,szauna,szemelyek
-//  &kik=hazigazda|vendeg &naptar=maxho|uzemido
+//  &kik=hazigazda|vendeg &naptar=maxho|uzemido &rend=fo-le (a Begyújtások lista rendezése; fel = növekvő, le = csökkenő)
 // =====================================================================
 const URL_MEAS = { b: 'begyujtas', s: 'szauna', p: 'szemelyek' };
 const URL_TYPE = { host: 'hazigazda', guest: 'vendeg' };
 const URL_HM   = { count: 'letszam', max: 'maxho', hot: 'uzemido' };
+const URL_SORT = { date: 'datum', count: 'fo', start: 'kezdes', heat: 'felfutes', max: 'maxho', hot: 'uzemido' };
 const urlKey = (map, v) => Object.keys(map).find(k => map[k] === v);
 
 function readUrlState() {
@@ -1167,6 +1221,9 @@ function readUrlState() {
     if (ts.length) { viewTypes.clear(); ts.forEach(t => viewTypes.add(t)); }
     const hm = urlKey(URL_HM, q.get('naptar'));
     if (hm) hmMode = hm;
+    const [rk, rd] = (q.get('rend') || '').split('-');
+    const sk = urlKey(URL_SORT, rk);
+    if (sk) tblSort = { key: sk, dir: rd === 'fel' ? 1 : rd === 'le' ? -1 : SORT_DEF_DIR[sk] };
     // a kapcsolók gombjai a beolvasott állapotot mutassák
     document.querySelectorAll('#segMeasure button').forEach(x => x.classList.toggle('on', viewMeasures.has(x.dataset.v)));
     document.querySelectorAll('#segType button').forEach(x => x.classList.toggle('on', viewTypes.has(x.dataset.v)));
@@ -1182,13 +1239,14 @@ function syncUrlState() {
     if (!(viewMeasures.size === 1 && viewMeasures.has('b'))) add('mutato', MEAS_ORDER.filter(m => viewMeasures.has(m)).map(m => URL_MEAS[m]));
     if (viewTypes.size < 2) add('kik', [...viewTypes].map(t => URL_TYPE[t]));
     if (hmMode !== 'count') add('naptar', [URL_HM[hmMode]]);
+    if (!(tblSort.key === 'date' && tblSort.dir === -1)) add('rend', [URL_SORT[tblSort.key] + '-' + (tblSort.dir > 0 ? 'fel' : 'le')]);
     const href = location.pathname + (parts.length ? '?' + parts.join('&') : '') + location.hash;
     try { if (href !== location.pathname + location.search + location.hash) history.replaceState(null, '', href); } catch (e) {}
 }
 function setSeg(id, v) { document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
 document.getElementById('resetBtn').onclick = () => {
     if (!allSessions.length) return;
-    selSeasons.clear(); selCode = ''; kpiOpen = false;
+    selSeasons.clear(); selCode = ''; kpiOpen = false; tblSort = { key: 'date', dir: -1 };
     viewMeasures.clear(); viewMeasures.add('b'); viewTypes.clear(); viewTypes.add('host').add('guest'); hmMode = 'count';
     setSeg('segMeasure', 'b'); document.querySelectorAll('#segType button').forEach(x => x.classList.add('on')); setSeg('segHm', 'count');
     document.getElementById('personPanel').classList.add('hidden');
