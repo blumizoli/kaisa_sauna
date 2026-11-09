@@ -1119,6 +1119,7 @@ async function show(text) {
     if (!allSessions.length) { alert('A fájlban nem találtam szaunázást.'); return; }
     await Promise.all([detectSensorStart(), loadSensorCsv()]);
     buildPeople();
+    readUrlState();
     document.getElementById('loadCard').classList.add('hidden');
     document.getElementById('content').classList.remove('hidden');
     applyFilters();
@@ -1139,7 +1140,51 @@ document.getElementById('fileInput').onchange = e => { const f = e.target.files[
 });
 // --- Alaphelyzet: szezonok, személy, oszlopdiagram- és naptár-kapcsolók (a téma marad) ---
 const isDefault = () => !selSeasons.size && !selCode && viewMeasures.size === 1 && viewMeasures.has('b') && viewTypes.size === 2 && hmMode === 'count';
-function updateResetBtn() { document.getElementById('resetBtn').classList.toggle('idle', isDefault()); }
+// Minden állapotváltozásnál ez fut le, így a link is itt frissül
+function updateResetBtn() { document.getElementById('resetBtn').classList.toggle('idle', isDefault()); syncUrlState(); }
+
+// =====================================================================
+//  ÁLLAPOT A LINKBEN – csak ami eltér az alaphelyzettől, így az alap link tiszta marad.
+//  ?szezon=2024-25,2025-26 &szemely=ABC &mutato=begyujtas,szauna,szemelyek
+//  &kik=hazigazda|vendeg &naptar=maxho|uzemido
+// =====================================================================
+const URL_MEAS = { b: 'begyujtas', s: 'szauna', p: 'szemelyek' };
+const URL_TYPE = { host: 'hazigazda', guest: 'vendeg' };
+const URL_HM   = { count: 'letszam', max: 'maxho', hot: 'uzemido' };
+const urlKey = (map, v) => Object.keys(map).find(k => map[k] === v);
+
+function readUrlState() {
+    const q = new URLSearchParams(location.search);
+    const list = k => (q.get(k) || '').split(',').map(x => x.trim()).filter(Boolean);
+    const seasons = new Set(allSessions.map(s => seasonOf(s.date)));
+    list('szezon').map(x => x.replace('-', '/')).filter(x => seasons.has(x)).forEach(x => selSeasons.add(x));
+    if (selSeasons.size === seasons.size) selSeasons.clear();
+    const p = (q.get('szemely') || '').trim().toUpperCase();
+    if (people.has(p)) selCode = p;
+    const ms = list('mutato').map(x => urlKey(URL_MEAS, x)).filter(Boolean);
+    if (ms.length) { viewMeasures.clear(); ms.forEach(m => viewMeasures.add(m)); }
+    const ts = list('kik').map(x => urlKey(URL_TYPE, x)).filter(Boolean);
+    if (ts.length) { viewTypes.clear(); ts.forEach(t => viewTypes.add(t)); }
+    const hm = urlKey(URL_HM, q.get('naptar'));
+    if (hm) hmMode = hm;
+    // a kapcsolók gombjai a beolvasott állapotot mutassák
+    document.querySelectorAll('#segMeasure button').forEach(x => x.classList.toggle('on', viewMeasures.has(x.dataset.v)));
+    document.querySelectorAll('#segType button').forEach(x => x.classList.toggle('on', viewTypes.has(x.dataset.v)));
+    setSeg('segHm', hmMode);
+}
+
+function syncUrlState() {
+    if (!allSessions.length) return;
+    const parts = [];
+    const add = (k, vals) => { if (vals.length) parts.push(k + '=' + vals.map(encodeURIComponent).join(',')); };
+    add('szezon', [...selSeasons].sort().map(s => s.replace('/', '-')));
+    add('szemely', selCode ? [selCode] : []);
+    if (!(viewMeasures.size === 1 && viewMeasures.has('b'))) add('mutato', MEAS_ORDER.filter(m => viewMeasures.has(m)).map(m => URL_MEAS[m]));
+    if (viewTypes.size < 2) add('kik', [...viewTypes].map(t => URL_TYPE[t]));
+    if (hmMode !== 'count') add('naptar', [URL_HM[hmMode]]);
+    const href = location.pathname + (parts.length ? '?' + parts.join('&') : '') + location.hash;
+    try { if (href !== location.pathname + location.search + location.hash) history.replaceState(null, '', href); } catch (e) {}
+}
 function setSeg(id, v) { document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle('on', x.dataset.v === v)); }
 document.getElementById('resetBtn').onclick = () => {
     if (!allSessions.length) return;
@@ -1149,7 +1194,16 @@ document.getElementById('resetBtn').onclick = () => {
     document.getElementById('personPanel').classList.add('hidden');
     applyFilters();   // mindent újrarajzol: a jelmagyarázatban kikapcsolt sorozatok és a kinyitott sorok is alaphelyzetbe kerülnek
 };
-document.getElementById('backBtn').onclick = () => { window.location.href = 'index.html'; };
+// Ha a monitorról jöttünk (pl. egy archív napról), oda térünk vissza; különben a mai nap
+document.getElementById('backBtn').onclick = () => {
+    let to = 'index.html';
+    try {
+        const r = new URL(document.referrer);
+        const dir = location.pathname.replace(/[^/]*$/, '');
+        if (r.origin === location.origin && (r.pathname === dir || r.pathname === dir + 'index.html')) to = r.href;
+    } catch (e) {}
+    window.location.href = to;
+};
 document.getElementById('themeBtn').onclick = () => {
     const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
