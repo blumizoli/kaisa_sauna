@@ -129,10 +129,26 @@
     }
 
     /* --- Chart & Modals --- */
-    #container { 
-        flex: 1; min-height: 0; width: 100%; background: var(--card); 
+    #chartWrap { flex: 1; min-height: 0; width: 100%; position: relative; }
+    #container {
+        position: absolute; inset: 0; background: var(--card);
         border-radius: 10px; border: 1px solid var(--border);
     }
+
+    /* --- Érintőképernyőn: fix adatsáv a görbe fölött (buborék helyett) --- */
+    #readout { display: none; }
+    body.touch #readout {
+        display: flex; position: absolute; top: 1px; left: 1px; right: 1px; height: 44px; z-index: 5;
+        align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px 10px;
+        padding: 3px 8px; font-size: 12px; line-height: 1.3; pointer-events: none;
+        border-bottom: 1px solid var(--border); border-radius: 10px 10px 0 0; color: var(--text-dim);
+    }
+    #readout .hc-time { font-weight: 700; color: var(--text); }
+    #readout .hc-row b, #readout .hc-eta b { color: var(--text); }
+    #readout .hc-foot { display: inline-flex; align-items: center; gap: 6px; }
+    #readout .hc-badge { color: #fff; padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 700; }
+    #readout .hc-warn { color: #ff8c00; font-weight: 700; }
+    #readout .ro-hint { font-style: italic; opacity: 0.8; }
 
     .modal { 
         display: none; position: fixed; z-index: 1000; left: 0; top: 0; 
@@ -349,7 +365,10 @@
     </div>
 </div>
 
-    <div id="container"></div>
+    <div id="chartWrap">
+        <div id="readout"></div>
+        <div id="container"></div>
+    </div>
 
     <div id="infoModal" class="modal">
         <div class="modal-content">
@@ -433,7 +452,7 @@
             </div>
             <div class="info-sec">
                 <h4><i class="fas fa-hourglass-half"></i> ETA</h4>
-                <p><b>Felfűtési</b> állapot esetén a 60 °C elérésének becsült időpontja és a hátralévő percek (T-perc).</p>
+                <p><b>Felfűtési</b> állapot esetén a 60 °C elérésének becsült időpontja és a hátralévő percek (T-perc). A becslés a korábbi felfűtések tapasztalatát és a mostani melegedési ütemet ötvözi; 60 °C közelében egyre inkább a mostani ütem számít.</p>
                 <p><b><i class="fas fa-fire" style="color:#ff8c00"></i> Tegyél rá fát!</b> jelenik meg helyette (és az állapotjelölő villog), ha a melegedés annyira lassul, hogy a mostani ütemben nem lenne meg a 60 °C. Fa rátétele után magától eltűnik.</p>
             </div>
         </div>
@@ -487,6 +506,12 @@ const SMOOTH_LEVELS = [
     { minSpanH: 0, half: 0 }    // 1 óra alatt: valós adatok
 ];
 const THEME_KEY      = 'kaisa-theme';
+// Érintőképernyő (nincs egérmutató): a buborék helyett a görbe fölötti fix sávban jelennek meg az adatok,
+// így az ujj alatt / mellett soha nem takarja ki a görbét
+const TOUCH = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+if (TOUCH) document.body.classList.add('touch');
+const READOUT_HINT = '<span class="ro-hint">Húzd az ujjad a görbén a részletekért</span>';
+function setReadout(html) { const el = document.getElementById('readout'); if (el) el.innerHTML = html || READOUT_HINT; }
 
 const COLORS = {
     ÜZEMI: "#800000", FELFŰTÉSI: "#d32f2f", LEHŰLÉSI: "#1976d2", KÉSZENLÉTI: "#f57c00",
@@ -629,53 +654,70 @@ function gNotRising(pts, i) {
 }
 
 // ETA számítás egy helyen (kártya, tooltip, CSV is ezt használja).
-// Newton-modell: dT/dt = (T∞ − T)/τ  →  G = a + b·T,  T∞ = −a/b,  τ = −1/b
+// A korábbi felfűtések (2026. okt–nov, 5 begyújtás) alapján: a melegedés nem Newton-szerű,
+// hanem a fa égése szabja meg (eleje gyors, 45–50 °C körül lassul, rárakás után újra gyorsul).
+// Ezért két becslés súlyozott (mértani) átlaga:
+//   – tapasztalati: az eddigi felfűtéseknél ebből a hőfokból átlagosan mennyi idő volt még 60 °C-ig
+//   – aktuális: a mostani G-vel lineárisan (60 − T) / G
+// Hidegen inkább a tapasztalat számít (az elején a G még keveset mond), 60 °C közelében egyre
+// inkább a mostani ütem. Visszamérve a 2026-os görbéken az átlagos hiba ~10 percről ~5 percre
+// csökkent, és a becsült időpont percről percre jóval kevésbé ugrál.
+//
+// "Tegyél rá fát!" (fire): Newton-illesztés G = a + b·T, T∞ = −a/b; ha a becsült maximum
+// 60 °C alatt van ÉS a G nem nő ÉS T ≥ 30 °C. Ezt változatlanul hagytuk.
 // Visszatérés: null | { mins, time, at, model } | { fire: true, tinf }
-//   fire: a becsült maximum 60 °C alatt van ÉS a G éppen most is csökken ÉS T ≥ 30 °C
-//   (a becsült maximumot csak ehhez használjuk, önmagában nem írjuk ki: a valóságban
-//   a görbe a kályha/fa miatt laposodik ki, nem a modell szerint)
+
+// Hátralévő perc 60 °C-ig, 20..60 °C között fokonként (az 5 mért felfűtés átlaga).
+// Ha később több görbe lesz, ez a táblázat frissíthető.
+const ETA_PROFILE = [43.7, 42.9, 42.1, 41.3, 40.2, 39.4, 38.0, 37.0, 35.9, 34.6,
+                     33.4, 32.3, 31.4, 30.4, 29.2, 28.5, 27.7, 26.9, 25.9, 24.0,
+                     23.4, 22.5, 21.7, 20.9, 20.0, 19.2, 17.8, 16.5, 15.4, 13.5,
+                     12.5, 11.4, 10.3,  9.1,  7.9,  7.0,  5.9,  4.9,  3.4,  2.0, 0];
+function etaFromProfile(t) {
+    if (t <= 20) return ETA_PROFILE[0] + (20 - t);
+    const f = Math.min(t, 60) - 20, k = Math.min(Math.floor(f), 39);
+    return ETA_PROFILE[k] + (ETA_PROFILE[k + 1] - ETA_PROFILE[k]) * (f - k);
+}
+
 function calcEta(pts, i) {
     const p = pts[i];
     if (p.y >= 60) return null;
-    const heating = p.stText === "FELFŰTÉSI";
-    if (!heating) return null;
+    if (p.stText !== "FELFŰTÉSI") return null;
 
     // Amíg nincs G (adathiány után), az előző becslés marad
-    if (heating && p.grad === null && i > 0 && pts[i - 1].eta && pts[i - 1].eta.at) {
+    if (p.grad === null && i > 0 && pts[i - 1].eta && pts[i - 1].eta.at) {
         const m = Math.round((pts[i - 1].eta.at - p.x) / 60000);
         if (m > 0) return { ...pts[i - 1].eta, mins: m };
     }
 
+    // Lassul-e annyira, hogy fát kell rakni?
     const xs = [], ys = [];
     for (let j = i; j >= 0 && p.x - pts[j].x <= ETA_WINDOW_MS; j--) {
         if (pts[j].grad !== null) { xs.push(pts[j].y); ys.push(pts[j].grad); }
     }
     const tRange = xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
-
     if (xs.length >= 8 && tRange >= 1.5) {
         const reg = linReg(xs, ys);
         if (reg && reg.b < 0) {
             const tinf = -reg.a / reg.b;
-            const tau = -1 / reg.b;
-            if (tinf <= 60) {
-                // Csak akkor riasztunk, ha a melegedés nem gyorsul; ha a G már
-                // újra nő (fát tettél rá), a riasztás megszűnik
-                if (p.y >= FIRE_MIN_T && gNotRising(pts, i)) return { fire: true, tinf };
-            } else if (heating) {
-                const mins = tau * Math.log((tinf - p.y) / (tinf - 60));
-                if (isFinite(mins) && mins > 0 && mins < 24 * 60) {
-                    const m = Math.round(mins);
-                    return { mins: m, time: fmtHM(p.x + m * 60000), at: p.x + m * 60000, model: 'newton' };
-                }
-            }
+            // Csak akkor riasztunk, ha a melegedés nem gyorsul; ha a G már
+            // újra nő (fát tettél rá), a riasztás megszűnik
+            if (tinf <= 60 && p.y >= FIRE_MIN_T && gNotRising(pts, i)) return { fire: true, tinf };
         }
     }
-    // Tartalék: lineáris becslés
-    if (heating && p.grad !== null && p.grad > 0.05) {
-        const m = Math.round((60 - p.y) / p.grad);
-        return { mins: m, time: fmtHM(p.x + m * 60000), at: p.x + m * 60000, model: 'linear' };
+
+    // Tapasztalati + aktuális becslés keveréke
+    const hist = etaFromProfile(p.y);
+    let mins = hist, model = 'profile';
+    if (p.grad !== null && p.grad > 0.05) {
+        const live = (60 - p.y) / p.grad;
+        const w = 0.2 + 0.5 * Math.min(1, Math.max(0, (p.y - 20) / 40));   // az aktuális ütem súlya
+        mins = Math.exp(w * Math.log(Math.max(live, 1)) + (1 - w) * Math.log(Math.max(hist, 1)));
+        model = 'blend';
     }
-    return null;
+    if (!isFinite(mins)) return null;
+    const m = Math.max(1, Math.round(mins));
+    return { mins: m, time: fmtHM(p.x + m * 60000), at: p.x + m * 60000, model };
 }
 
 // Nyers feedből tiszta, rendezett pontsor gradienssel, állapottal, ETA-val
@@ -804,12 +846,10 @@ function gapTooltipHtml(g, x) {
             : fmtHMS(g.realTo) + (g.realTo > end ? ' (másnap)' : '');
         rows = first + `<span class="hc-row">Következő <b>${next}</b></span>`;
     }
-    return `<div class="hc-tip">` +
-           `<span class="hc-time">${fmtHMS(x)}</span>` +
+    return `<span class="hc-time">${fmtHMS(x)}</span>` +
            `<span class="hc-foot"><span class="hc-badge" style="background:${COLORS["NINCS ADAT"]}">NINCS ADAT</span>` +
            `<span class="hc-eta"><b>${fmtDur(gapDurMs(g))}</b>${g.ongoing ? ' óta' : ''}</span></span>` +
-           rows +
-           `</div>`;
+           rows;
 }
 
 // "Utolsó adat" / "Adatok" kártya: idő + adatteljesség
@@ -936,6 +976,7 @@ async function updateArchiveData(preserveView = false) {
     icon.classList.add('spinning');
 
     const oldExtremes = (preserveView && chart) ? chart.xAxis[0].getExtremes() : null;
+    if (!preserveView) setReadout();
     const selDate = document.getElementById('datePicker').value;
     const today = isTodaySelected();
     const { start: dStartMs, end: dEndMs } = dayBounds(selDate);
@@ -1039,7 +1080,7 @@ async function updateArchiveData(preserveView = false) {
 function initChart(theme) {
     const c = THEMES[theme];
     chart = Highcharts.stockChart('container', {
-        chart: { zoomType: 'x', backgroundColor: 'transparent', spacingBottom: 10, reflow: true },
+        chart: { zoomType: 'x', backgroundColor: 'transparent', spacingBottom: 10, reflow: true, ...(TOUCH ? { marginTop: 52 } : {}) },
         rangeSelector: { enabled: false }, scrollbar: { enabled: false }, credits: { enabled: false },
         navigator: {
             enabled: true, margin: 10, height: 40,
@@ -1057,6 +1098,7 @@ function initChart(theme) {
         plotOptions: { series: { states: { hover: { lineWidthPlus: 0 }, inactive: { opacity: 1 } } } },
         xAxis: {
             type: 'datetime', ordinal: false, minRange: 30 * 60 * 1000,
+            crosshair: TOUCH ? { width: 1, color: c.label, dashStyle: 'Dash', zIndex: 4 } : false,
             events: {
                 afterSetExtremes: function (e) {
                     // Felhasználói nagyítás / navigátor-húzás kikapcsolja a követő módot
@@ -1105,7 +1147,12 @@ function initChart(theme) {
             formatter: function () {
                 const p = this.points[0].point;
                 if (p.y === null) return false;
-                if (p.gap) return gapTooltipHtml(p.gap, this.x);
+                // Érintőképernyőn a fix sávba írunk, buborék nincs (a függőleges vonal mutatja a helyet)
+                const out = inner => {
+                    if (TOUCH) { setReadout(inner); return false; }
+                    return `<div class="hc-tip">${inner}</div>`;
+                };
+                if (p.gap) return out(gapTooltipHtml(p.gap, this.x));
                 const color = COLORS[p.stText];
                 const fire = p.eta && p.eta.fire;
                 const blinkClass = fire ? " blink" : "";
@@ -1117,11 +1164,9 @@ function initChart(theme) {
                         etaStr = `<span class="hc-eta">ETA <b>${p.eta.time}</b> (T-${p.eta.mins})</span>`;
                     }
                 }
-                return `<div class="hc-tip">` +
-                       `<span class="hc-time">${fmtHMS(this.x)}</span>` +
+                return out(`<span class="hc-time">${fmtHMS(this.x)}</span>` +
                        `<span class="hc-row">T <b>${(p.rawY ?? p.y).toFixed(1)} °C</b> &nbsp;·&nbsp; G <b>${fmtG(p.grad)} °C/p</b></span>` +
-                       `<span class="hc-foot"><span class="hc-badge${blinkClass}" style="background:${color}">${p.stText}</span>${etaStr}</span>` +
-                       `</div>`;
+                       `<span class="hc-foot"><span class="hc-badge${blinkClass}" style="background:${color}">${p.stText}</span>${etaStr}</span>`);
             }
         },
         series: [{
@@ -1174,7 +1219,7 @@ function applyTheme(theme) {
     if (meta) meta.setAttribute('content', c.meta);
     if (!chart) return;
     chart.update({
-        xAxis: { labels: { style: { color: c.label } } },
+        xAxis: { labels: { style: { color: c.label } }, ...(TOUCH ? { crosshair: { width: 1, color: c.label, dashStyle: 'Dash', zIndex: 4 } } : {}) },
         yAxis: {
             gridLineColor: c.grid,
             labels: { style: { color: c.label } },
@@ -1543,6 +1588,7 @@ window.addEventListener('error', e => {
 });
 
 function boot() {
+    setReadout();
     try {
         initChart(initialTheme);
     } catch (e) {
