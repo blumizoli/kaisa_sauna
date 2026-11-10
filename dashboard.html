@@ -66,7 +66,12 @@
     /* a szezon-gombok függőlegesen középen a felirat és a kártya alja között */
     .f-card .chips { flex: 1; align-items: center; align-content: center; }
     .f-card .hl-line { margin-top: 8px; }
-    .person-wrap { position: relative; }
+    .person-row { display: flex; gap: 6px; }
+    .person-wrap { position: relative; flex: 1; min-width: 0; }
+    #personClear { flex: none; width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font-size: 15px; cursor: pointer; }
+    [data-theme="dark"] #personClear { background: #252525; }
+    #personClear:not(:disabled) { color: var(--header-red); border-color: var(--header-red); }
+    #personClear:disabled { opacity: 0.35; cursor: default; }
     .f-lbl { font-size: 11px; color: var(--header-red); font-weight: 700; margin-bottom: 4px; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .chips button { flex: 1 1 0; min-width: 0; white-space: nowrap; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -149,6 +154,14 @@
     .hm-legend .r > span { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; }
     .hm-legend i.fr { box-shadow: 0 0 0 1.5px var(--text) inset; }
     .hm-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .hm-year rect[data-d] { cursor: pointer; }
+    .hm-info { margin-top: 8px; padding: 7px 9px; border-radius: 8px; background: var(--hl-bg); font-size: 12px; line-height: 1.6; color: var(--text-dim); }
+    .hm-info b { color: var(--text); }
+    .hm-info .code { display: inline-block; padding: 0 5px; margin-right: 2px; border-radius: 4px; background: var(--card); color: var(--text); }
+    .hm-info .code.me { background: var(--header-red); color: #fff; }
+    .hm-info .code.host { box-shadow: inset 0 0 0 1px var(--text-dim); }
+    .hm-info a { color: var(--header-red); font-weight: 700; text-decoration: none; white-space: nowrap; }
+    .hm-info .x { float: right; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 0 2px; }
     /* A lista a naptár magasságáig ér (egymás mellett), a többi görgethető */
     @media (min-width: 1100px) {
         .tbl-card { height: 0; min-height: max(100%, 340px); display: flex; flex-direction: column; }
@@ -174,6 +187,9 @@
     tr.hl td { background: var(--hl-bg); }
     tr.hl td:first-child { box-shadow: inset 3px 0 0 var(--header-red); }
     tr.fade td { opacity: 0.35; }
+    tr.flash td { animation: rowFlash 1.6s ease-out; }
+    @keyframes rowFlash { 0%, 35% { background: rgba(211, 47, 47, 0.35); } 100% { background: transparent; } }
+    @media (min-width: 1100px) { .hm-info { display: none; } }   /* egymás mellett a lista mutatja (felvillan) */
     th[data-sort] { cursor: pointer; user-select: none; -webkit-user-select: none; }
     @media (hover: hover) { th[data-sort]:hover { color: var(--text); } }
     th[data-sort].on { color: var(--header-red); }
@@ -199,7 +215,7 @@
 <main>
     <div class="toolbar">
         <button id="backBtn" title="Vissza a monitorhoz"><i class="fas fa-arrow-left"></i></button>
-        <div class="title"><i class="fa-solid fa-chart-simple"></i> Kaisa Sauna Dashboard</div>
+        <div class="title"><i class="fa-solid fa-chart-simple"></i> Dashboard</div>
         <button id="resetBtn" title="Alaphelyzet: szűrők és kapcsolók visszaállítása"><i class="fas fa-rotate-left"></i></button>
         <button id="themeBtn" title="Téma"><i class="fas fa-circle-half-stroke"></i></button>
     </div>
@@ -220,9 +236,12 @@
             </div>
             <div class="card f-card person">
                 <div class="f-lbl">Személyek</div>
-                <div class="person-wrap">
-                    <button id="personBtn"><span id="personLbl">Nincs kiemelés</span><i class="fas fa-chevron-down"></i></button>
-                    <div id="personPanel" class="hidden"></div>
+                <div class="person-row">
+                    <div class="person-wrap">
+                        <button id="personBtn"><span id="personLbl">Nincs kiemelés</span><i class="fas fa-chevron-down"></i></button>
+                        <div id="personPanel" class="hidden"></div>
+                    </div>
+                    <button id="personClear" title="Kiemelés törlése" aria-label="Kiemelés törlése" disabled><i class="fas fa-xmark"></i></button>
                 </div>
                 <div class="hl-line hidden" id="hlLine"></div>
             </div>
@@ -260,14 +279,12 @@
             <div class="card">
                 <div class="cal-head">
                     <h3><i class="fa-solid fa-table-cells"></i> Naptár</h3>
-                    <div class="toggles">
-                        <div class="seg small" id="segHmType" title="Kiemelés: a többi nap halványan látszik"><button data-v="all" class="on">Mind</button><button data-v="host">Csak házigazda</button><button data-v="guest">Vendéggel</button></div>
-                        <div class="seg small" id="segHm"><button data-v="count" class="on">Létszám</button><button data-v="max">Max hőfok</button><button data-v="hot">Üzemidő</button></div>
-                    </div>
+                    <div class="seg small" id="segHm"><button data-v="count" class="on">Létszám</button><button data-v="type">Vendég</button><button data-v="max">Max hőfok</button><button data-v="hot">Üzemidő</button></div>
                 </div>
-                <div class="sub">Szezononként egy sor, oszloponként egy hét (hétfőtől vasárnapig). A pöttyel jelölt napokon van szenzoradat, ezekre kattintva megnyílik a nap görbéje. A ki nem választott szezonok halványan; a kiemelt személy napjai keretet kapnak, a többi nap halvány. A „Csak házigazda” / „Vendéggel” gomb ugyanígy kiemel: a többi alkalom halványan látszik (személyre szűréssel együtt is működik).</div>
+                <div class="sub">Szezononként egy sor, oszloponként egy hét (hétfőtől vasárnapig). A szín a fenti gombbal választott adatot mutatja; a pöttyös napokon van szenzoradat (hőmérséklet-görbe). Egy napra koppintva a Begyújtások listában felvillan és lenyílik a sora (keskeny kijelzőn az adatai a naptár alatt is megjelennek); ugyanarra a napra, egy üres napra vagy a kártyákon kívülre koppintva a kijelölés megszűnik. A ki nem választott szezonok halványan; kiemelt személynél az ő napjai keretet kapnak, a többi halvány.</div>
                 <div class="hm-wrap" id="heatmap"></div>
                 <div class="hm-legend" id="hmLegend"></div>
+                <div class="hm-info" id="hmInfo"></div>
             </div>
             <div class="card tbl-card">
                 <div class="cal-head">
@@ -459,8 +476,15 @@ function renderPersonPanel() {
         `<div class="pp-sec">Házigazdák</div>` + hosts.map(row).join('') +
         `<div class="pp-sec">Vendégek</div>` + guests.map(row).join('');
     const o = people.get(selCode);
+    document.getElementById('personClear').disabled = !selCode;
     document.getElementById('personLbl').innerHTML = o ? `<span class="code">${o.code}</span> · ${o.status}${o.rank ? ' · ' + o.rank + '.' : ''}` : 'Nincs kiemelés';
 }
+document.getElementById('personClear').addEventListener('click', () => {
+    if (!selCode) return;
+    selCode = '';
+    document.getElementById('personPanel').classList.add('hidden');
+    applyFilters();
+});
 document.getElementById('personBtn').addEventListener('click', e => {
     e.stopPropagation();
     document.getElementById('personPanel').classList.toggle('hidden');
@@ -881,14 +905,88 @@ function renderCharts() {
 //  Színezés: létszám, max hőfok vagy üzemidő szerint.
 // =====================================================================
 let hmMode = 'count';
-let hmType = 'all';   // naptár-kiemelés: all | host (csak házigazdás alkalmak) | guest (vendéggel)
-const typeOk = s => hmType === 'all' || (hmType === 'host' ? !s.guests.length : s.guests.length > 0);
+let hmDay = '';   // a naptárban kijelölt nap (részletek a naptár alatt)
 let tblFilt = false;   // Begyújtások lista: csak a szűrt sorok (szűréskor magától bekapcsol)
+// Minden mód egy kérdésre felel, egy színskálával. A „Vendég” mód két jól elkülönülő színnel
+// a létszám-skála árnyalataiból: sötét (mint a 3–4 fő) = csak házigazdával, világos (mint az 1 fő) = vendéggel.
 const HM_MODES = {
     count: { lvl: s => s.count >= 5 ? 4 : s.count >= 3 ? 3 : s.count === 2 ? 2 : 1, legend: ['1 fő', '2 fő', '3–4 fő', '5+ fő'], sensor: false },
+    type:  { fill: s => s.guests.length ? 'var(--hm-1)' : 'var(--hm-3)', legend: [['var(--hm-3)', 'csak házigazdával'], ['var(--hm-1)', 'vendéggel']], sensor: false },
     max:   { lvl: s => { const a = sensorOf(s.date); return !a ? 0 : a.max >= 80 ? 4 : a.max >= 70 ? 3 : a.max >= 60 ? 2 : 1; }, legend: ['< 60 °C', '60–70 °C', '70–80 °C', '80+ °C'], sensor: true },
     hot:   { lvl: s => { const a = sensorOf(s.date); return !a ? 0 : a.hot >= 180 ? 4 : a.hot >= 120 ? 3 : a.hot >= 60 ? 2 : 1; }, legend: ['< 1 óra', '1–2 óra', '2–3 óra', '3+ óra'], sensor: true }
 };
+
+// A kijelölt nap minden adata egy sorban (mobilon a <title> buborék nem jelenik meg, ez pótolja)
+function renderHmInfo() {
+    const box = document.getElementById('hmInfo');
+    const s = hmDay && allSessions.find(x => x.date === hmDay);
+    if (!s) { box.innerHTML = '<span class="dim">Koppints egy szaunázós napra a részletekért.</span>'; return; }
+    const wd = DAYS_HU[weekdayIdx(s.date)].toLowerCase();
+    const parts = [`<b>${fmtDate(s.date)}.</b> ${wd}`, `<b>${s.count}</b> fő ${s.guests.length ? '' : '(csak házigazdával) '}${codeChips(s)}`];
+    if (s.date < sensorStart) parts.push('<span class="dim">a hőmérő bekötése előtt, nincs görbe</span>');
+    else {
+        const v = sensorCache.get(s.date);
+        if (v === undefined) parts.push('<span class="dim">szenzoradat betöltése…</span>');
+        else if (!v || v === 'err') parts.push('<span class="dim">nincs szenzoradat</span>');
+        else {
+            if (v.start) parts.push(`begyújtás <b>${fmtHM(v.start)}</b>`);
+            parts.push(`felfűtés <b>${v.heat !== null ? fmtMin(v.heat) : (v.reached ? '—' : 'nem érte el a 60 °C-ot')}</b>`);
+            parts.push(`max <b>${fmtNum(v.max)} °C</b>`);
+            parts.push(`üzemidő <b>${v.hot > 0 ? fmtMin(v.hot) : '—'}</b>`);
+        }
+    }
+    box.innerHTML = `<button class="x" title="Bezárás" aria-label="Bezárás"><i class="fas fa-xmark"></i></button>` + parts.join(' · ') +
+        (hasSensor(s.date) ? ` · <a href="index.html?date=${s.date}">Görbe <i class="fas fa-arrow-right"></i></a>` : '');
+    box.querySelector('.x').onclick = clearHmDay;
+}
+document.getElementById('heatmap').addEventListener('click', e => {
+    const r = e.target.closest('[data-d]');
+    // üres (szürke) napra, vagy ugyanarra a napra újra kattintva: kijelölés törlése
+    if (!r || r.dataset.d === hmDay) { clearHmDay(); return; }
+    if (hmDay) collapseRow(hmDay);
+    hmDay = r.dataset.d;
+    renderHeatmap();
+    flashRow(hmDay);
+});
+// Kártyákon kívülre kattintva is megszűnik a kijelölés
+document.addEventListener('click', e => {
+    // (a naptár újrarajzolásakor a kattintott elem már nincs a lapon – az belső kattintás volt)
+    if (hmDay && e.target.isConnected && !e.target.closest('.card, .kpi, .kpi-people, .toolbar, #egg')) clearHmDay();
+});
+function collapseRow(ds) {
+    const tr = document.getElementById('sr-' + ds);
+    if (!tr) return;
+    tr.classList.remove('open');
+    document.getElementById('dt-' + ds).classList.add('hidden');
+}
+function clearHmDay() {
+    if (!hmDay) return;
+    collapseRow(hmDay);
+    hmDay = '';
+    renderHeatmap();
+}
+// A kijelölt nap sora a Begyújtások listában: odagörget (a listán belül), lenyitja a résztvevőket és felvillan.
+// Széles kijelzőn a lista a naptár mellett van, ott ez a visszajelzés; keskenyen a naptár alatti sáv is megjelenik.
+function flashRow(ds) {
+    let tr = document.getElementById('sr-' + ds);
+    if (!tr) {   // a „Szűrt” nézet elrejti (más szezon / személy) → „Mind” nézet, ott halványan látszik
+        tblFilt = false;
+        renderSensor();
+        tr = document.getElementById('sr-' + ds);
+        if (!tr) return;
+    }
+    // a korábban lenyitott sorok összecsukódnak
+    document.querySelectorAll('#sensorBody tr.row.open').forEach(o => {
+        if (o === tr) return;
+        o.classList.remove('open');
+        document.getElementById('dt-' + o.id.slice(3)).classList.add('hidden');
+    });
+    tr.classList.add('open');
+    document.getElementById('dt-' + ds).classList.remove('hidden');
+    const wrap = tr.closest('.tbl-wrap');
+    wrap.scrollTop = tr.offsetTop - wrap.querySelector('thead').offsetHeight;
+    tr.classList.remove('flash'); void tr.offsetWidth; tr.classList.add('flash');
+}
 
 function renderHeatmap() {
     const wrap = document.getElementById('heatmap');
@@ -910,8 +1008,6 @@ function renderHeatmap() {
     const unit = Math.max(12, Math.min(13, Math.floor(avail / maxWeeks)));   // 10–11 px-es négyzet + 2 px rés
     const gap = 2, cw = unit - gap, top = 14, sx = unit, sy = unit, rx = 2;
     let html = '', octX = 0;
-    // A jelmagyarázat szürkéi az oszlopdiagramokéi (a naptár maga halványítással jelöl)
-    const grays = bgColors(2);
     for (const { y, first, off, days, weeks } of layout) {
         let rects = '', labels = '';
         for (let m = m0; m <= m1; m++) {
@@ -927,20 +1023,17 @@ function renderHeatmap() {
             const s = byDate.get(ds);
             if (!s) { rects += `<rect x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="var(--hm-empty)"/>`; continue; }
             const mine = has(s, selCode);
-            // halvány: ha van kiemelt személy és ő nem volt ott, vagy nem illik a házigazda/vendég kiemeléshez
-            const op = (selCode && !mine) || !typeOk(s) ? ' opacity="0.22"' : '';
-            const stroke = mine ? ` stroke="var(--text)" stroke-width="1.5"` : '';
-            const a = sensorOf(ds), sensor = hasSensor(ds);
-            const lv = mode.lvl(s);
-            const fill = lv ? `var(--hm-${lv})` : 'url(#hmNd)';   // nincs szenzoradat: sraffozott
+            const op = selCode && !mine ? ' opacity="0.22"' : '';   // kiemelt személy: a többi nap halvány
+            const sel = ds === hmDay;
+            const stroke = sel ? ` stroke="var(--header-red)" stroke-width="2"` : mine ? ` stroke="var(--text)" stroke-width="1.5"` : '';
+            let fill;
+            if (mode.fill) fill = mode.fill(s);
+            else { const lv = mode.lvl(s); fill = lv ? `var(--hm-${lv})` : 'url(#hmNd)'; }   // nincs szenzoradat: sraffozott
+            const a = sensorOf(ds);
             let tip = `${fmtDate(ds)} · ${s.count} fő (${s.people.join(', ')})`;
             if (a) tip += ` · max ${fmtNum(a.max)} °C · üzemidő ${a.hot > 0 ? fmtMin(a.hot) : '—'}`;
-            else if (mode.sensor) tip += ' · nincs szenzoradat';
-            if (sensor) tip += ' · kattints a görbéért';
-            const rect = `<rect x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="${fill}"${op}${stroke}><title>${tip}</title></rect>`;
-            rects += sensor
-                ? `<a href="index.html?date=${ds}">${rect}<circle cx="${x + cw / 2}" cy="${yy + cw / 2}" r="2" fill="#fff"${op} pointer-events="none"/></a>`
-                : rect;
+            rects += `<rect data-d="${ds}" x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="${fill}"${op}${stroke}><title>${tip}</title></rect>`;
+            if (hasSensor(ds)) rects += `<circle cx="${x + cw / 2}" cy="${yy + cw / 2}" r="2" fill="#fff"${op} pointer-events="none"/>`;   // van szenzoradat
         }
         const w = weeks * sx, h = top + 7 * sy;
         const fade = selSeasons.size && !selSeasons.has(`${y}/${pad2((y + 1) % 100)}`) ? ' fade' : '';
@@ -950,33 +1043,22 @@ function renderHeatmap() {
     wrap.innerHTML = html;
     wrap.scrollLeft = Math.max(0, octX - 4);
     const sw = (style, cls = '') => `<i class="${cls}" style="${style}"></i>`;
-    document.getElementById('hmLegend').innerHTML =
-        // 1. sor: a színskála (létszám / hőfok / üzemidő)
-        `<div class="r">` + mode.legend.map((t, i) => `<span>${sw(`background:var(--hm-${i + 1})`)}${t}</span>`).join('') +
-            (mode.sensor ? `<span>${sw('background:repeating-linear-gradient(45deg, var(--hm-empty) 0 2px, var(--hm-nodata) 2px 3.6px)')}nincs adat</span>` : '') + `</div>` +
-        // 2. sor: szenzoradat, kiemelt személy kerettel
-        `<div class="r"><span><svg width="10" height="10"><rect width="10" height="10" rx="2" fill="var(--hm-3)"/><circle cx="5" cy="5" r="2" fill="#fff"/></svg>szenzoradat (kattintható)</span>` +
-            (selCode ? `<span>${sw('background:var(--hm-3)', 'fr')}Kiválasztott (<span class="code">${selCode}</span>)</span>` : '') +
-            (hmType !== 'all' ? (() => {
-                const vis = allSessions.filter(s => inSel(s) && (!selCode || has(s, selCode)));
-                return `<span>${sw('background:var(--hm-3)')}Kiemelve: <b style="color:var(--text)">${hmType === 'host' ? 'csak házigazdás' : 'vendéges'}</b> alkalmak (${vis.filter(typeOk).length} / ${vis.length})</span>`;
-            })() : '') + `</div>` +
-        // 3. sor (csak szezonszűréskor): az üres napok szürkéi
-        (selSeasons.size ? `<div class="r"><span>${sw('background:' + grays[0])}Szűrés nélkül</span><span>${sw('background:' + grays[1])}Kiválasztott szezon</span></div>` : '');
+    const scale = mode.fill
+        ? mode.legend.map(([c, t]) => `<span>${sw('background:' + c)}${t}</span>`).join('')
+        : mode.legend.map((t, i) => `<span>${sw(`background:var(--hm-${i + 1})`)}${t}</span>`).join('');
+    document.getElementById('hmLegend').innerHTML = `<div class="r">` + scale +
+        (mode.sensor ? `<span>${sw('background:repeating-linear-gradient(45deg, var(--hm-empty) 0 2px, var(--hm-nodata) 2px 3.6px)')}nincs adat</span>` : '') +
+        `</div>` +
+        // 2. sor: a színtől független jelölések (pötty, keret), ezért színtelen mintával
+        `<div class="r"><span><svg width="10" height="10"><rect width="10" height="10" rx="2" fill="var(--hm-nodata)"/><circle cx="5" cy="5" r="2" fill="#fff"/></svg>van szenzoradat</span>` +
+        (selCode ? `<span>${sw('background:var(--hm-empty)', 'fr')}<span class="code">${selCode}</span> napjai</span>` : '') + `</div>`;
+    renderHmInfo();
 }
 document.getElementById('segTbl').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
     tblFilt = b.dataset.v === 'filt';
     renderSensor();
-});
-document.getElementById('segHmType').addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    hmType = b.dataset.v;
-    setSeg('segHmType', hmType);
-    renderHeatmap();
-    updateResetBtn();
 });
 document.getElementById('segHm').addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -1197,32 +1279,37 @@ async function show(text) {
 }
 
 document.getElementById('fileInput').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(show); };
-// Több gombos kapcsolók: kattintásra ki-be; az utolsó aktív gomb nem kapcsolható ki
+// Több gombos kapcsolók: kattintásra ki-be; az utolsó aktív gombot kikapcsolva az alapállapot jön vissza
 [['segMeasure', viewMeasures], ['segType', viewTypes]].forEach(([id, set]) => {
     document.getElementById(id).addEventListener('click', e => {
         const b = e.target.closest('button');
         if (!b) return;
         const v = b.dataset.v;
-        if (set.has(v)) { if (set.size === 1) return; set.delete(v); } else set.add(v);
-        b.classList.toggle('on', set.has(v));
+        // Az egyetlen bekapcsolt gombra kattintva (kikapcsolná) → az adott kapcsoló alapállapota:
+        // mérőszámnál a begyújtás, házigazda/vendégnél mindkettő
+        if (set.has(v) && set.size === 1) {
+            set.clear();
+            (id === 'segMeasure' ? ['b'] : ['host', 'guest']).forEach(x => set.add(x));
+        } else if (set.has(v)) set.delete(v);
+        else set.add(v);
+        document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle('on', set.has(x.dataset.v)));
         renderCharts();
         updateResetBtn();
     });
 });
 // --- Alaphelyzet: szezonok, személy, oszlopdiagram- és naptár-kapcsolók (a téma marad) ---
-const isDefault = () => !selSeasons.size && !selCode && viewMeasures.size === 1 && viewMeasures.has('b') && viewTypes.size === 2 && hmMode === 'count' && hmType === 'all' && tblSort.key === 'date' && tblSort.dir === -1;
+const isDefault = () => !selSeasons.size && !selCode && viewMeasures.size === 1 && viewMeasures.has('b') && viewTypes.size === 2 && hmMode === 'count' && tblSort.key === 'date' && tblSort.dir === -1;
 // Minden állapotváltozásnál ez fut le, így a link is itt frissül
 function updateResetBtn() { document.getElementById('resetBtn').classList.toggle('idle', isDefault()); syncUrlState(); }
 
 // =====================================================================
 //  ÁLLAPOT A LINKBEN – csak ami eltér az alaphelyzettől, így az alap link tiszta marad.
 //  ?szezon=2024-25,2025-26 &szemely=ABC &mutato=begyujtas,szauna,szemelyek
-//  &kik=hazigazda|vendeg &naptar=maxho|uzemido &kiemeles=hazigazda|vendeg &rend=fo-le (a Begyújtások lista rendezése; fel = növekvő, le = csökkenő)
+//  &kik=hazigazda|vendeg &naptar=vendeg|maxho|uzemido &rend=fo-le (a Begyújtások lista rendezése; fel = növekvő, le = csökkenő)
 // =====================================================================
 const URL_MEAS = { b: 'begyujtas', s: 'szauna', p: 'szemelyek' };
 const URL_TYPE = { host: 'hazigazda', guest: 'vendeg' };
-const URL_HM   = { count: 'letszam', max: 'maxho', hot: 'uzemido' };
-const URL_HMT  = { host: 'hazigazda', guest: 'vendeg' };
+const URL_HM   = { count: 'letszam', type: 'vendeg', max: 'maxho', hot: 'uzemido' };
 const URL_SORT = { date: 'datum', count: 'fo', start: 'kezdes', heat: 'felfutes', max: 'maxho', hot: 'uzemido' };
 const urlKey = (map, v) => Object.keys(map).find(k => map[k] === v);
 
@@ -1240,8 +1327,6 @@ function readUrlState() {
     if (ts.length) { viewTypes.clear(); ts.forEach(t => viewTypes.add(t)); }
     const hm = urlKey(URL_HM, q.get('naptar'));
     if (hm) hmMode = hm;
-    const hmt = urlKey(URL_HMT, q.get('kiemeles'));
-    if (hmt) hmType = hmt;
     const [rk, rd] = (q.get('rend') || '').split('-');
     const sk = urlKey(URL_SORT, rk);
     if (sk) tblSort = { key: sk, dir: rd === 'fel' ? 1 : rd === 'le' ? -1 : SORT_DEF_DIR[sk] };
@@ -1249,7 +1334,6 @@ function readUrlState() {
     document.querySelectorAll('#segMeasure button').forEach(x => x.classList.toggle('on', viewMeasures.has(x.dataset.v)));
     document.querySelectorAll('#segType button').forEach(x => x.classList.toggle('on', viewTypes.has(x.dataset.v)));
     setSeg('segHm', hmMode);
-    setSeg('segHmType', hmType);
 }
 
 function syncUrlState() {
@@ -1261,7 +1345,6 @@ function syncUrlState() {
     if (!(viewMeasures.size === 1 && viewMeasures.has('b'))) add('mutato', MEAS_ORDER.filter(m => viewMeasures.has(m)).map(m => URL_MEAS[m]));
     if (viewTypes.size < 2) add('kik', [...viewTypes].map(t => URL_TYPE[t]));
     if (hmMode !== 'count') add('naptar', [URL_HM[hmMode]]);
-    if (hmType !== 'all') add('kiemeles', [URL_HMT[hmType]]);
     if (!(tblSort.key === 'date' && tblSort.dir === -1)) add('rend', [URL_SORT[tblSort.key] + '-' + (tblSort.dir > 0 ? 'fel' : 'le')]);
     const href = location.pathname + (parts.length ? '?' + parts.join('&') : '') + location.hash;
     try { if (href !== location.pathname + location.search + location.hash) history.replaceState(null, '', href); } catch (e) {}
@@ -1270,8 +1353,8 @@ function setSeg(id, v) { document.querySelectorAll(`#${id} button`).forEach(x =>
 document.getElementById('resetBtn').onclick = () => {
     if (!allSessions.length) return;
     selSeasons.clear(); selCode = ''; kpiOpen = false; tblSort = { key: 'date', dir: -1 };
-    viewMeasures.clear(); viewMeasures.add('b'); viewTypes.clear(); viewTypes.add('host').add('guest'); hmMode = 'count'; hmType = 'all';
-    setSeg('segMeasure', 'b'); document.querySelectorAll('#segType button').forEach(x => x.classList.add('on')); setSeg('segHm', 'count'); setSeg('segHmType', 'all');
+    viewMeasures.clear(); viewMeasures.add('b'); viewTypes.clear(); viewTypes.add('host').add('guest'); hmMode = 'count'; hmDay = '';
+    setSeg('segMeasure', 'b'); document.querySelectorAll('#segType button').forEach(x => x.classList.add('on')); setSeg('segHm', 'count');
     document.getElementById('personPanel').classList.add('hidden');
     applyFilters();   // mindent újrarajzol: a jelmagyarázatban kikapcsolt sorozatok és a kinyitott sorok is alaphelyzetbe kerülnek
 };
