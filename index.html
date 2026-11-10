@@ -90,6 +90,7 @@
     .val-data { font-size: 13px; font-weight: bold; }
     .val-data.stale { opacity: 0.45; }
     .val-sub { font-weight: normal; font-size: 11px; color: var(--text-dim); }
+    .ppl-codes { display: block; font-family: Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.2; font-weight: 700; color: var(--text); white-space: nowrap; }
 
     /* --- Napléptető nyilak a dátum kártyán (a rejtett dátumválasztó fölött) --- */
     .day-nav {
@@ -176,14 +177,16 @@
     .cal-grid button { position: relative; height: 34px; border: none; border-radius: 6px; background: transparent; color: var(--text); font-size: 13px; cursor: pointer; }
     @media (hover: hover) { .cal-grid button:not(:disabled):hover { background: var(--bg); } }
     .cal-grid button.hot { background: rgba(211, 47, 47, 0.18); font-weight: 700; }
-    .cal-grid button.hot::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--header-red); }
+    .cal-grid button.sens::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--header-red); }
     .cal-grid button.today { box-shadow: inset 0 0 0 1.5px var(--header-red); }
     .cal-grid button.sel { background: var(--header-red); color: #fff; font-weight: 700; }
     .cal-grid button.sel::after { background: #fff; }
     .cal-grid button:disabled { opacity: 0.3; cursor: default; }
     .cal-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 12px; }
     .cal-foot button { padding: 0 12px; }
-    .cal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--header-red); }
+    .cal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--header-red); vertical-align: middle; }
+    .cal-hot { display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: rgba(211, 47, 47, 0.18); vertical-align: middle; }
+    .cal-foot .lg { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .info-sec h4 { 
         margin: 0 0 8px 0; color: var(--header-red); border-bottom: 1px solid var(--border); 
         padding-bottom: 4px; display: flex; align-items: center; gap: 8px; 
@@ -353,8 +356,8 @@
             <div class="values-grid" style="grid-template-columns: 0.7fr 1.3fr; height: 100%; align-items: center;">
                 <div class="val-item">
                     <div class="card-header-mini">
-                        <i class="fas fa-hourglass-half" style="color: var(--header-red);"></i>
-                        <span class="card-title-mini" style="color: var(--header-red);">ETA</span>
+                        <i id="etaIcon" class="fas fa-hourglass-half" style="color: var(--header-red);"></i>
+                        <span id="etaTitle" class="card-title-mini" style="color: var(--header-red);">ETA</span>
                     </div>
                 </div>
                 <div class="val-item" style="justify-content: center;">
@@ -387,7 +390,7 @@
             <div class="info-sec">
                 <h4><i class="fa-regular fa-calendar"></i> Dátum</h4>
                 <p>A közepére kattintva megnyílik a naptár.<br>
-                   A szaunázós napokat piros háttér és pötty jelzi.<br>
+                   A szaunázós napokat halványpiros háttér jelzi; pötty azokon, amelyekhez van szenzoradat (görbe). A „Ma” gomb a mai napra ugrik.<br>
                    A nyilakkal az előző / következő napra ugorhatsz.</p>
             </div>
 
@@ -441,14 +444,19 @@
                         </tr>
                         <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 8px 0;"><span class="status-badge" style="background:#A0522D; min-width: 90px; margin: 0 auto;">ARCHÍV</span></td>
-                            <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">Archív napokon részletek a tooltip-ben.</td>
+                            <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">Részletek a tooltipben.</td>
                         </tr>
                         <tr>
                             <td style="padding: 8px 0;"><span class="status-badge" style="background:#555555; min-width: 90px; margin: 0 auto;">NINCS ADAT</span></td>
-                            <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">Mai napon: az elmúlt 2 percben nem érkezett mérési adat.<br>Archív napon: amennyiben egyetlen adat sem érkezett.</td>
+                            <td colspan="2" style="padding: 8px 4px; color: var(--text-dim); font-style: italic;">Nincs friss mérés.*</td>
                         </tr>
                     </tbody>
                 </table>
+                <p class="dim" style="font-size: 11px; margin: 6px 0 0;">* Mai napon: az elmúlt 2 percben nem érkezett mérési adat. Archív napon: aznap egyetlen mérés sem érkezett.</p>
+            </div>
+            <div class="info-sec">
+                <h4><i class="fas fa-users"></i> Szauna (archív napokon)</h4>
+                <p>Archív napon az ETA kártya helyén: fejlécében a létszám (pl. „4 fő”), mellette a résztvevők kódjai a szaunanaplóból. Ha aznap nem volt szaunázás: „nem volt”.</p>
             </div>
             <div class="info-sec">
                 <h4><i class="fas fa-hourglass-half"></i> ETA</h4>
@@ -469,7 +477,7 @@
             </div>
             <div class="cal-grid" id="calGrid"></div>
             <div class="cal-foot">
-                <span><i class="cal-dot"></i> szaunázás volt</span>
+                <span class="lg"><span><i class="cal-hot"></i> szaunázás</span><span><i class="cal-dot"></i> van szenzoradat</span></span>
                 <button id="calToday">Ma</button>
             </div>
         </div>
@@ -941,6 +949,31 @@ function updateDayNavState() {
     document.getElementById('nextDayBtn').disabled = !sel || sel >= localDateStr();
 }
 
+// Archív napon az ETA kártya a résztvevőket mutatja (a szaunanaplóból); a mai napon ETA
+function setEtaCardMode(archive, title) {
+    document.getElementById('etaIcon').className = archive ? 'fas fa-users' : 'fas fa-hourglass-half';
+    document.getElementById('etaTitle').innerText = archive ? (title || 'Szauna') : 'ETA';
+}
+function renderPeopleCard(selDate) {
+    setEtaCardMode(true);
+    const span = document.getElementById('eta_val');
+    span.style.color = ''; span.style.fontSize = '13px';
+    const ppl = sessionPeople.get(selDate);
+    const card = span.closest('.card');
+    if (!sessionDays.size) { span.innerHTML = '&nbsp;'; card.title = ''; return; }   // a napló még nem töltődött be / nem elérhető
+    if (!ppl || !ppl.length) {
+        span.innerHTML = sessionDays.has(selDate) ? 'volt' : '<span class="val-sub">nem volt</span>';
+        card.title = '';
+        return;
+    }
+    // a létszám a kártya fejlécébe kerül, a kódok soronként legfeljebb 3-asával (6 fő is kifér)
+    setEtaCardMode(true, `${ppl.length} fő`);
+    const rows = [];
+    for (let k = 0; k < ppl.length; k += 3) rows.push(ppl.slice(k, k + 3).join(' '));
+    span.innerHTML = `<span class="ppl-codes">${rows.join('<br>')}</span>`;
+    card.title = `Résztvevők (${ppl.length}): ${ppl.join(', ')}`;
+}
+
 function renderDateCard(selDate) {
     updateDayNavState();
     const daysHu = ['vasárnap', 'hétfő', 'kedd', 'szerda', 'csütörtök', 'péntek', 'szombat'];
@@ -985,6 +1018,7 @@ async function updateArchiveData(preserveView = false) {
     syncDateUrl(selDate);
     document.getElementById('refreshBtn').disabled = !today;
     if (!today) followNow = false;
+    if (today) { setEtaCardMode(false); document.getElementById('eta_val').closest('.card').title = ''; }
 
     try {
         const feeds = await fetchFeeds(dStartMs - 10800000, dEndMs + 10800000);
@@ -1059,6 +1093,7 @@ async function updateArchiveData(preserveView = false) {
             chart.series[0].update({ threshold: yMin }, false);
         }
 
+        if (!today) renderPeopleCard(selDate);
         renderDataCard(today, currentDayPoints[currentDayPoints.length - 1], currentCompleteness, currentGaps);
         chart.redraw();
 
@@ -1098,7 +1133,7 @@ function initChart(theme) {
         plotOptions: { series: { states: { hover: { lineWidthPlus: 0 }, inactive: { opacity: 1 } } } },
         xAxis: {
             type: 'datetime', ordinal: false, minRange: 30 * 60 * 1000,
-            crosshair: TOUCH ? { width: 1, color: c.label, dashStyle: 'Dash', zIndex: 4 } : false,
+            crosshair: { width: 1, color: c.label, dashStyle: 'Dash', zIndex: 4 },   // függőleges vonal a kurzor / ujj alatt
             events: {
                 afterSetExtremes: function (e) {
                     // Felhasználói nagyítás / navigátor-húzás kikapcsolja a követő módot
@@ -1219,7 +1254,7 @@ function applyTheme(theme) {
     if (meta) meta.setAttribute('content', c.meta);
     if (!chart) return;
     chart.update({
-        xAxis: { labels: { style: { color: c.label } }, ...(TOUCH ? { crosshair: { width: 1, color: c.label, dashStyle: 'Dash', zIndex: 4 } } : {}) },
+        xAxis: { labels: { style: { color: c.label } }, crosshair: { width: 1, color: c.label, dashStyle: 'Dash', zIndex: 4 } },
         yAxis: {
             gridLineColor: c.grid,
             labels: { style: { color: c.label } },
@@ -1459,16 +1494,49 @@ document.addEventListener('keydown', e => {
     else if (e.key === 'ArrowRight') goToDay(1);
 });
 
-// ---- Naptár: a szaunás napok a szaunanaplóból (data/alkalmak.csv – csak a dátumok kellenek) ----
+// ---- Naptár: a szaunás napok a szaunanaplóból (data/alkalmak.csv) ----
 let sessionDays = new Set();
+let sessionPeople = new Map();   // dátum → résztvevők kódjai (archív napokon az ETA kártya helyén)
 let calY, calM;            // a naptárban mutatott hónap
 fetch('data/alkalmak.csv?v=' + Date.now())
     .then(r => r.ok ? r.text() : '')
     .then(t => {
-        sessionDays = new Set(t.split(/\r?\n/).map(l => l.split(/[,;]/)[0].trim()).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)));
+        const lines = t.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
+        const head = (lines[0] || '').toLowerCase().split(/[,;]/).map(h => h.trim());
+        const iD = Math.max(0, head.indexOf('datum')), iP = head.indexOf('resztvevo') >= 0 ? head.indexOf('resztvevo') : 1;
+        sessionDays = new Set(); sessionPeople = new Map();
+        for (const l of lines) {
+            const c = l.split(/[,;]/).map(x => x.trim());
+            const d = c[iD], p = (c[iP] || '').toUpperCase();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+            sessionDays.add(d);
+            if (p) { if (!sessionPeople.has(d)) sessionPeople.set(d, []); if (!sessionPeople.get(d).includes(p)) sessionPeople.get(d).push(p); }
+        }
         if (calOpen()) renderCal();
+        if (!isTodaySelected()) renderPeopleCard(datePickerEl.value);
     })
     .catch(() => { /* gépről megnyitva nem érhető el – ilyenkor nincs jelölés */ });
+
+// Mely szaunázós napokon van szenzoradat: a data/szenzor.csv-ből (a GitHub Action összesítője,
+// ugyanaz, amit a dashboard is használ). Nincs ThingSpeak-lekérés.
+// Egy sor: datum,begyujtas,felfutes_perc,max_c,uzemido_perc – üres max_c = aznap nem volt mérés.
+// Ha egy szaunázós nap még nincs a fájlban (az Action még nem futott le rá), de későbbi, mint az
+// első mért nap, pöttyöt kap: a hőmérő azóta folyamatosan mér.
+let sensorYes = new Set(), sensorNo = new Set(), sensorFirst = null;
+fetch('data/szenzor.csv?v=' + Date.now())
+    .then(r => r.ok ? r.text() : '')
+    .then(t => {
+        for (const l of t.split(/\r?\n/).slice(1)) {
+            const c = l.split(',').map(x => (x || '').trim());
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(c[0])) continue;
+            if (c[3]) { sensorYes.add(c[0]); if (!sensorFirst || c[0] < sensorFirst) sensorFirst = c[0]; }
+            else sensorNo.add(c[0]);
+        }
+        if (calOpen()) renderCal();
+    })
+    .catch(() => { /* gépről megnyitva nem érhető el – ilyenkor nincs pötty */ });
+const hasSensorDay = ds => sessionDays.has(ds) &&
+    (sensorYes.has(ds) || (!sensorNo.has(ds) && sensorFirst !== null && ds > sensorFirst));
 
 function renderCal() {
     const sel = datePickerEl.value, today = localDateStr();
@@ -1483,8 +1551,10 @@ function renderCal() {
     html += '<div></div>'.repeat(off);
     for (let d = 1; d <= days; d++) {
         const ds = `${calY}-${pad2(calM + 1)}-${pad2(d)}`;
-        const cls = [hot.has(ds) ? 'hot' : '', ds === today ? 'today' : '', ds === sel ? 'sel' : ''].filter(Boolean).join(' ');
-        html += `<button data-d="${ds}" class="${cls}"${ds > today ? ' disabled' : ''}${hot.has(ds) ? ' title="szaunázás volt"' : ''}>${d}</button>`;
+        const sens = hasSensorDay(ds);
+        const cls = [hot.has(ds) ? 'hot' : '', sens ? 'sens' : '', ds === today ? 'today' : '', ds === sel ? 'sel' : ''].filter(Boolean).join(' ');
+        const tip = [hot.has(ds) ? 'szaunázás volt' : '', sens ? 'van szenzoradat' : ''].filter(Boolean).join(' · ');
+        html += `<button data-d="${ds}" class="${cls}"${ds > today ? ' disabled' : ''}${tip ? ` title="${tip}"` : ''}>${d}</button>`;
     }
     document.getElementById('calGrid').innerHTML = html;
 }
@@ -1522,7 +1592,15 @@ const parseDateStr = s => new Date(s + 'T12:00:00');
 document.getElementById('dateOpenBtn').addEventListener('click', e => { e.stopPropagation(); openCal(); });
 document.getElementById('calPrev').onclick = () => calShift(-1);
 document.getElementById('calNext').onclick = () => calShift(1);
-document.getElementById('calToday').onclick = () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); renderCal(); };
+// „Ma”: rögtön a mai napra ugrik
+document.getElementById('calToday').onclick = () => {
+    closeCal();
+    if (datePickerEl.value === localDateStr()) return;
+    datePickerEl.value = localDateStr();
+    followNow = false;
+    updateDayNavState();
+    updateArchiveData(false);
+};
 document.getElementById('calGrid').onclick = e => {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
