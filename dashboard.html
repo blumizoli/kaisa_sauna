@@ -5,9 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff" id="theme-meta">
     <title>Kaisa Sauna Dashboard</title>
-    <!-- Ikon: az SVG a böngésző világos / sötét témájához igazodik; a PNG tartalék (pl. Safari) -->
-    <link rel="icon" type="image/png" href="heat.png" sizes="32x32">
-    <link rel="icon" type="image/svg+xml" href="heat.svg">
+    <link rel="icon" type="image/png" href="heat.png" id="favicon">
+    <script>
+    // Ikon a készülék témája szerint: világosnál fekete (heat.png), sötétnél fehér (heat-dark.png) csíkok;
+    // ha közben átvált a téma, az ikon is cserélődik
+    (function () {
+        if (!window.matchMedia) return;
+        var mq = matchMedia('(prefers-color-scheme: dark)');
+        var set = function () { document.getElementById('favicon').href = mq.matches ? 'heat-dark.png' : 'heat.png'; };
+        set();
+        if (mq.addEventListener) mq.addEventListener('change', set); else if (mq.addListener) mq.addListener(set);
+    })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/highstock.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,7 +29,7 @@
     [data-theme="dark"] {
         --bg: #121212; --card: #1e1e1e; --text: #fff; --text-dim: #b0b0b0; --border: #333;
         --header-red: #ff4d4d; --hl-bg: rgba(255, 77, 77, 0.12);
-        --hm-empty: #2a2a2a; --hm-nodata: #5a5a5a; --hm-1: #5a2323; --hm-2: #8f2a2a; --hm-3: #c93a3a; --hm-4: #ff6b6b;
+        --hm-empty: #3a3a3a; --hm-nodata: #5a5a5a; --hm-1: #5a2323; --hm-2: #8f2a2a; --hm-3: #c93a3a; --hm-4: #ff6b6b;
     }
     * { font-family: 'Roboto', 'Segoe UI', sans-serif; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { background: var(--bg); transition: background-color 0.3s ease; }
@@ -1318,10 +1327,17 @@ function renderHeatmap() {
     let html = '', octX = 0;
     for (const { y, first, off, days, weeks } of layout) {
         let rects = '', labels = '';
+        // Szezonszűrés: a kimaradó szezon teljes sora halvány (CSS, .fade). Hónap- / napszűrés ugyanígy:
+        // a kimaradó napok – szaunás és üres egyaránt – és hónapnevek ugyanannyira halványak (0,3).
+        // Egy már halvány szezonsorban nem halványítunk tovább, hogy ne tűnjön el.
+        const fade = selSeasons.size && !selSeasons.has(`${y}/${pad2((y + 1) % 100)}`) ? ' fade' : '';
+        const OUT = ' opacity="0.3"';
+        const outDay = ds => !fade && !inMonthDay({ date: ds });
         for (let m = m0; m <= m1; m++) {
             const k = Math.round((monthDate(y, m) - first) / 86400000) + off;
             const col = Math.ceil(k / 7);   // az első teljesen az adott hónaphoz tartozó hét fölé
-            labels += `<text x="${col * sx}" y="10" font-size="9" fill="var(--text-dim)">${MONTHS_HU[(8 + m) % 12]}</text>`;
+            const mOut = !fade && selMonths.size && !selMonths.has((8 + m) % 12) ? OUT : '';
+            labels += `<text x="${col * sx}" y="10" font-size="9" fill="var(--text-dim)"${mOut}>${MONTHS_HU[(8 + m) % 12]}</text>`;
             if (m === 1) octX = col * sx;
         }
         for (let i = 0; i < days; i++) {
@@ -1329,10 +1345,11 @@ function renderHeatmap() {
             const ds = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
             const k = i + off, x = Math.floor(k / 7) * sx, yy = top + (k % 7) * sy;
             const s = byDate.get(ds);
-            if (!s) { rects += `<rect x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="var(--hm-empty)"/>`; continue; }
+            const out = outDay(ds);
+            if (!s) { rects += `<rect x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="var(--hm-empty)"${out ? OUT : ''}/>`; continue; }
             const mine = has(s, selCode);
-            // kiemelt személy: a többi nap halvány; hónapra / napra szűrve a kimaradó napok is
-            const op = (selCode && !mine) || !inMonthDay(s) ? ' opacity="0.22"' : '';
+            // kiemelt személy: a többi szaunás nap halványabb (0,22); a szűrt időszakon kívüli napok 0,3
+            const op = selCode && !mine ? ' opacity="0.22"' : out ? OUT : '';
             const sel = ds === hmDay;
             const stroke = sel ? ` stroke="var(--header-red)" stroke-width="2"` : mine ? ` stroke="var(--text)" stroke-width="1.5"` : '';
             let fill;
@@ -1345,7 +1362,6 @@ function renderHeatmap() {
             if (hasSensor(ds)) rects += `<circle cx="${x + cw / 2}" cy="${yy + cw / 2}" r="2" fill="#fff"${op} pointer-events="none"/>`;   // van szenzoradat
         }
         const w = weeks * sx, h = top + 7 * sy;
-        const fade = selSeasons.size && !selSeasons.has(`${y}/${pad2((y + 1) % 100)}`) ? ' fade' : '';
         const defs = html ? '' : `<defs><pattern id="hmNd" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="4" fill="var(--hm-empty)"/><rect width="1.6" height="4" fill="var(--hm-nodata)"/></pattern></defs>`;
         html += `<div class="hm-year${fade}"><div class="y" style="padding-top:${top}px">${y}/${pad2((y + 1) % 100)}</div><svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${defs}${labels}${rects}</svg></div>`;
     }
