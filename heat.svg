@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512">
+  <!-- Átlátszó háttér; világos témájú böngészőben fekete, sötétben fehér csíkok -->
+  <style>
+    .s { stroke: #000; }
+    @media (prefers-color-scheme: dark) { .s { stroke: #fff; } }
+  </style>
+  <defs><path id="w" d="M90 23C88 28 80 43 77 53C74 63 71 73 69 83C67 93 66 103 66 113C66 123 66 133 66 143C66 153 67 163 69 173C71 183 73 193 76 203C79 213 83 223 88 233C93 243 99 253 105 263C111 273 118 283 123 293C128 303 132 313 135 323C138 333 141 343 143 353C145 363 146 373 147 383C148 393 148 403 147 413C146 423 145 433 143 443C141 453 136 465 133 473C130 481 129 488 128 491"/></defs>
+  <g class="s" fill="none" stroke-width="42" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#w" xlink:href="#w"/>
+    <use href="#w" xlink:href="#w" x="150"/>
+    <use href="#w" xlink:href="#w" x="299"/>
+  </g>
+</svg>
