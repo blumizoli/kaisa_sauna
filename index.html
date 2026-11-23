@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff" id="theme-meta">
     <title>Kaisa Sauna Monitor & Predict</title>
-    <link rel="icon" type="image/png" href="heat.png">
+    <!-- Ikon: az SVG a böngésző világos / sötét témájához igazodik; a PNG tartalék (pl. Safari) -->
+    <link rel="icon" type="image/png" href="heat.png" sizes="32x32">
+    <link rel="icon" type="image/svg+xml" href="heat.svg">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- Highcharts jsDelivr-ről (a code.highcharts.com sebességkorlátoz/tilt); tartalékok lent a szkriptben -->
     <script src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/highstock.js"></script>
@@ -513,7 +515,7 @@ const SMOOTH_LEVELS = [
     { minSpanH: 1, half: 1 },   // 1–3 óra: enyhe, ~1,5 perc
     { minSpanH: 0, half: 0 }    // 1 óra alatt: valós adatok
 ];
-const THEME_KEY      = 'kaisa-theme';
+const THEME_KEY      = 'kaisa-theme-tab';   // sessionStorage: a kézi témaváltás csak az adott lapra szól
 // Érintőképernyő (nincs egérmutató): a buborék helyett a görbe fölötti fix sávban jelennek meg az adatok,
 // így az ujj alatt / mellett soha nem takarja ki a görbét
 const TOUCH = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
@@ -1234,11 +1236,13 @@ function updateZoomNowState() {
 }
 
 // =====================================================================
-//  TÉMA (megjegyzi a választást, alapból a rendszer beállítását követi)
+//  TÉMA: alapból a készülék beállítása. A téma gombbal felülírható, de csak az adott böngészőlapon
+//  (a dashboard és a monitor között átjárva megmarad), új megnyitáskor ismét a készüléké.
 // =====================================================================
+try { localStorage.removeItem('kaisa-theme'); } catch (e) {}   // a régi, örökre elmentett választás törlése
 function getSavedTheme() {
     try {
-        const s = localStorage.getItem(THEME_KEY);
+        const s = sessionStorage.getItem(THEME_KEY);
         if (s === 'dark' || s === 'light') return s;
     } catch (e) { /* privát mód stb. */ }
     return null;
@@ -1273,14 +1277,15 @@ function applyTheme(theme) {
 
 document.getElementById('themeBtn').onclick = () => {
     const newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem(THEME_KEY, newTheme); } catch (e) {}
+    // ha a választás egyezik a készülékével, nincs mit felülírni
+    try { if (newTheme === getSystemTheme()) sessionStorage.removeItem(THEME_KEY); else sessionStorage.setItem(THEME_KEY, newTheme); } catch (e) {}
     applyTheme(newTheme);
 };
 
-// Ha nincs mentett választás, kövesse a rendszer témaváltását
+// Ha a készüléken átvált a téma (pl. naplementekor automatikusan), az oldal is követi
 if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onSys = () => { if (!getSavedTheme()) applyTheme(getSystemTheme()); };
+    const onSys = () => { try { sessionStorage.removeItem(THEME_KEY); } catch (e) {} applyTheme(getSystemTheme()); };
     if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
 }
 
