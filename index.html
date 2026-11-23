@@ -5,9 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff" id="theme-meta">
     <title>Kaisa Sauna Monitor & Predict</title>
-    <!-- Ikon: az SVG a böngésző világos / sötét témájához igazodik; a PNG tartalék (pl. Safari) -->
-    <link rel="icon" type="image/png" href="heat.png" sizes="32x32">
-    <link rel="icon" type="image/svg+xml" href="heat.svg">
+    <link rel="icon" type="image/png" href="heat.png" id="favicon">
+    <script>
+    // Ikon a készülék témája szerint: világosnál fekete (heat.png), sötétnél fehér (heat-dark.png) csíkok;
+    // ha közben átvált a téma, az ikon is cserélődik
+    (function () {
+        if (!window.matchMedia) return;
+        var mq = matchMedia('(prefers-color-scheme: dark)');
+        var set = function () { document.getElementById('favicon').href = mq.matches ? 'heat-dark.png' : 'heat.png'; };
+        set();
+        if (mq.addEventListener) mq.addEventListener('change', set); else if (mq.addListener) mq.addListener(set);
+    })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- Highcharts jsDelivr-ről (a code.highcharts.com sebességkorlátoz/tilt); tartalékok lent a szkriptben -->
     <script src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/highstock.js"></script>
