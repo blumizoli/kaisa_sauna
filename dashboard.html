@@ -61,6 +61,8 @@
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 12px; min-width: 0; }
     .card h3 { margin: 0 0 8px; font-size: 13px; color: var(--header-red); display: flex; align-items: center; gap: 8px; }
     .card .sub { font-size: 11px; color: var(--text-dim); margin: -4px 0 8px; line-height: 1.4; }
+    /* leírások: sorkizárt, magyar elválasztással (így nem lesznek nagy lyukak a szavak között) */
+    .card .sub, .mx-bar > span, .mx-foot { text-align: justify; -webkit-hyphens: auto; hyphens: auto; }
     .dim { color: var(--text-dim); }
     .hidden { display: none !important; }
     .code { font-family: Consolas, 'Courier New', monospace; font-weight: 700; }
@@ -151,7 +153,7 @@
     .kpi-people .lbl i { margin-right: 6px; }
     .kpi-people button { border: 1px solid var(--border); background: none; color: var(--text); border-radius: 6px; padding: 1px 6px; margin: 0 2px; font-size: 12px; cursor: pointer; }
     .kpi-people button b { font-weight: 700; }
-    .kpi-people button.h { border-color: #455a64; }
+    .kpi-people button.h { border-color: var(--text-dim); }
     .kpi-people button:hover { border-color: var(--header-red); }
     .kpi-tog i { transition: transform .2s; }
     /* Ki kivel: fejléc-sor és lenyitható mátrix */
@@ -177,10 +179,10 @@
     .mx-grid .c.dg { background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--text-dim); font-weight: 700; }
     .mx-grid .c.me { box-shadow: inset 0 0 0 1.5px var(--header-red); }
     @media (hover: hover) { .mx-grid .c:hover { box-shadow: inset 0 0 0 2px var(--text); } }
-    /* névcímkék: vendég = keretes, házigazda = sötét, kiemelt = piros */
+    /* névcímkék: vendég = halvány keret, házigazda = sötét keret, kiemelt = piros */
     .mx-grid .lab, .mx-side .chip { font-family: Consolas, 'Courier New', monospace; font-weight: 700; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
     .mx-grid .lab { font-size: 9.5px; cursor: pointer; }
-    .mx-grid .lab.host, .mx-side .chip.host { background: #455a64; border-color: #455a64; color: #fff; }
+    .mx-grid .lab.host, .mx-side .chip.host { border-color: var(--text-dim); }   /* mint a Begyújtások listában: keretes */
     .mx-grid .lab.me, .mx-side .chip.me { background: var(--header-red); border-color: var(--header-red); color: #fff; }
     .mx-grid .lab.on { box-shadow: 0 0 0 2px var(--header-red); }
     .mx-grid .sticky-t { position: sticky; top: 0; z-index: 1; }
@@ -343,7 +345,7 @@
                     <div class="seg" id="segType"><button data-v="host" class="on">Házigazda</button><button data-v="guest" class="on">Vendég</button></div>
                 </div>
             </div>
-            <div class="sub">Piros: begyújtás (csak házigazdával / vendéggel), szilva: szaunázás (házigazdák / vendégek), kékesszürke: személyek, vagyis hány különböző ember (házigazdák / vendégek); a sötét árnyalat mindig a házigazda. Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli teljes oszlop; ha szezonra és személyre is szűrsz, egy sötétebb szürke réteg mutatja a kiválasztott szezonok összes alkalmát. Személynél azok a begyújtások számítanak, ahol ő is ott volt. A kapcsolók a havi és a heti diagramra is vonatkoznak. Egy szezon szeptembertől augusztusig tart. Ezen, a havi és a heti diagramon egy oszlopra kattintva arra szűrsz (érintőképernyőn az első koppintás a részleteket mutatja, a második szűr; ha a diagramon már van kijelölt oszlop, egy újat egy koppintással is hozzáadhatsz); több is választható, az utolsót kikapcsolva ismét minden látszik.</div>
+            <div class="sub">Piros: begyújtás (csak házigazdával / vendéggel), kékesszürke: szaunázás (házigazdák / vendégek), szilva: személyek, vagyis hány különböző ember (házigazdák / vendégek); a sötét árnyalat mindig a házigazda. Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli teljes oszlop; ha szezonra és személyre is szűrsz, egy sötétebb szürke réteg mutatja a kiválasztott szezonok összes alkalmát. Személynél azok a begyújtások számítanak, ahol ő is ott volt. A kapcsolók a havi és a heti diagramra is vonatkoznak. Egy szezon szeptembertől augusztusig tart. Ezen, a havi és a heti diagramon egy oszlopra kattintva arra szűrsz (érintőképernyőn az első koppintás a részleteket mutatja, a második szűr; ha a diagramon már van kijelölt oszlop, egy újat egy koppintással is hozzáadhatsz); több is választható, az utolsót kikapcsolva ismét minden látszik.</div>
             <div id="chSeasons" class="chart clickable"></div>
         </div>
 
@@ -388,8 +390,11 @@
 
         <div class="grid2">
             <div class="card fill">
-                <h3><i class="fa-solid fa-users"></i> Létszám</h3>
-                <div class="sub">Hány fővel ment a szauna (házigazdákkal együtt), körönként: egy begyújtás általában egy kör, de ha aznap külön-külön, egymás után szaunáztak (pl. „1+1”), mindegyik külön kör. Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli összes, illetve (időszakra és személyre is szűrve) a szűrt időszak összes köre.</div>
+                <div class="chart-head">
+                    <h3><i class="fa-solid fa-users"></i> Létszám</h3>
+                    <div class="seg small" id="segHc"><button data-v="n" class="on">Alkalom</button><button data-v="s">Szaunázás</button></div>
+                </div>
+                <div class="sub">Hány fővel ment a szauna (házigazdákkal együtt), körönként. „Alkalom”: hány ilyen létszámú kör volt; „Szaunázás”: ezekben összesen hány szaunázás (fő × alkalom), vagyis a szaunázások mekkora része jutott az egyes létszámokra. A kettő egyszerre is bekapcsolható. Egy begyújtás általában egy kör, de ha aznap külön-külön, egymás után szaunáztak (pl. „1+1”), mindegyik külön kör. Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli összes, illetve (időszakra és személyre is szűrve) a szűrt időszak összes köre.</div>
                 <div id="chHeadcount" class="chart"></div>
             </div>
             <div class="card fill">
@@ -993,11 +998,11 @@ document.addEventListener('touchstart', e => {
 const alpha = (color, a) => a >= 1 ? color : Highcharts.color(color).setOpacity(a).get();
 const DIM = 0.3;
 
-// Színek: begyújtás = piros (alapnézet), szaunázás = szilva, személyek = kékesszürke; sötét = házigazda, világos = vendég
+// Színek: begyújtás = piros (alapnézet), szaunázás = kékesszürke, személyek = szilva; sötét = házigazda, világos = vendég
 const COL = {
     b: { host: '#b71c1c', guest: '#e57373' },
-    s: { host: '#6d2f5a', guest: '#c48bb0' },
-    p: { host: '#455a64', guest: '#a3b5c0' }
+    s: { host: '#455a64', guest: '#a3b5c0' },
+    p: { host: '#6d2f5a', guest: '#c48bb0' }
 };
 const MEAS_ORDER = ['b', 's', 'p'];
 const MEAS_NAME = { s: 'Szaunázás', b: 'Begyújtás', p: 'Személyek' };
@@ -1144,7 +1149,7 @@ function renderCharts() {
     charts.splice(0).forEach(c => c.destroy());
     // Címke a havi/heti kártyán: a bekapcsolt mérőszámok, a színük szerinti sávokkal
     const on = MEAS_ORDER.filter(m => viewMeasures.has(m));
-    const chipCol = { b: '#b71c1c', s: '#6d2f5a', p: '#455a64' };
+    const chipCol = { b: '#b71c1c', s: COL.s.host, p: COL.p.host };
     const grad = on.length === 1 ? chipCol[on[0]] :
         'linear-gradient(90deg, ' + on.map((m, k) => `${chipCol[m]} ${100 * k / on.length}% ${100 * (k + 1) / on.length}%`).join(', ') + ')';
     document.querySelectorAll('.mode-chip').forEach(el => {
@@ -1183,24 +1188,36 @@ function renderCharts() {
     // Körönként számol: egy begyújtás általában egy kör, de a külön-külön szaunázók (pl. 1+1) külön 1 fős körök.
     // Kiemelt személynél csak az ő körei.
     const maxN = Math.max(...allSessions.map(maxGroup));
-    const hCount = (list, code) => { const h = Array(maxN).fill(0); list.forEach(s => s.groups.forEach(g => { if (!code || g.includes(code)) h[g.length - 1]++; })); return h; };
-    const hFg = hCount(fgList, selCode), hLayers = layerDefs.map(L => ({ name: L.name, data: hCount(L.list) }));
-    const hCols = bgColors(hLayers.length);
-    const hs = hLayers.map((L, k) => ({ name: L.name, id: 'hc-bg' + k, legendIndex: k + 1, color: hCols[k], zIndex: k, stack: 'bg' + k, enableMouseTracking: false, data: L.data }));
-    hs.push({ name: selCode ? `Kör (${selCode} ott volt)` : 'Kör', id: 'hc-fg', legendIndex: 0, color: COL.b.guest, zIndex: 5, stack: 'fg', data: hFg });
+    // „Szaunázás”: egy kör a létszámának megfelelő súllyal számít (fő × alkalom). A kettő egyszerre is látszhat (egymás mellett).
+    const hcOn = ['n', 's'].filter(m => hcModes.has(m));
+    const HC = { n: { name: 'Alkalom', unit: 'alkalom', col: COL.b.guest }, s: { name: 'Szaunázás', unit: 'szaunázás', col: COL.s.guest } };
+    const hCount = (list, code, m) => { const h = Array(maxN).fill(0); list.forEach(s => s.groups.forEach(g => { if (!code || g.includes(code)) h[g.length - 1] += m === 's' ? g.length : 1; })); return h; };
+    const hBoth = hcOn.length > 1;
+    const hPlace = mi => hBoth ? (mi - 0.5) * 0.38 : 0;
+    const hFg = {}, hLayers = {};
+    const hCols = bgColors(layerDefs.length);
+    const hs = [];
+    hcOn.forEach((m, mi) => {
+        hFg[m] = hCount(fgList, selCode, m);
+        hLayers[m] = layerDefs.map(L => ({ name: L.name, data: hCount(L.list, '', m) }));
+        hs.push({ name: (hBoth ? HC[m].name : 'Létszám') + (selCode ? ` (${selCode} ott volt)` : ''), id: 'hc-fg-' + m, legendIndex: mi,
+            color: HC[m].col, zIndex: 5, stack: 'fg' + m, pointPlacement: hPlace(mi), data: hFg[m] });
+        hLayers[m].forEach((L, k) => hs.push({ name: L.name, id: `hc-bg${k}-${m}`, linkedTo: mi ? `hc-bg${k}-${hcOn[0]}` : undefined,
+            legendIndex: hcOn.length + k, color: hCols[k], zIndex: k, stack: 'bg' + k + m, pointPlacement: hPlace(mi), enableMouseTracking: false, data: L.data }));
+    });
     makeChart('chHeadcount', {
         chart: { type: 'column' }, legend: { enabled: false },
-        xAxis: { categories: hFg.map((_, i) => `${i + 1} fő`) },
+        xAxis: { categories: hFg[hcOn[0]].map((_, i) => `${i + 1} fő`) },
         yAxis: { title: { text: 'darab' } },
-        plotOptions: { column: { grouping: false, groupPadding: 0.14, pointPadding: 0.06 } },
+        plotOptions: { column: { grouping: false, ...(hBoth ? { groupPadding: 0.1, pointPadding: 0.3 } : { groupPadding: 0.14, pointPadding: 0.06 }) } },
         tooltip: { formatter: function () {
             const i = this.points[0].point.index;
-            return `<div class="hc-tip"><b>${i + 1} fő</b><br><span style="color:${COL.b.guest}">■</span> Kör: <b>${hFg[i]}</b>` +
-                hLayers.slice().reverse().map(L => ` <span class="dim">· ${L.name.toLowerCase()} ${L.data[i]}</span>`).join('') + '</div>';
+            return `<div class="hc-tip"><b>${i + 1} fő</b>` + hcOn.map(m => `<br><span style="color:${HC[m].col}">■</span> <b>${hFg[m][i]}</b> ${HC[m].unit}` +
+                hLayers[m].slice().reverse().map(L => ` <span class="dim">· ${L.name.toLowerCase()} ${L.data[i]}</span>`).join('')).join('') + '</div>';
         } },
         series: hs
     });
-    renderLegend('chHeadcount', hs, hs.length);
+    renderLegend('chHeadcount', hs.filter(se => !se.linkedTo), hcOn.length + layerDefs.length);
 
     // --- Vendégkör: a kiválasztott szezonok vendégei, az összes szezonra vett státuszuk szerint ---
     const present = new Set(sessions.flatMap(s => s.guests));
@@ -1240,6 +1257,7 @@ function renderCharts() {
 //  Színezés: létszám, max hőfok vagy üzemidő szerint.
 // =====================================================================
 let hmMode = 'count';
+const hcModes = new Set(['n']);   // Létszám diagram: 'n' = alkalmak (körök) száma, 's' = szaunázások száma; egyszerre is
 let hmDay = '';   // a naptárban kijelölt nap (részletek a naptár alatt)
 let tblFilt = false;   // Begyújtások lista: csak a szűrt sorok (szűréskor magától bekapcsol)
 // Minden mód egy kérdésre felel, egy színskálával. A „Vendég” mód két jól elkülönülő színnel
@@ -1283,6 +1301,7 @@ document.getElementById('heatmap').addEventListener('click', e => {
     hmDay = r.dataset.d;
     renderHeatmap();
     flashRow(hmDay);
+    updateResetBtn();
 });
 // Kártyákon kívülre kattintva is megszűnik a kijelölés
 document.addEventListener('click', e => {
@@ -1300,6 +1319,7 @@ function clearHmDay() {
     collapseRow(hmDay);
     hmDay = '';
     renderHeatmap();
+    updateResetBtn();
 }
 // A kijelölt nap sora a Begyújtások listában: odagörget (a listán belül), lenyitja a résztvevőket és felvillan.
 // Széles kijelzőn a lista a naptár mellett van, ott ez a visszajelzés; keskenyen a naptár alatti sáv is megjelenik.
@@ -1404,6 +1424,18 @@ document.getElementById('segTbl').addEventListener('click', e => {
     tblFilt = b.dataset.v === 'filt';
     renderSensor();
 });
+document.getElementById('segHc').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const v = b.dataset.v;
+    // ki-be kapcsol; az egyetlen bekapcsoltat kikapcsolva az alapállapot (Alkalom) jön vissza
+    if (hcModes.has(v) && hcModes.size === 1) { hcModes.clear(); hcModes.add('n'); }
+    else if (hcModes.has(v)) hcModes.delete(v); else hcModes.add(v);
+    syncHcSeg();
+    renderCharts();
+    updateResetBtn();
+});
+const syncHcSeg = () => document.querySelectorAll('#segHc button').forEach(x => x.classList.toggle('on', hcModes.has(x.dataset.v)));
 document.getElementById('segHm').addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -1622,6 +1654,14 @@ async function show(text) {
     document.getElementById('loadCard').classList.add('hidden');
     document.getElementById('content').classList.remove('hidden');
     applyFilters();
+    // A linkben érkezett nap: mintha a naptárban rákattintottak volna – a lista sora lenyílik, a lap odagörget
+    if (hmDay) requestAnimationFrame(() => {
+        flashRow(hmDay);
+        const card = document.getElementById('heatmap').closest('.card');
+        const fr = document.querySelector('.filter-row');
+        const off = getComputedStyle(fr).position === 'sticky' ? fr.offsetHeight : 0;
+        window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - off - 8, behavior: 'smooth' });
+    });
 }
 
 document.getElementById('fileInput').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(show); };
@@ -1644,14 +1684,15 @@ document.getElementById('fileInput').onchange = e => { const f = e.target.files[
     });
 });
 // --- Alaphelyzet: szezonok, személy, oszlopdiagram- és naptár-kapcsolók (a téma marad) ---
-const isDefault = () => !selSeasons.size && !selMonths.size && !selDays.size && !selCode && viewMeasures.size === 1 && viewMeasures.has('b') && viewTypes.size === 2 && hmMode === 'count' && tblSort.key === 'date' && tblSort.dir === -1;
+const isDefault = () => !selSeasons.size && !selMonths.size && !selDays.size && !selCode && viewMeasures.size === 1 && viewMeasures.has('b') && viewTypes.size === 2 && hmMode === 'count' && hcModes.size === 1 && hcModes.has('n') && tblSort.key === 'date' && tblSort.dir === -1 && !hmDay;
 // Minden állapotváltozásnál ez fut le, így a link is itt frissül
 function updateResetBtn() { document.getElementById('resetBtn').classList.toggle('idle', isDefault()); syncUrlState(); }
 
 // =====================================================================
 //  ÁLLAPOT A LINKBEN – csak ami eltér az alaphelyzettől, így az alap link tiszta marad.
 //  ?szezon=2024-25,2025-26 &honap=11,12 (1 = január) &nap=6,7 (1 = hétfő) &szemely=ABC &mutato=begyujtas,szauna,szemelyek
-//  &kik=hazigazda|vendeg &naptar=vendeg|maxho|uzemido &rend=fo-le (a Begyújtások lista rendezése; fel = növekvő, le = csökkenő)
+//  &kik=hazigazda|vendeg &naptar=vendeg|maxho|uzemido &letszam=alkalom,szauna &rend=fo-le (a Begyújtások lista rendezése; fel = növekvő, le = csökkenő)
+//  &datum=2026-11-08 (a naptárban kijelölt nap)
 // =====================================================================
 const URL_MEAS = { b: 'begyujtas', s: 'szauna', p: 'szemelyek' };
 const URL_TYPE = { host: 'hazigazda', guest: 'vendeg' };
@@ -1677,6 +1718,12 @@ function readUrlState() {
     if (ts.length) { viewTypes.clear(); ts.forEach(t => viewTypes.add(t)); }
     const hm = urlKey(URL_HM, q.get('naptar'));
     if (hm) hmMode = hm;
+    // datum=ÉÉÉÉ-HH-NN: a naptárban kijelölt nap (pl. a monitorról, egy archív nap kártyájára kattintva)
+    const dd = q.get('datum');
+    if (dd && allSessions.some(s => s.date === dd)) hmDay = dd;
+    const hc = list('letszam').map(x => ({ alkalom: 'n', szauna: 's' })[x]).filter(Boolean);
+    if (hc.length) { hcModes.clear(); hc.forEach(m => hcModes.add(m)); }
+    syncHcSeg();
     const [rk, rd] = (q.get('rend') || '').split('-');
     const sk = urlKey(URL_SORT, rk);
     if (sk) tblSort = { key: sk, dir: rd === 'fel' ? 1 : rd === 'le' ? -1 : SORT_DEF_DIR[sk] };
@@ -1697,6 +1744,8 @@ function syncUrlState() {
     if (!(viewMeasures.size === 1 && viewMeasures.has('b'))) add('mutato', MEAS_ORDER.filter(m => viewMeasures.has(m)).map(m => URL_MEAS[m]));
     if (viewTypes.size < 2) add('kik', [...viewTypes].map(t => URL_TYPE[t]));
     if (hmMode !== 'count') add('naptar', [URL_HM[hmMode]]);
+    if (hmDay) add('datum', [hmDay]);
+    if (!(hcModes.size === 1 && hcModes.has('n'))) add('letszam', ['n', 's'].filter(m => hcModes.has(m)).map(m => ({ n: 'alkalom', s: 'szauna' })[m]));
     if (!(tblSort.key === 'date' && tblSort.dir === -1)) add('rend', [URL_SORT[tblSort.key] + '-' + (tblSort.dir > 0 ? 'fel' : 'le')]);
     const href = location.pathname + (parts.length ? '?' + parts.join('&') : '') + location.hash;
     try { if (href !== location.pathname + location.search + location.hash) history.replaceState(null, '', href); } catch (e) {}
@@ -1705,8 +1754,8 @@ function setSeg(id, v) { document.querySelectorAll(`#${id} button`).forEach(x =>
 document.getElementById('resetBtn').onclick = () => {
     if (!allSessions.length) return;
     selSeasons.clear(); selMonths.clear(); selDays.clear(); selCode = ''; kpiOpen = false; mxOpen = false; tblSort = { key: 'date', dir: -1 };
-    viewMeasures.clear(); viewMeasures.add('b'); viewTypes.clear(); viewTypes.add('host').add('guest'); hmMode = 'count'; hmDay = '';
-    setSeg('segMeasure', 'b'); document.querySelectorAll('#segType button').forEach(x => x.classList.add('on')); setSeg('segHm', 'count');
+    viewMeasures.clear(); viewMeasures.add('b'); viewTypes.clear(); viewTypes.add('host').add('guest'); hmMode = 'count'; hcModes.clear(); hcModes.add('n'); hmDay = '';
+    setSeg('segMeasure', 'b'); document.querySelectorAll('#segType button').forEach(x => x.classList.add('on')); setSeg('segHm', 'count'); syncHcSeg();
     document.getElementById('personPanel').classList.add('hidden');
     applyFilters();   // mindent újrarajzol: a jelmagyarázatban kikapcsolt sorozatok és a kinyitott sorok is alaphelyzetbe kerülnek
 };
