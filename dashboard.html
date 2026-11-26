@@ -61,22 +61,16 @@
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 12px; min-width: 0; }
     .card h3 { margin: 0 0 8px; font-size: 13px; color: var(--header-red); display: flex; align-items: center; gap: 8px; }
     .card .sub { font-size: 11px; color: var(--text-dim); margin: -4px 0 8px; line-height: 1.4; }
-    /* mobilon a leírások két sorra csukva, „tovább”-bal lenyithatók */
-    @media (max-width: 767px) {
-        .card .sub:not(.open) { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    }
-    .sub-tog { display: block; border: 0; background: none; padding: 0; margin: -6px 0 8px; font-size: 11px; font-weight: 700;
-               color: var(--header-red); cursor: pointer; }
-    .sub-tog[hidden] { display: none; }
-    .sub-tog i { font-size: 9px; margin-left: 3px; transition: transform .2s; }
-    .sub-tog.on i { transform: rotate(180deg); }
     /* leírások: sorkizárt, magyar elválasztással (így nem lesznek nagy lyukak a szavak között) */
     .card .sub, .mx-bar > span, .mx-foot { text-align: justify; -webkit-hyphens: auto; hyphens: auto; }
-    /* mobilon a leírás 2 sor után lenyitható („több”) */
-    .sub-more { display: block; margin: -6px 0 8px auto; border: 0; background: none; padding: 2px 0; color: var(--header-red);
-                font-size: 11px; font-weight: 700; cursor: pointer; }
+    /* mobilon a leírás 2 sorra csukva; a „több” a 2. sor végén (jobb oldalt), lenyitva „kevesebb” a szöveg végén */
+    .card .sub { position: relative; }
+    .sub-more { border: 0; padding: 0 0 0 4px; margin: 0; background: none; color: var(--header-red); font: inherit; font-weight: 700; cursor: pointer; }
+    .sub-more i { font-size: 9px; margin-left: 2px; }
     @media (max-width: 767px) {
         .card .sub.clamp:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+        .card .sub.clamp:not(.open) .sub-more { position: absolute; right: 0; bottom: 0; padding-left: 22px;
+            background: linear-gradient(to right, transparent, var(--card) 18px); }
     }
     .dim { color: var(--text-dim); }
     .hidden { display: none !important; }
@@ -1637,46 +1631,30 @@ async function detectSensorStart() {
 // =====================================================================
 //  BETÖLTÉS
 // =====================================================================
-// Leírások: ha nem férnek ki (mobilon két sorra csukva), alattuk „tovább” gomb nyitja / csukja
-function setupSubs() {
-    document.querySelectorAll('.card .sub').forEach(sub => {
-        let b = sub.nextElementSibling;
-        if (!b || !b.classList.contains('sub-tog')) {
-            b = document.createElement('button');
-            b.className = 'sub-tog';
-            b.onclick = () => { sub.classList.toggle('open'); setupSubs(); };
-            sub.after(b);
-        }
-        const open = sub.classList.contains('open');
-        b.innerHTML = `${open ? 'kevesebb' : 'tovább'}<i class="fas fa-chevron-down"></i>`;
-        b.classList.toggle('on', open);
-        b.hidden = !open && sub.scrollHeight <= sub.clientHeight + 1;
-    });
-}
-window.addEventListener('resize', () => { if (allSessions.length) setupSubs(); });
-
-// Mobilon a hosszú leírások 2 sorra rövidülnek, „több” gombbal lenyithatók (gépen minden látszik)
+// Mobilon a hosszú leírások 2 sorra csukva; egyetlen gomb: csukva „több” a 2. sor végén, nyitva „kevesebb” a szöveg végén.
+// Gépen (ahol nincs levágás) nincs gomb.
 function initSubs() {
     document.querySelectorAll('.card .sub').forEach(el => {
-        if (!el.classList.contains('clamp')) {
-            el.classList.add('clamp');
-            const b = document.createElement('button');
-            b.className = 'sub-more';
-            b.onclick = () => { el.classList.toggle('open'); updateSubs(); };
-            el.after(b);
-        }
+        if (el.classList.contains('clamp')) return;
+        el.classList.add('clamp');
+        const b = document.createElement('button');
+        b.className = 'sub-more';
+        b.onclick = e => { e.stopPropagation(); el.classList.toggle('open'); updateSubs(); };
+        el.appendChild(b);
     });
     updateSubs();
 }
 function updateSubs() {
+    const mobile = window.innerWidth <= 767;
     document.querySelectorAll('.card .sub.clamp').forEach(el => {
-        const b = el.nextElementSibling;
-        if (!b || !b.classList.contains('sub-more')) return;
+        const b = el.querySelector(':scope > .sub-more');
+        if (!b) return;
         const open = el.classList.contains('open');
-        const cut = !open && el.scrollHeight > el.clientHeight + 1;
-        // gépen (nincs levágás) nem kell gomb; nyitva a „kevesebb” csak mobilon
-        b.classList.toggle('hidden', !cut && !(open && window.innerWidth <= 767));
-        b.innerHTML = open ? 'kevesebb <i class="fas fa-chevron-up"></i>' : 'több <i class="fas fa-chevron-down"></i>';
+        if (!mobile) { b.classList.add('hidden'); return; }
+        b.innerHTML = open ? 'kevesebb<i class="fas fa-chevron-up"></i>' : 'több<i class="fas fa-chevron-down"></i>';
+        b.classList.remove('hidden');
+        // csukva csak akkor kell, ha tényleg le van vágva a szöveg
+        if (!open && el.scrollHeight <= el.clientHeight + 1) b.classList.add('hidden');
     });
 }
 window.addEventListener('resize', () => { if (allSessions.length) updateSubs(); });
@@ -1716,7 +1694,6 @@ async function show(text) {
     document.getElementById('content').classList.remove('hidden');
     applyFilters();
     initSubs();
-    setupSubs();
     // A linkben érkezett nap: mintha a naptárban rákattintottak volna – a lista sora lenyílik, a lap odagörget
     if (hmDays.size) requestAnimationFrame(() => {
         [...hmDays].sort().forEach(flashRow);
