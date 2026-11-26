@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff" id="theme-meta">
+    <script src="lock.js"></script>   <!-- PIN-zár (látszatvédelem) -->
     <title>Kaisa Sauna Dashboard</title>
     <link rel="icon" type="image/png" href="heat.png" id="favicon">
     <script>
@@ -342,7 +343,7 @@
                     <div class="seg" id="segType"><button data-v="host" class="on">Házigazda</button><button data-v="guest" class="on">Vendég</button></div>
                 </div>
             </div>
-            <div class="sub">Piros: begyújtás (csak házigazdával / vendéggel), szilva: szaunázás (házigazdák / vendégek), kékesszürke: személyek, vagyis hány különböző ember (házigazdák / vendégek); a sötét árnyalat mindig a házigazda. Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli teljes oszlop; ha szezonra és személyre is szűrsz, egy sötétebb szürke réteg mutatja a kiválasztott szezonok összes alkalmát. Személynél azok a begyújtások számítanak, ahol ő is ott volt. A kapcsolók a havi és a heti diagramra is vonatkoznak. Egy szezon szeptembertől augusztusig tart. Ezen, a havi és a heti diagramon egy oszlopra kattintva arra szűrsz (érintőképernyőn: második koppintásra); több is választható, az utolsót kikapcsolva ismét minden látszik.</div>
+            <div class="sub">Piros: begyújtás (csak házigazdával / vendéggel), szilva: szaunázás (házigazdák / vendégek), kékesszürke: személyek, vagyis hány különböző ember (házigazdák / vendégek); a sötét árnyalat mindig a házigazda. Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli teljes oszlop; ha szezonra és személyre is szűrsz, egy sötétebb szürke réteg mutatja a kiválasztott szezonok összes alkalmát. Személynél azok a begyújtások számítanak, ahol ő is ott volt. A kapcsolók a havi és a heti diagramra is vonatkoznak. Egy szezon szeptembertől augusztusig tart. Ezen, a havi és a heti diagramon egy oszlopra kattintva arra szűrsz (érintőképernyőn az első koppintás a részleteket mutatja, a második szűr; ha a diagramon már van kijelölt oszlop, egy újat egy koppintással is hozzáadhatsz); több is választható, az utolsót kikapcsolva ismét minden látszik.</div>
             <div id="chSeasons" class="chart clickable"></div>
         </div>
 
@@ -388,7 +389,7 @@
         <div class="grid2">
             <div class="card fill">
                 <h3><i class="fa-solid fa-users"></i> Létszám</h3>
-                <div class="sub">Hány fővel ment a szauna (házigazdákkal együtt). Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli összes, illetve (időszakra és személyre is szűrve) a szűrt időszak összes begyújtása.</div>
+                <div class="sub">Hány fővel ment a szauna (házigazdákkal együtt), körönként: egy begyújtás általában egy kör, de ha aznap külön-külön, egymás után szaunáztak (pl. „1+1”), mindegyik külön kör. Szűréskor színesen a szűrés eredménye, mögötte szürkén a szűrés nélküli összes, illetve (időszakra és személyre is szűrve) a szűrt időszak összes köre.</div>
                 <div id="chHeadcount" class="chart"></div>
             </div>
             <div class="card fill">
@@ -467,21 +468,30 @@ function parseCsv(text) {
     const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const sep = lines[0].includes(';') ? ';' : ',';
     const head = lines.shift().toLowerCase().split(sep).map(h => h.trim());
-    const iD = head.indexOf('datum'), iP = head.indexOf('resztvevo');
+    const iD = head.indexOf('datum'), iP = head.indexOf('resztvevo'), iK = head.indexOf('kor');
     if (iD < 0 || iP < 0) throw new Error('A fájl fejléce nem „datum,resztvevo”.');
     const byDate = new Map();
     for (const l of lines) {
         const c = l.split(sep).map(x => x.trim());
         const d = c[iD], p = (c[iP] || '').toUpperCase();
         if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !p) continue;
-        if (!byDate.has(d)) byDate.set(d, new Set());
-        byDate.get(d).add(p);
+        if (!byDate.has(d)) byDate.set(d, new Map());
+        const m = byDate.get(d);
+        if (!m.has(p)) m.set(p, (iK >= 0 && c[iK]) || '1');   // üres kor = 1. kör
     }
-    return [...byDate.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([date, set]) => {
-        const people = [...set];
-        return { date, people, count: people.length, guests: people.filter(p => !isHost(p)) };
+    return [...byDate.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([date, m]) => {
+        const people = [...m.keys()];
+        // Körök: ugyanazon a begyújtáson külön-külön (egymás után) szaunázók csoportjai
+        const gm = new Map();
+        for (const [p, k] of m) { if (!gm.has(k)) gm.set(k, []); gm.get(k).push(p); }
+        const groups = [...gm.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })).map(e => e[1]);
+        return { date, people, count: people.length, guests: people.filter(p => !isHost(p)), groups };
     });
 }
+// Létszám körönként: „1+1” ha külön körökben szaunáztak, különben a létszám
+const sizeLbl = s => s.groups.length > 1 ? s.groups.map(g => g.length).join('+') : String(s.count);
+const maxGroup = s => Math.max(...s.groups.map(g => g.length));
+const groupOf = (s, c) => s.groups.find(g => g.includes(c)) || [];
 
 // Személyek az összes szezon alapján: alkalomszám, utolsó részvétel, státusz és abszolút rangsor.
 // Rangsor: 1. részvételek száma, 2. aki később volt utoljára, 3. ABC.
@@ -780,7 +790,8 @@ function renderPeopleBox(mine) {
     let head;
     if (selCode) {
         const cnt = new Map();
-        mine(sessions).forEach(s => s.people.forEach(p => { if (p !== selCode) cnt.set(p, (cnt.get(p) || 0) + 1); }));
+        // csak akikkel egy körben volt (a külön körben szaunázók nem számítanak)
+        mine(sessions).forEach(s => groupOf(s, selCode).forEach(p => { if (p !== selCode) cnt.set(p, (cnt.get(p) || 0) + 1); }));
         const list = [...cnt].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
         head = `<span class="lbl"><i class="fa-solid fa-people-arrows"></i>Akikkel ${selCode} szaunázott (${list.length})</span>` +
             (list.length ? list.map(([p, n]) => `<button data-p="${p}" class="${isHost(p) ? 'h' : ''}" title="${isHost(p) ? 'házigazda' : people.get(p).status}"><span class="code">${p}</span> <b>${n}×</b></button>`).join('')
@@ -822,10 +833,11 @@ function matrixHtml() {
     if (codes.length < 2) { mxData = null; return `<div class="mx-foot dim">A szűrt időszakban (${filterText()}) nincs legalább két résztvevő.</div>`; }
     const idx = new Map(codes.map((c, i) => [c, i]));
     const M = codes.map(() => codes.map(() => 0));
-    sessions.forEach(s => {
-        const ps = s.people.filter(p => idx.has(p)).map(p => idx.get(p));
+    // körönként: aki külön körben szaunázott, az nem „együtt” volt (az átló így is az alkalmak száma)
+    sessions.forEach(s => s.groups.forEach(g => {
+        const ps = g.filter(p => idx.has(p)).map(p => idx.get(p));
         ps.forEach(a => ps.forEach(b => M[a][b]++));
-    });
+    }));
     mxData = { codes, M };
     const n = codes.length;
     const size = n <= 10 ? 30 : n <= 16 ? 26 : 24;   // kevés főnél nagyobb kockák
@@ -848,7 +860,7 @@ function matrixHtml() {
     }
     const cols = n + 1;
     const bar = `<div class="mx-bar"><span class="dim">Soronként olvasd: a sor személyének alkalmaiból hány %-on volt ott az oszlop személye. ` +
-        `Az átlóban (keretes) a saját alkalmak száma; a közös alkalmak száma rámutatáskor jobbra látszik.</span></div>`;
+        `Az átlóban (keretes) a saját alkalmak száma; a közös alkalmak száma rámutatáskor jobbra látszik. Az ugyanazon a napon, de külön körben szaunázók nem számítanak együttnek.</span></div>`;
     const leg = `<i style="background:var(--hm-1)"></i>1–24% <i style="background:var(--hm-2)"></i>25–49% <i style="background:var(--hm-3)"></i>50–74% <i style="background:var(--hm-4)"></i>75%+`;
     const skipped = cnt.size - codes.length;
     return bar +
@@ -890,7 +902,7 @@ function mxSide(i, j) {
         const ps = codes.map((p, j2) => [p, M[k][j2]]).filter(([p, v], j2) => j2 !== k && v > 0).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
         const top = ps.slice(0, 10);
         el.innerHTML = `<div class="sd-h">${chip(c)} társai</div>` +
-            `<div class="sd-big"><b>${M[k][k]}</b>alkalom, ebből ${M[k][k] - sessions.filter(s => s.people.length === 1 && s.people[0] === c).length} másokkal</div>` +
+            `<div class="sd-big"><b>${M[k][k]}</b>alkalom, ebből ${M[k][k] - sessions.filter(s => groupOf(s, c).length === 1).length} másokkal</div>` +
             (top.length ? bars(top.map(([p, v]) => [chip(p), v, M[k][k], `${v}× · ${pc(v, M[k][k])}%`])) : '<div class="dim">mindig egyedül szaunázott</div>') +
             (ps.length > 10 ? `<div class="sd-f">+ ${ps.length - 10} további társ</div>` : '') + hint;
     };
@@ -907,7 +919,7 @@ function mxSide(i, j) {
     }
     if (i === j) return person(i);
     const a = codes[i], b = codes[j], v = M[i][j];
-    const both = sessions.filter(s => s.people.includes(a) && s.people.includes(b));
+    const both = sessions.filter(s => s.groups.some(g => g.includes(a) && g.includes(b)));
     el.innerHTML = `<div class="sd-h">${chip(a)} + ${chip(b)}</div>` +
         `<div class="sd-big"><b>${v}</b>közös alkalom</div>` +
         bars([[`${chip(a)} alkalmainak`, v, M[i][i], `${pc(v, M[i][i])}% <span class="dim" style="font-weight:400">(${v}/${M[i][i]})</span>`],
@@ -1024,9 +1036,13 @@ const bgColors = n => {
 // Oszlopra kattintás → szűrés. Érintőképernyőn az első koppintás csak a buborékot mutatja,
 // ugyanarra az oszlopra másodszor koppintva szűr (különben a buborék elérhetetlen lenne).
 let lastTap = null;
-function pickCategory(id, i, n, onPick) {
+// Ha a diagramon már van kijelölt oszlop, egy nem kijelölt oszlopon a buborék úgysem mondana semmit
+// (a szűrés miatt 0) → ilyenkor egy koppintás is elég a hozzáadáshoz. Kijelölt oszlopnál marad a két koppintás.
+function pickCategory(id, i, n, pick) {
     if (!(i >= 0 && i < n)) return;
-    if (TOUCH) {
+    const onPick = pick.on;
+    const instant = pick.sel.size > 0 && !pick.sel.has(i);
+    if (TOUCH && !instant) {
         const now = Date.now();
         if (!lastTap || lastTap.id !== id || lastTap.i !== i || now - lastTap.at > 5000) { lastTap = { id, i, at: now }; return; }
     }
@@ -1078,7 +1094,7 @@ function stackChart(id, categories, fg, layers, fullNames, pick) {
         return `<br><span class="dim" style="font-size:11px">${TOUCH ? 'Koppints újra' : 'Kattints'}: ${act}</span>`;
     };
     makeChart(id, {
-        chart: { type: 'column', ...(pick ? { events: { click: e => pickCategory(id, Math.round(e.xAxis[0].value), n, pick.on) } } : {}) },
+        chart: { type: 'column', ...(pick ? { events: { click: e => pickCategory(id, Math.round(e.xAxis[0].value), n, pick) } } : {}) },
         legend: { enabled: false },
         xAxis: { categories, labels: { formatter: function () {
             // a kijelölt oszlopok felirata piros és félkövér
@@ -1088,7 +1104,7 @@ function stackChart(id, categories, fg, layers, fullNames, pick) {
         plotOptions: {
             column: { stacking: 'normal', grouping: false,
                 ...({ 1: { groupPadding: 0.14, pointPadding: 0.06 }, 2: { groupPadding: 0.1, pointPadding: 0.3 }, 3: { groupPadding: 0.08, pointPadding: 0.35 } })[measures.length] },
-            ...(pick ? { series: { cursor: 'pointer', point: { events: { click: function () { pickCategory(id, this.index, n, pick.on); } } } } } : {})
+            ...(pick ? { series: { cursor: 'pointer', point: { events: { click: function () { pickCategory(id, this.index, n, pick); } } } } } : {})
         },
         tooltip: { formatter: function () {
             const i = this.points[0].point.index;
@@ -1164,12 +1180,14 @@ function renderCharts() {
     chart3('chWeekdays', DAYS_HU.map(d => d.slice(0, 3)), 7, s => weekdayIdx(s.date), DAYS_HU, pickOf(selDays, i => i, 7));
 
     // --- Létszám: színesen a szűrés eredménye, mögötte szürkén ugyanazok a rétegek, mint fent ---
-    const maxN = Math.max(...allSessions.map(s => s.count));
-    const hCount = list => { const h = Array(maxN).fill(0); list.forEach(s => h[s.count - 1]++); return h; };
-    const hFg = hCount(fgList), hLayers = layerDefs.map(L => ({ name: L.name, data: hCount(L.list) }));
+    // Körönként számol: egy begyújtás általában egy kör, de a külön-külön szaunázók (pl. 1+1) külön 1 fős körök.
+    // Kiemelt személynél csak az ő körei.
+    const maxN = Math.max(...allSessions.map(maxGroup));
+    const hCount = (list, code) => { const h = Array(maxN).fill(0); list.forEach(s => s.groups.forEach(g => { if (!code || g.includes(code)) h[g.length - 1]++; })); return h; };
+    const hFg = hCount(fgList, selCode), hLayers = layerDefs.map(L => ({ name: L.name, data: hCount(L.list) }));
     const hCols = bgColors(hLayers.length);
     const hs = hLayers.map((L, k) => ({ name: L.name, id: 'hc-bg' + k, legendIndex: k + 1, color: hCols[k], zIndex: k, stack: 'bg' + k, enableMouseTracking: false, data: L.data }));
-    hs.push({ name: selCode ? `Begyújtás (${selCode} ott volt)` : 'Begyújtás', id: 'hc-fg', legendIndex: 0, color: COL.b.guest, zIndex: 5, stack: 'fg', data: hFg });
+    hs.push({ name: selCode ? `Kör (${selCode} ott volt)` : 'Kör', id: 'hc-fg', legendIndex: 0, color: COL.b.guest, zIndex: 5, stack: 'fg', data: hFg });
     makeChart('chHeadcount', {
         chart: { type: 'column' }, legend: { enabled: false },
         xAxis: { categories: hFg.map((_, i) => `${i + 1} fő`) },
@@ -1177,7 +1195,7 @@ function renderCharts() {
         plotOptions: { column: { grouping: false, groupPadding: 0.14, pointPadding: 0.06 } },
         tooltip: { formatter: function () {
             const i = this.points[0].point.index;
-            return `<div class="hc-tip"><b>${i + 1} fő</b><br><span style="color:${COL.b.guest}">■</span> Begyújtás: <b>${hFg[i]}</b>` +
+            return `<div class="hc-tip"><b>${i + 1} fő</b><br><span style="color:${COL.b.guest}">■</span> Kör: <b>${hFg[i]}</b>` +
                 hLayers.slice().reverse().map(L => ` <span class="dim">· ${L.name.toLowerCase()} ${L.data[i]}</span>`).join('') + '</div>';
         } },
         series: hs
@@ -1227,7 +1245,8 @@ let tblFilt = false;   // Begyújtások lista: csak a szűrt sorok (szűréskor 
 // Minden mód egy kérdésre felel, egy színskálával. A „Vendég” mód két jól elkülönülő színnel
 // a létszám-skála árnyalataiból: sötét (mint a 3–4 fő) = csak házigazdával, világos (mint az 1 fő) = vendéggel.
 const HM_MODES = {
-    count: { lvl: s => s.count >= 5 ? 4 : s.count >= 3 ? 3 : s.count === 2 ? 2 : 1, legend: ['1 fő', '2 fő', '3–4 fő', '5+ fő'], sensor: false },
+    // külön körök esetén a nagyobb kör létszáma számít
+    count: { lvl: s => { const c = maxGroup(s); return c >= 5 ? 4 : c >= 3 ? 3 : c === 2 ? 2 : 1; }, legend: ['1 fő', '2 fő', '3–4 fő', '5+ fő'], sensor: false },
     type:  { fill: s => s.guests.length ? 'var(--hm-1)' : 'var(--hm-3)', legend: [['var(--hm-3)', 'csak házigazdával'], ['var(--hm-1)', 'vendéggel']], sensor: false },
     max:   { lvl: s => { const a = sensorOf(s.date); return !a ? 0 : a.max >= 80 ? 4 : a.max >= 70 ? 3 : a.max >= 60 ? 2 : 1; }, legend: ['< 60 °C', '60–70 °C', '70–80 °C', '80+ °C'], sensor: true },
     hot:   { lvl: s => { const a = sensorOf(s.date); return !a ? 0 : a.hot >= 180 ? 4 : a.hot >= 120 ? 3 : a.hot >= 60 ? 2 : 1; }, legend: ['< 1 óra', '1–2 óra', '2–3 óra', '3+ óra'], sensor: true }
@@ -1239,7 +1258,7 @@ function renderHmInfo() {
     const s = hmDay && allSessions.find(x => x.date === hmDay);
     if (!s) { box.innerHTML = '<span class="dim">Koppints egy szaunázós napra a részletekért.</span>'; return; }
     const wd = DAYS_HU[weekdayIdx(s.date)].toLowerCase();
-    const parts = [`<b>${fmtDate(s.date)}.</b> ${wd}`, `<b>${s.count}</b> fő ${s.guests.length ? '' : '(csak házigazdával) '}${codeChips(s)}`];
+    const parts = [`<b>${fmtDate(s.date)}.</b> ${wd}`, `<b>${sizeLbl(s)}</b> fő ${s.groups.length > 1 ? '(külön körökben) ' : s.guests.length ? '' : '(csak házigazdával) '}${codeChips(s)}`];
     if (s.date < sensorStart) parts.push('<span class="dim">a hőmérő bekötése előtt, nincs görbe</span>');
     else {
         const v = sensorCache.get(s.date);
@@ -1356,7 +1375,7 @@ function renderHeatmap() {
             if (mode.fill) fill = mode.fill(s);
             else { const lv = mode.lvl(s); fill = lv ? `var(--hm-${lv})` : 'url(#hmNd)'; }   // nincs szenzoradat: sraffozott
             const a = sensorOf(ds);
-            let tip = `${fmtDate(ds)} · ${s.count} fő (${s.people.join(', ')})`;
+            let tip = `${fmtDate(ds)} · ${sizeLbl(s)} fő (${s.groups.map(g => g.join(', ')).join(' | ')})`;
             if (a) tip += ` · max ${fmtNum(a.max)} °C · üzemidő ${a.hot > 0 ? fmtMin(a.hot) : '—'}`;
             rects += `<rect data-d="${ds}" x="${x}" y="${yy}" width="${cw}" height="${cw}" rx="${rx}" fill="${fill}"${op}${stroke}><title>${tip}</title></rect>`;
             if (hasSensor(ds)) rects += `<circle cx="${x + cw / 2}" cy="${yy + cw / 2}" r="2" fill="#fff"${op} pointer-events="none"/>`;   // van szenzoradat
@@ -1442,15 +1461,17 @@ function sensorCells(a) {
         `<td>${a.hot > 0 ? fmtMin(a.hot) : '—'}</td>`;
 }
 
+// Résztvevők kódjai; külön körök között elválasztó
 function codeChips(s) {
-    return s.people.slice().sort((a, b) => (isHost(b) - isHost(a)) || (a < b ? -1 : 1))
-        .map(p => `<span class="code${p === selCode ? ' me' : ''}${isHost(p) ? ' host' : ''}" title="${people.get(p) ? people.get(p).status : ''}">${p}</span>`).join('');
+    return s.groups.map(g => g.slice().sort((a, b) => (isHost(b) - isHost(a)) || (a < b ? -1 : 1))
+        .map(p => `<span class="code${p === selCode ? ' me' : ''}${isHost(p) ? ' host' : ''}" title="${people.get(p) ? people.get(p).status : ''}">${p}</span>`).join(''))
+        .join('<span class="dim" style="margin:0 5px" title="külön kör">|</span>');
 }
 
 function tableRow(s) {
     const d = hasSensor(s.date) ? `<a href="index.html?date=${s.date}" onclick="event.stopPropagation()">${fmtDate(s.date)}</a>` : fmtDate(s.date);
     const cells = s.date < sensorStart ? `<td>—</td><td>—</td><td>—</td><td>—</td>` : sensorCells(sensorCache.get(s.date));
-    return `<td>${d}</td><td>${s.count}</td>${cells}<td class="chev"><i class="fas fa-chevron-down"></i></td>`;
+    return `<td>${d}</td><td${s.groups.length > 1 ? ' title="külön körökben"' : ''}>${sizeLbl(s)}</td>${cells}<td class="chev"><i class="fas fa-chevron-down"></i></td>`;
 }
 
 // --- Rendezés az oszlopfejlécre koppintva ---
@@ -1514,7 +1535,7 @@ function renderSensor() {
     body.innerHTML = shown.length ? '' : '<tr><td colspan="7" class="dim" style="text-align:center;padding:14px">Nincs találat.</td></tr>';
     body.innerHTML += shown.map(s =>
         `<tr id="sr-${s.date}" class="row${has(s, selCode) ? ' hl' : ''}${inSel(s) ? '' : ' fade'}" title="${s.people.join(', ')}">${tableRow(s)}</tr>` +
-        `<tr class="det hidden" id="dt-${s.date}"><td colspan="7">Résztvevők: ${codeChips(s)}</td></tr>`).join('');
+        `<tr class="det hidden" id="dt-${s.date}"><td colspan="7">Résztvevők${s.groups.length > 1 ? ' (külön körökben)' : ''}: ${codeChips(s)}</td></tr>`).join('');
     body.onclick = e => {
         const tr = e.target.closest('tr.row');
         if (!tr) return;
