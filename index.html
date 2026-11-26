@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff" id="theme-meta">
+    <script src="lock.js"></script>   <!-- PIN-zár (látszatvédelem) -->
     <title>Kaisa Sauna Monitor & Predict</title>
     <link rel="icon" type="image/png" href="heat.png" id="favicon">
     <script>
@@ -467,7 +468,7 @@
             </div>
             <div class="info-sec">
                 <h4><i class="fas fa-users"></i> Szauna (archív napokon)</h4>
-                <p>Archív napon az ETA kártya helyén: fejlécében a létszám (pl. „4 fő”), mellette a résztvevők kódjai a szaunanaplóból. Ha aznap nem volt szaunázás: „nem volt”.</p>
+                <p>Archív napon az ETA kártya helyén: fejlécében a létszám (pl. „4 fő”), mellette a résztvevők kódjai a szaunanaplóból. Ha aznap nem volt szaunázás: „nem volt”. Ha egymás után, külön-külön szaunáztak, a fejlécben pl. „1+1 fő”, a kódok körönként külön sorban.</p>
             </div>
             <div class="info-sec">
                 <h4><i class="fas fa-hourglass-half"></i> ETA</h4>
@@ -977,12 +978,20 @@ function renderPeopleCard(selDate) {
         card.title = '';
         return;
     }
+    // Külön körök (pl. egymás után, külön-külön): fejlécben „1+1 fő”, körönként új sor
+    const gm = new Map();
+    const km = sessionKor.get(selDate) || new Map();
+    ppl.forEach(p => { const k = km.get(p) || '1'; if (!gm.has(k)) gm.set(k, []); gm.get(k).push(p); });
+    const groups = [...gm.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })).map(e => e[1]);
+    const split = groups.length > 1;
     // a létszám a kártya fejlécébe kerül, a kódok soronként legfeljebb 3-asával (6 fő is kifér)
-    setEtaCardMode(true, `${ppl.length} fő`);
+    setEtaCardMode(true, split ? `${groups.map(g => g.length).join('+')} fő` : `${ppl.length} fő`);
     const rows = [];
-    for (let k = 0; k < ppl.length; k += 3) rows.push(ppl.slice(k, k + 3).join(' '));
+    groups.forEach(g => { for (let k = 0; k < g.length; k += 3) rows.push(g.slice(k, k + 3).join(' ')); });
     span.innerHTML = `<span class="ppl-codes">${rows.join('<br>')}</span>`;
-    card.title = `Résztvevők (${ppl.length}): ${ppl.join(', ')}`;
+    card.title = split
+        ? `Résztvevők (${ppl.length}, külön körökben): ${groups.map(g => g.join(', ')).join(' | ')}`
+        : `Résztvevők (${ppl.length}): ${ppl.join(', ')}`;
 }
 
 function renderDateCard(selDate) {
@@ -1511,6 +1520,7 @@ document.addEventListener('keydown', e => {
 // ---- Naptár: a szaunás napok a szaunanaplóból (data/alkalmak.csv) ----
 let sessionDays = new Set();
 let sessionPeople = new Map();   // dátum → résztvevők kódjai (archív napokon az ETA kártya helyén)
+let sessionKor = new Map();      // dátum → (kód → kör); külön körben = egymás után, külön-külön
 let calY, calM;            // a naptárban mutatott hónap
 fetch('data/alkalmak.csv?v=' + Date.now())
     .then(r => r.ok ? r.text() : '')
@@ -1518,13 +1528,17 @@ fetch('data/alkalmak.csv?v=' + Date.now())
         const lines = t.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
         const head = (lines[0] || '').toLowerCase().split(/[,;]/).map(h => h.trim());
         const iD = Math.max(0, head.indexOf('datum')), iP = head.indexOf('resztvevo') >= 0 ? head.indexOf('resztvevo') : 1;
-        sessionDays = new Set(); sessionPeople = new Map();
+        const iK = head.indexOf('kor');   // opcionális: külön körök (egymás után, külön-külön szaunázók)
+        sessionDays = new Set(); sessionPeople = new Map(); sessionKor = new Map();
         for (const l of lines) {
             const c = l.split(/[,;]/).map(x => x.trim());
             const d = c[iD], p = (c[iP] || '').toUpperCase();
             if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
             sessionDays.add(d);
-            if (p) { if (!sessionPeople.has(d)) sessionPeople.set(d, []); if (!sessionPeople.get(d).includes(p)) sessionPeople.get(d).push(p); }
+            if (p) {
+                if (!sessionPeople.has(d)) { sessionPeople.set(d, []); sessionKor.set(d, new Map()); }
+                if (!sessionPeople.get(d).includes(p)) { sessionPeople.get(d).push(p); sessionKor.get(d).set(p, (iK >= 0 && c[iK]) || '1'); }
+            }
         }
         if (calOpen()) renderCal();
         if (!isTodaySelected()) renderPeopleCard(datePickerEl.value);
